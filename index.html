@@ -11731,7 +11731,7 @@ function renderBrunLastRun() {
   const phosEarned = _lastRunPhos || 0;
   // No run in progress yet — show lobby welcome
   if (!playerElement) {
-    el.innerHTML = '<div class="brun-run-title" style="color:#c8a060;font-size:1rem;">⚔ Wizard's League</div><div style="color:#555;font-size:.7rem;margin-top:.3rem;">Select New Run to begin your journey</div>';
+    el.innerHTML = '<div class="brun-run-title" style="color:#c8a060;font-size:1rem;">&#9876; Wizard&#39;s League</div><div style="color:#555;font-size:.7rem;margin-top:.3rem;">Select New Run to begin your journey</div>';
     return;
   }
   const zoneStr = _runZoneReached && _runZoneReached !== playerElement ? ` → ${_runZoneReached} Zone` : '';
