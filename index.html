@@ -1367,37 +1367,48 @@ var sandboxMode    = false;
 let _musicEnabled = true;
 let _volumeLevel  = 0.80;
 let _mutedByBtn   = false;
+let _audioStarted = false;  // true after first gesture fires
 
 function _tryResumeAudio() {}
 function musicPlay(key) {}
 function musicStop() {}
+
+// Get the live MP3 element safely (declared later in mp3audio.js)
+function _getVol() { return (typeof _mp3El !== 'undefined' && _mp3El) ? _mp3El : null; }
 
 function volumeSet(val) {
   const v = Math.max(0, Math.min(100, Number(val))) / 100;
   _volumeLevel  = v;
   _mutedByBtn   = (v === 0);
   _musicEnabled = (v > 0);
-  if (typeof _mp3El !== 'undefined' && _mp3El) _mp3El.volume = v;
+  const el = _getVol();
+  if (el) el.volume = v;
   _updateVolIcon();
 }
 
 function volumeToggleMute() {
-  if (typeof _tryResumeAudio === 'function') {}
+  // If audio hasn't started yet, let _firstGesture handle it — don't mute
+  if (!_audioStarted) return;
+
   if (_mutedByBtn || !_musicEnabled) {
+    // Unmute
     _mutedByBtn   = false;
     _musicEnabled = true;
     const v = Math.max(0.10, _volumeLevel);
     _volumeLevel  = v;
-    if (typeof _mp3El !== 'undefined' && _mp3El) _mp3El.volume = v;
+    const el = _getVol();
+    if (el) {
+      el.volume = v;
+      if (el.paused) el.play().catch(function(){});
+    }
     const slider = document.getElementById('vol-slider');
     if (slider) slider.value = Math.round(v * 100);
-    if (typeof _mp3El !== 'undefined' && _mp3El && _mp3El.paused && typeof _mp3Key !== 'undefined' && _mp3Key) {
-      _mp3El.play().catch(function(){});
-    }
   } else {
+    // Mute
     _mutedByBtn   = true;
     _musicEnabled = false;
-    if (typeof _mp3El !== 'undefined' && _mp3El) _mp3El.volume = 0;
+    const el = _getVol();
+    if (el) el.volume = 0;
   }
   _updateVolIcon();
 }
@@ -12031,7 +12042,8 @@ function backToElementSelectFromPassive(){
   function _firstGesture(){
     if (_started) return;
     _started = true;
-    // Sync MP3 element volume to slider on first gesture
+    _audioStarted = true;  // unlock volumeToggleMute
+    // Sync volume level from slider
     const slider = document.getElementById('vol-slider');
     if (slider) _volumeLevel = Number(slider.value) / 100;
     const active = document.querySelector('.screen.active');
