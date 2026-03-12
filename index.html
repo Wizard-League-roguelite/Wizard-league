@@ -2046,7 +2046,7 @@ function _mp3FadeIn(el, onDone) {
   function tick(now) {
     const t = Math.min((now - start) / _MP3_FADE_MS, 1);
     const _targetVol = _musicEnabled ? (typeof _volumeLevel !== 'undefined' ? _volumeLevel : _MP3_MAX_VOL) : 0;
-    el.volume = from + (_targetVol - from) * t;
+    el.volume = Math.max(0, Math.min(1, from + (_targetVol - from) * t));
     if (t < 1) { _mp3FadeRAF = requestAnimationFrame(tick); }
     else        { el.volume = _musicEnabled ? (typeof _volumeLevel !== 'undefined' ? _volumeLevel : _MP3_MAX_VOL) : 0; _mp3FadeRAF = null; if (onDone) onDone(); }
   }
@@ -2059,7 +2059,7 @@ function _mp3FadeOut(el, onDone) {
   const from  = el.volume;
   function tick(now) {
     const t = Math.min((now - start) / _MP3_FADE_MS, 1);
-    el.volume = from * (1 - t);
+    el.volume = Math.max(0, Math.min(1, from * (1 - t)));
     if (t < 1) { _mp3FadeRAF = requestAnimationFrame(tick); }
     else        { el.volume = 0; _mp3FadeRAF = null; if (onDone) onDone(); }
   }
