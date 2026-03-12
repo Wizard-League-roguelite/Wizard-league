@@ -4345,6 +4345,24 @@ function _buildColorOpts(list, key, styleFn, noneOpt) {
   }).join('');
 }
 
+const CHAR_PORTRAIT_STYLES = {
+  battlemage: {
+    bg:        'linear-gradient(175deg, #3a1808 0%, #1a0c04 60%, #0e0804 100%)',
+    ground:    'linear-gradient(180deg, #2a1408, #1a0a04)',
+    glowRgb:   '200,100,40',
+  },
+  hexblade: {
+    bg:        'linear-gradient(175deg, #1a0830 0%, #100620 60%, #080410 100%)',
+    ground:    'linear-gradient(180deg, #1a0830, #0e0520)',
+    glowRgb:   '140,80,240',
+  },
+  arcanist: {
+    bg:        'linear-gradient(175deg, #04102a 0%, #030c1e 60%, #02080e 100%)',
+    ground:    'linear-gradient(180deg, #061228, #030c18)',
+    glowRgb:   '60,140,255',
+  },
+};
+
 function _buildArchetypeOpts() {
   return WIZ_ARCHETYPES.map(a => {
     const selected = _wizBuild.archetype === a.id;
