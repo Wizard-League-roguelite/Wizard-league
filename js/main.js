@@ -618,20 +618,14 @@ function showBetweenRuns() {
 
 function lobbyStartRun() {
   stopLobbyMap();
-  const meta = getMeta();
-  const isFirstRun = !meta.totalRuns || meta.totalRuns === 0;
-  if (isFirstRun) {
-    showCharacterScreen();
-  } else {
-    const slotData = getActiveSlotData();
-    if (slotData.wizardBuild && typeof _wizBuild !== 'undefined') {
-      _wizBuild = Object.assign({...WIZ_DEFAULTS}, slotData.wizardBuild);
-    }
-    playerCharId = _wizBuild.archetype || slotData.savedCharId || 'arcanist';
-    const welcomeEl = document.getElementById('welcome-msg');
-    if (welcomeEl) welcomeEl.textContent = `${playerName}, choose your element`;
-    showElementScreen();
+  const slotData = getActiveSlotData();
+  if (slotData.wizardBuild && typeof _wizBuild !== 'undefined') {
+    _wizBuild = Object.assign({...WIZ_DEFAULTS}, slotData.wizardBuild);
   }
+  playerCharId = _wizBuild.archetype || slotData.savedCharId || 'arcanist';
+  const welcomeEl = document.getElementById('welcome-msg');
+  if (welcomeEl) welcomeEl.textContent = `${playerName}, choose your element`;
+  showElementScreen();
 }
 
 function renderBrunLastRun() {

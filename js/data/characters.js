@@ -229,6 +229,7 @@ const WIZ_DEFAULTS = {
 };
 
 let _wizBuild = {...WIZ_DEFAULTS};
+let _wizBuilderFromLobby = false; // true when opened from the lobby tailor, so "continue" returns to lobby
 
 function _applyWizBuild(patch) {
   Object.assign(_wizBuild, patch);
@@ -248,6 +249,9 @@ function showCharacterScreen() {
   CHARACTER_ROSTER.forEach(ch => { _charRolledBuffs[ch.id] = rollCharacterBuff(ch.id); });
   _renderWizBuilder();
   showScreen('character-screen');
+  // Update button label depending on context
+  const continueBtn = document.getElementById('char-continue-btn');
+  if (continueBtn) continueBtn.textContent = _wizBuilderFromLobby ? 'Save ✓' : 'Continue →';
 }
 
 function _renderWizBuilder() {
@@ -436,6 +440,11 @@ function confirmCharacterSelect() {
   playerCharId   = _wizBuild.archetype;
   playerCharBuff = _charRolledBuffs[playerCharId] || null;
   patchActiveSlot({ savedCharId: playerCharId, wizardBuild: _wizBuild });
+  if (_wizBuilderFromLobby) {
+    _wizBuilderFromLobby = false;
+    showBetweenRuns();
+    return;
+  }
   document.getElementById('welcome-msg').textContent = `${playerName}, choose your element`;
   showElementScreen();
 }
