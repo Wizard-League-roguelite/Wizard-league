@@ -280,6 +280,7 @@ function advanceToNextGym(){
   currentGymIdx++;
   zoneBattleCount = 0;
   gymSkips = 0;
+  _zoneRivalDefeated = false;
   if(currentGymIdx >= GYM_ROSTER.length) gymDefeated = true;
   initZoneSpecial(); // schedule the campfire/shop for new zone
 }

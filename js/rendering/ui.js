@@ -153,6 +153,8 @@ function log(msg,type=""){
 }
 
 function showScreen(id){
+  // Stop lobby map when navigating away from between-runs
+  if (id !== 'between-runs-screen' && typeof stopLobbyMap === 'function') stopLobbyMap();
   // Stop any running game over animation
   const goCanvas = document.getElementById('gameover-canvas');
   if(goCanvas && goCanvas._goStop) goCanvas._goStop();
@@ -464,6 +466,14 @@ function renderSpellButtons(){
         setActiveEnemy(snapTgt);
         const ctx=makeSpellCtx('player','enemy',spellIdx);
         spell.execute(ctx);
+        // Deep Current: fire Water spell a second time
+        if(!combat.over && spell.element==='Water' && status.player.deepCurrentActive){
+          status.player.deepCurrentActive = false;
+          log('💠 Deep Current: '+spell.name+' fires again!','player');
+          setActiveEnemy(snapTgt);
+          const ctx2=makeSpellCtx('player','enemy',spellIdx);
+          spell.execute(ctx2);
+        }
         updateHPBars();renderStatusTags();updateStatsUI();
       });
       renderSpellButtons();

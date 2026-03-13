@@ -142,6 +142,8 @@ function buildMapNodes(encounters, specials, canvasW, canvasH) {
       rows: getEnemySprite(m),
       pal:  getElemPal(m.element || 'Neutral'),
     }));
+    const nextSlot = zoneBattleCount + 1;
+    const slotReward = enc._rewardType || getZoneRewardType(nextSlot, currentGymIdx);
     nodes.push({
       x: nx, y: ny,
       type: enc.isPack ? 'pack' : 'combat',
@@ -150,6 +152,7 @@ function buildMapNodes(encounters, specials, canvasW, canvasH) {
         ? getElemPal(enc.members[0]?.element || 'Neutral')[0]
         : (EL_PAL[enc.element?.split(/[\/\s]/)[0]] || EL_PAL.Neutral)[0],
       label: enc.isPack ? enc.packName : enc.name,
+      rewardType: slotReward,
     });
   });
 
@@ -248,6 +251,25 @@ function _drawNode(ctx, node, hovered, tick) {
   ctx.globalAlpha = hovered ? 0.95 : 0.7;
   ctx.fillText(node.label || '', x, y + r + 10);
   ctx.restore();
+
+  // Reward indicator below label
+  if ((type === 'combat' || type === 'pack') && node.rewardType) {
+    const rewardMeta = {
+      primary_spell:   { icon: '✦', label: 'Spell',  col: '#aa88ff' },
+      secondary_spell: { icon: '✦', label: 'Spell',  col: '#aa88ff' },
+      minor:           { icon: '📈', label: 'Minor',  col: '#88aacc' },
+      major:           { icon: '⚡', label: 'Major',  col: '#ffcc44' },
+      rival:           { icon: '🧢', label: 'Rival',  col: '#9a6aee' },
+      gym_available:   { icon: '🏛',  label: 'Gym',   col: '#c8a060' },
+    }[node.rewardType] || { icon: '?', label: '', col: '#666' };
+    ctx.save();
+    ctx.font = `${hovered ? 9 : 8}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = rewardMeta.col;
+    ctx.globalAlpha = hovered ? 0.95 : 0.65;
+    ctx.fillText(rewardMeta.icon + ' ' + rewardMeta.label, x, y + r + 20);
+    ctx.restore();
+  }
 }
 
 

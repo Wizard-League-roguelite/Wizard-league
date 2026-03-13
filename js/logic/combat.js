@@ -627,9 +627,10 @@ function endBattle(won){
       advanceToNextGym(); // resets zoneBattleCount and gymSkips
     } else if(isRival){
       log('⚔ Rival '+RIVAL.name+' defeated! Passive reward incoming...','win');
+      _zoneRivalDefeated = true;
       battleNumber++;
       _runRoomsCompleted++;
-      zoneBattleCount++;
+      // Do NOT increment zoneBattleCount for rival fights
     } else {
       battleNumber++;
       _runRoomsCompleted++;

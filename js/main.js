@@ -66,6 +66,7 @@ function buildStatRewardPool() {
 
 let _currentRewardPool = [];
 let _currentRewardIsGym = false;
+let _currentRewardTier = 'minor';
 
 function grantRandomLegendary() {
   const elements = [playerElement, ...(player.unlockedElements||[])];
@@ -110,61 +111,111 @@ function grantRandomLegendary() {
 
 function showBattleRewardScreen(isGym, isSpellBattle, isRival) {
   _currentRewardIsGym = isGym;
-  // Battle 1 always gives a primary spell (starter spell pick)
-  const forceSpell = (battleNumber === 1);
-  const type = isGym    ? 'legendary'
-             : isRival  ? 'passive'
-             : (isSpellBattle || forceSpell) ? 'spell'
-             : 'stat';
   const badge = document.getElementById('br-badge');
   const title = document.getElementById('br-title');
-  const sub   = document.getElementById('br-sub');
+  const sub = document.getElementById('br-sub');
+
+  const rewardType = isGym ? 'gym'
+                   : isRival ? 'rival'
+                   : getZoneRewardType(zoneBattleCount, currentGymIdx);
 
   if (badge) badge.textContent = isGym ? 'Gym Clear' : isRival ? 'Rival Defeated' : 'Battle ' + battleNumber;
 
-  if (type === 'legendary') {
-    // First gym: always element unlock if no second element yet
-    if (!player.unlockedElements.length) {
-      showElementUnlockScreen('gym');
-      return;
-    }
-    // Grant one random legendary (spell OR passive) — no choice
-    grantRandomLegendary();
-    showMap();
+  if (rewardType === 'gym') { _doGymRewardFlow(); return; }
+  if (rewardType === 'rival') { showPassiveChoiceScreen('rival'); return; }
+
+  if (rewardType === 'primary_spell') {
+    if (title) title.textContent = '✦ Starting Spell ✦';
+    if (sub) sub.textContent = 'Choose your primary spell.';
+    showSpellChoiceScreen(battleNumber, 'primary');
     return;
   }
-
-  if (type === 'passive') {
-    // Rival defeat → passive choice
-    showPassiveChoiceScreen('rival');
-    return;
-  }
-
-  if (type === 'spell') {
+  if (rewardType === 'secondary_spell') {
     if (title) title.textContent = '✦ Spell Reward ✦';
-    if (sub)   sub.textContent   = 'Choose a spell to add to your spellbook.';
-    // Determine tier: secondary default, legendary every 3rd spell (every 9th battle)
-    const spellCount = player.spellbook ? player.spellbook.length : 0;
-    // Battle 1 / first spell → primary. All other spell battles → secondary.
-    // Legendary only comes from gym clears.
-    const tier = (battleNumber === 1 || spellCount === 0) ? 'primary' : 'secondary';
-    showSpellChoiceScreen(battleNumber, tier);
+    if (sub) sub.textContent = 'Choose a spell to add to your spellbook.';
+    showSpellChoiceScreen(battleNumber, 'secondary');
     return;
   }
-
-  // Stat reward
-  if (title) title.textContent = '✦ Victory ✦';
-  if (sub)   sub.textContent   = 'Choose a reward.';
-  _renderStatRewardChoices();
+  if (rewardType === 'minor') {
+    if (title) title.textContent = '✦ Minor Upgrade ✦';
+    if (sub) sub.textContent = 'Choose a stat upgrade.';
+    _currentRewardTier = 'minor';
+    _renderUpgradeChoices('minor');
+    showScreen('battle-reward-screen');
+    return;
+  }
+  if (rewardType === 'major') {
+    if (title) title.textContent = '✦ Major Upgrade ✦';
+    if (sub) sub.textContent = 'Choose your reward.';
+    _currentRewardTier = 'major';
+    _renderUpgradeChoices('major');
+    showScreen('battle-reward-screen');
+    return;
+  }
+  // fallback
+  if (title) title.textContent = '✦ Upgrade ✦';
+  if (sub) sub.textContent = 'Choose a reward.';
+  _currentRewardTier = 'minor';
+  _renderUpgradeChoices('minor');
   showScreen('battle-reward-screen');
 }
 
-function _renderStatRewardChoices() {
+function getZoneRewardType(battleSlot, gymIdx) {
+  if (gymIdx === 0) {
+    if (battleSlot === 1) return 'primary_spell';
+    if (battleSlot === 4) return 'secondary_spell';
+    if (battleSlot === 6) return 'rival';
+    if (battleSlot === 7) return 'secondary_spell';
+    if (battleSlot >= 8) return 'gym_available';
+    return battleSlot % 2 === 0 ? 'minor' : 'major';
+  } else {
+    if (battleSlot === 3) return 'secondary_spell';
+    if (battleSlot === 4) return 'rival';
+    if (battleSlot >= 8) return 'gym_available';
+    return battleSlot % 2 === 1 ? 'major' : 'minor';
+  }
+}
+
+function buildMinorUpgradePool() {
+  return [
+    { label:'+5 Attack Power', emoji:'⚔️', tag:'Minor Upgrade', desc:'Permanently gain +5 Attack Power.',
+      apply(){ player.attackPower += 5; } },
+    { label:'+5 Effect Power', emoji:'✦', tag:'Minor Upgrade', desc:'Permanently gain +5 Effect Power.',
+      apply(){ player.effectPower += 5; } },
+    { label:'+5 Defense', emoji:'🛡️', tag:'Minor Upgrade', desc:'Permanently gain +5 Defense.',
+      apply(){ player.defense += 5; } },
+    { label:'+15 Max HP', emoji:'❤️', tag:'Minor Upgrade', desc:'Permanently increase max HP by 15.',
+      apply(){ player.baseMaxHPBonus=(player.baseMaxHPBonus||0)+15; player.hp=Math.min(maxHPFor('player'),player.hp+15); } },
+    { label:'+40 Gold', emoji:'💰', tag:'Minor Upgrade', desc:'Gain 40 gold.',
+      apply(){ player.gold += 40; } },
+    { label:'Heal 30%', emoji:'💚', tag:'Minor Upgrade', desc:'Restore 30% of your max HP.',
+      apply(){ applyHeal('player', Math.floor(maxHPFor('player')*0.30), '✦ Minor Heal'); } },
+  ];
+}
+
+function buildMajorUpgradePool() {
+  return [
+    { label:'Extra Action', emoji:'⚡', tag:'Major Upgrade', desc:'Permanently gain +1 action per turn.',
+      apply(){ player.bonusActions = (player.bonusActions||0) + 1; log('⚡ Extra action per turn!','win'); } },
+    { label:'Extra Life', emoji:'❤️', tag:'Major Upgrade', desc:'Gain one extra life — survive a killing blow.',
+      apply(){ player.revives = (player.revives||0) + 1; log('❤ Extra life gained!','win'); } },
+    { label:'Extra Spell Slot', emoji:'📖', tag:'Major Upgrade', desc:'+1 spell slot in your active spellbook.',
+      apply(){ const b=activeBook(); if(b){ b.spellSlots++; log('📖 Spell slot added!','win'); } } },
+    { label:'Reroll Token', emoji:'🎲', tag:'Major Upgrade', desc:'Gain 1 reroll — re-draw any future reward screen.',
+      apply(){ player._rerolls = (player._rerolls||0) + 1; log('🎲 Reroll token!','win'); } },
+    { label:'+20 Max HP', emoji:'💪', tag:'Major Upgrade', desc:'Permanently gain +20 max HP.',
+      apply(){ player.baseMaxHPBonus=(player.baseMaxHPBonus||0)+20; player.hp=Math.min(maxHPFor('player'),player.hp+20); } },
+    { label:'Full Heal', emoji:'✨', tag:'Major Upgrade', desc:'Fully restore HP.',
+      apply(){ applyHeal('player', maxHPFor('player'), '✨ Major Heal'); } },
+  ];
+}
+
+function _renderUpgradeChoices(tier) {
   const cont = document.getElementById('br-choices');
   if (!cont) return;
   cont.innerHTML = '';
-  _currentRewardPool = buildStatRewardPool();
-  const chosen = pickRandom(_currentRewardPool, 3);
+  const pool = tier === 'major' ? buildMajorUpgradePool() : buildMinorUpgradePool();
+  const chosen = pickRandom(pool, Math.min(3, pool.length));
   chosen.forEach(opt => {
     const btn = document.createElement('button');
     btn.className = 'prog-choice-btn';
@@ -172,7 +223,6 @@ function _renderStatRewardChoices() {
     btn.onclick = () => { opt.apply(); updateStatsUI(); showMap(); };
     cont.appendChild(btn);
   });
-  // Reroll button
   const rerollBtn = document.getElementById('br-reroll-btn');
   const rerollCount = document.getElementById('br-reroll-count');
   if (rerollBtn) {
@@ -181,6 +231,20 @@ function _renderStatRewardChoices() {
   }
 }
 
+function _doGymRewardFlow() {
+  const hasAnyUnlocked = player.unlockedElements && player.unlockedElements.length > 0;
+  const allElements = Object.keys(STARTER_SPELL);
+  const locked = allElements.filter(e => e !== playerElement && !player.unlockedElements.includes(e));
+  if (!hasAnyUnlocked || locked.length > 0) {
+    showElementUnlockScreen('gym');
+  } else {
+    grantRandomLegendary();
+    showMap();
+  }
+}
+
+function _renderStatRewardChoices() { _renderUpgradeChoices(_currentRewardTier || 'minor'); }
+
 function rerollBattleReward() {
   if ((player._rerolls||0) <= 0) return;
   player._rerolls--;
@@ -188,8 +252,20 @@ function rerollBattleReward() {
 }
 
 // ── SPELL CHOICE (now standalone, called from reward flow) ──
-// processNextLevelUp kept as shim for element unlock / passive flow
-function processNextLevelUp(){ showMap(); }
+function processNextLevelUp(){
+  if(pendingLevelUps.length === 0){ showMap(); return; }
+  const ev = pendingLevelUps.shift();
+  if(ev.type === 'gym_legendary'){
+    grantRandomLegendary();
+    showMap();
+  } else if(ev.type === 'spellchoice'){
+    showSpellChoiceScreen(ev.level, ev.tier || 'secondary', ev.forElement || null);
+  } else if(ev.type === 'passivechoice'){
+    showPassiveChoiceScreen(ev.level);
+  } else {
+    showMap();
+  }
+}
 function showLevelUp(){ showMap(); }
 function closeLevelUp(){ showMap(); }
 
@@ -225,7 +301,7 @@ function buildSkillPointPool(){
 }
 
 // ── SPELL CHOICE ──
-function showSpellChoiceScreen(level, tier='secondary'){
+function showSpellChoiceScreen(level, tier='secondary', forElement=null){
   const tierLabel = tier==='primary'?'Primary Spell' : tier==='legendary'?'✦ Legendary Spell' : 'Spell';
   document.getElementById("sc-level-badge").textContent = typeof level === 'number' ? 'Battle '+level : String(level);
   document.querySelector('#spellchoice-screen .prog-title').textContent =
@@ -236,7 +312,7 @@ function showSpellChoiceScreen(level, tier='secondary'){
                           'Choose a spell to add to your arsenal.';
 
   const cont=document.getElementById("sc-choices"); cont.innerHTML="";
-  const pool=buildSpellChoicePool(tier);
+  const pool=buildSpellChoicePool(tier, forElement);
   if(pool.length===0){ processNextLevelUp(); return; }
   const chosen=pickRandom(pool, Math.min(3, pool.length));
   chosen.forEach(opt=>{
@@ -251,28 +327,34 @@ function showSpellChoiceScreen(level, tier='secondary'){
   showScreen("spellchoice-screen");
 }
 
-function buildSpellChoicePool(tier='secondary'){
+function buildSpellChoicePool(tier='secondary', forElement=null){
   const owned = new Set(player.spellbook.map(s=>s.id));
-  const elements = [playerElement, ...player.unlockedElements];
+  const elements = forElement ? [forElement] : [playerElement, ...player.unlockedElements];
   const pool = [];
+
+  // Build owned tag set for prerequisite checking
+  const ownedTagSet = new Set();
+  player.spellbook.forEach(s => {
+    const def = SPELL_CATALOGUE[s.id];
+    if(def && def.tags) def.tags.forEach(t => ownedTagSet.add(t));
+  });
 
   elements.forEach(el=>{
     Object.values(SPELL_CATALOGUE).forEach(s=>{
       if(s.element !== el) return;
       if(owned.has(s.id)) return;
-      if(s.isStarter) return;                       // starters are given, never chosen
-      const spellTier = s.tier || 'secondary';      // default to secondary if unmarked
-      if(spellTier === tier) pool.push(s);
+      if(s.isStarter) return;
+      if((s.tier || 'secondary') !== tier) return;
+      if(s.requiresTag && !ownedTagSet.has(s.requiresTag)) return;
+      pool.push(s);
     });
   });
 
-  // Neutral spells only appear in secondary pool
   if(tier === 'secondary'){
     NEUTRAL_SPELL_IDS.forEach(id=>{
       if(!owned.has(id)) pool.push(SPELL_CATALOGUE[id]);
     });
   }
-
   return pool;
 }
 
@@ -292,10 +374,12 @@ function showElementUnlockScreen(level){
       <div class="pc-desc">Unlocks ${el} spells and passives. Starter: ${starterSpell?starterSpell.emoji+' '+starterSpell.name:'—'}</div>`;
     btn.onclick=()=>{
       player.unlockedElements.push(el);
-      // Give starter spell for that element
       addSpellById(STARTER_SPELL[el]);
-      // Now show a spell choice for that element
-      pendingLevelUps.unshift({type:'spellchoice', level, forElement:el});
+      // Queue: spell choice in new element, then legendary
+      pendingLevelUps = [
+        { type:'spellchoice', level:'gym', tier:'secondary', forElement: el },
+        { type:'gym_legendary' }
+      ];
       processNextLevelUp();
     };
     c.appendChild(btn);
@@ -521,20 +605,33 @@ function hubPlay() {
   showBetweenRuns();
 }
 
-// ── BETWEEN RUNS (replaces gameover flow) ────────────────────────────────────
+// ── BETWEEN RUNS (lobby map) ──────────────────────────────────────────────────
 function showBetweenRuns() {
-  // Hide canvas unless we have a completed run to show
-  const canvas = document.getElementById('gameover-canvas');
-  if (canvas) canvas.style.display = playerElement ? 'block' : 'none';
+  stopLobbyMap();
   showScreen('between-runs-screen');
-  renderBrunLastRun();
-  switchBrunTab('history', document.querySelector('.brun-tab'));
+  const slotData = getActiveSlotData ? getActiveSlotData() : {};
+  if (slotData.wizardBuild && typeof _wizBuild !== 'undefined') {
+    _wizBuild = Object.assign({...WIZ_DEFAULTS}, slotData.wizardBuild);
+  }
+  setTimeout(showBetweenRuns_map, 50);
 }
 
 function lobbyStartRun() {
-  // From lobby New Run button — go to character select
-  // sandboxMode is already set by hubPlay/hubSandbox
-  showCharacterScreen();
+  stopLobbyMap();
+  const meta = getMeta();
+  const isFirstRun = !meta.totalRuns || meta.totalRuns === 0;
+  if (isFirstRun) {
+    showCharacterScreen();
+  } else {
+    const slotData = getActiveSlotData();
+    if (slotData.wizardBuild && typeof _wizBuild !== 'undefined') {
+      _wizBuild = Object.assign({...WIZ_DEFAULTS}, slotData.wizardBuild);
+    }
+    playerCharId = _wizBuild.archetype || slotData.savedCharId || 'arcanist';
+    const welcomeEl = document.getElementById('welcome-msg');
+    if (welcomeEl) welcomeEl.textContent = `${playerName}, choose your element`;
+    showElementScreen();
+  }
 }
 
 function renderBrunLastRun() {
@@ -988,7 +1085,7 @@ function beginRun(){
     totalXP:0, totalGold:0,
   });
   resetStatusForBattle();
-  battleNumber=1; currentGymIdx=0; zoneBattleCount=0; gymSkips=0; gymDefeated=false; pendingLevelUps=[];
+  battleNumber=1; currentGymIdx=0; zoneBattleCount=0; gymSkips=0; gymDefeated=false; pendingLevelUps=[]; _zoneRivalDefeated=false;
   _runDmgDealt = 0; _runDmgTaken = 0; _runRoomsCompleted = 0; _runZoneReached = '';
   initGymRoster();
   initZoneSpecial();

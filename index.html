@@ -149,19 +149,18 @@
 </div>
 
 <!-- BETWEEN RUNS -->
-<div id="between-runs-screen" class="screen">
-  <canvas id="gameover-canvas" style="image-rendering:pixelated;image-rendering:crisp-edges;max-width:420px;width:100%;border-radius:6px;margin-bottom:.6rem;"></canvas>
-  <div class="brun-last-run" id="brun-last-run"></div>
-  <div class="brun-tabs" id="brun-tabs">
-    <button class="brun-tab active" onclick="switchBrunTab('history',this)">📜 History</button>
-    <button class="brun-tab" onclick="switchBrunTab('books',this)">📖 Books</button>
-    <button class="brun-tab" onclick="switchBrunTab('artifacts',this)">🏺 Artifacts</button>
-    <button class="brun-tab" onclick="switchBrunTab('talents',this)">🌟 Talents</button>
-    <button class="brun-tab" onclick="switchBrunTab('wizards',this)">🧙 Wizards</button>
+<div id="between-runs-screen" class="screen" style="padding:0;overflow:hidden;position:relative;">
+  <!-- Map canvas -->
+  <canvas id="lobby-map-canvas" style="display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;cursor:default;"></canvas>
+
+  <!-- Overlay panels — shown one at a time over the map -->
+  <div id="lobby-panel" style="display:none;position:absolute;inset:0;background:#080608ee;overflow-y:auto;padding:1rem;">
+    <button onclick="closeLobbyPanel()" style="position:sticky;top:0;background:#0f0d0b;border:1px solid #3a2a10;color:#c8a060;font-family:'Cinzel',serif;font-size:.72rem;padding:.3rem .8rem;border-radius:4px;cursor:pointer;margin-bottom:.8rem;z-index:10;">← Map</button>
+    <div id="lobby-panel-content"></div>
   </div>
-  <div class="brun-tab-content" id="brun-tab-content"></div>
-  <button class="btn-main" style="width:220px;margin-top:.8rem;" onclick="lobbyStartRun()">⚔ New Run</button>
-  <button class="btn-back" style="width:220px;margin-top:.4rem;" onclick="showSaveSelect()">← Save Files</button>
+
+  <!-- Save Files button always visible -->
+  <button onclick="showSaveSelect()" style="position:absolute;bottom:.6rem;left:.6rem;background:#0a0806;border:1px solid #2a1a08;color:#4a3820;font-family:'Cinzel',serif;font-size:.6rem;padding:.25rem .6rem;border-radius:3px;cursor:pointer;z-index:5;">← Files</button>
 </div>
 
 <!-- BOOK OVERFLOW OVERLAY -->
@@ -394,6 +393,7 @@
 <script src="js/logic/progression.js"></script>
 
 <!-- Entry point -->
+<script src="js/rendering/lobbyMap.js"></script>
 <script src="js/main.js"></script>
 
 </body>

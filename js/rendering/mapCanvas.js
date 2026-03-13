@@ -111,8 +111,9 @@ function showMap(){
   const specials = [];
   if(gym && gymShouldAppear()) specials.push({ type:'gym', enc:{} });
 
-  // Rival at battle 4 — also a special node alongside encounters
-  if(zoneBattleCount === 4) specials.push({ type:'rival', enc:{} });
+  // Rival timing: battle 6 in first gym, battle 4 in all others
+  const rivalSlot = currentGymIdx === 0 ? 6 : 4;
+  if(zoneBattleCount === rivalSlot && !_zoneRivalDefeated) specials.push({ type:'rival', enc:{} });
 
   // Campfire / shop: replace ONE encounter slot (keeps total at 2 unless gym present)
   const zoneSpecial = _pickZoneSpecial();

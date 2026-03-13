@@ -41,13 +41,17 @@
     #element-screen h2{font-family:'Cinzel',serif;font-size:1.4rem;letter-spacing:.15em;text-transform:uppercase;margin-bottom:.4rem;}
     #element-screen .subtitle{color:#555;font-size:.8rem;letter-spacing:.1em;margin-bottom:2rem;}
     .element-grid{display:grid;grid-template-columns:repeat(4,140px);gap:14px;margin-bottom:1.5rem;}
-    @media(max-width:640px){
+    @media(max-width:680px){
+      body{font-size:16px;}
       .element-grid{grid-template-columns:repeat(2,1fr);gap:10px;width:100%;max-width:360px;}
       .element-card{padding:1.2rem .8rem 1rem;}
       .element-card .emoji{font-size:1.8rem;}
       .element-card .name{font-size:.68rem;}
       #title-screen h1{font-size:2rem;}
-      .btn-main,.txt-input{width:100%;max-width:320px;}
+      .btn-main,.txt-input,.btn-gym,.btn-gym-forced{width:100%;max-width:320px;}
+    }
+    @media(min-width:1400px){
+      body{font-size:20px;}
     }
     .element-card{position:relative;padding:1.6rem 1rem 1.2rem;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;background:linear-gradient(160deg,#2a2520 0%,#1a1512 40%,#0f0d0b 100%);border:none;outline:none;transition:transform .15s,filter .15s;clip-path:polygon(4px 0%,calc(100% - 6px) 2px,100% 5px,calc(100% - 2px) calc(100% - 4px),calc(100% - 5px) 100%,6px calc(100% - 2px),2px calc(100% - 6px),0% 4px);}
     .element-card::before{content:'';position:absolute;inset:-3px;background:linear-gradient(135deg,#6b5a3e,#3d3028,#5a4a35,#2a2018);clip-path:polygon(3px 0%,calc(100% - 5px) 1px,100% 4px,calc(100% - 1px) calc(100% - 3px),calc(100% - 4px) 100%,5px calc(100% - 1px),1px calc(100% - 5px),0% 3px);z-index:-1;}
@@ -606,6 +610,9 @@
       flex-shrink: 0;
     }
 
+    @media (max-height: 500px) {
+      .battle-arena { height: 160px; }
+    }
     @media (min-height: 680px) {
       .battle-arena { height: 280px; }
     }
@@ -1409,6 +1416,12 @@
 .brun-art-star { font-size:.65rem; }
 .brun-art-desc { color:#666; font-size:.6rem; margin-top:2px; }
 .brun-empty { color:#333; font-size:.7rem; text-align:center; padding:1.5rem 0; }
+
+/* ── Lobby Map ── */
+#between-runs-screen { background:#0a0608 !important; }
+#lobby-map-canvas { display:block; }
+.lobby-panel-title { font-family:'Cinzel',serif; font-size:1rem; color:#c8a060; letter-spacing:.12em; margin-bottom:.6rem; text-align:center; }
+.lobby-phos-bar { font-family:'Cinzel',serif; font-size:.72rem; color:#a080ff; text-align:center; margin-bottom:.8rem; }
 
 /* talent stub */
 .brun-talent-stub {

@@ -15,15 +15,15 @@ const STARTER_SPELL = {
 const SPELL_CATALOGUE = {
 
   // ════════════════════════════════ FIRE ══════════════════════════════════════
-  ignite:{ id:'ignite', tier:'primary', name:'Ignite', emoji:'🔥', element:'Fire',
+  ignite:{ id:'ignite', tier:'primary', name:'Ignite', emoji:'🔥', element:'Fire', tags:['burn'],
     desc:'Strike and heavily ignite the target', baseCooldown:1, isStarter:true,
     execute(s){ s.hit({baseDamage:5, effects:[{type:'burn',stacks:15}], abilityElement:'Fire'}); s.log('🔥 Ignite!','player'); }},
 
-  ember_storm:{ id:'ember_storm', tier:'primary', name:'Ember Storm', emoji:'🔥', element:'Fire',
+  ember_storm:{ id:'ember_storm', tier:'primary', name:'Ember Storm', emoji:'🔥', element:'Fire', tags:['burn'],
     desc:'Three rapid strikes, each fanning the flames', baseCooldown:2,
     execute(s){ s.hit({baseDamage:5, hits:3, effects:[{type:'burn',stacks:3}], abilityElement:'Fire'}); s.log('🔥 Ember Storm!','player'); }},
 
-  flame_wave:{ id:'flame_wave', tier:'primary', name:'Flame Wave', emoji:'🌊', element:'Fire',
+  flame_wave:{ id:'flame_wave', tier:'primary', name:'Flame Wave', emoji:'🌊', element:'Fire', tags:['burn'],
     desc:'Scorching wave washes over all enemies', baseCooldown:2,
     execute(s){ aliveEnemies().forEach((_,i)=>{ setActiveEnemy(combat.enemies.indexOf(aliveEnemies()[i])); s.hit({baseDamage:10, effects:[{type:'burn',stacks:5}], abilityElement:'Fire', isAOE:true}); }); s.log('🌊🔥 Flame Wave!','player'); }},
 
@@ -32,7 +32,7 @@ const SPELL_CATALOGUE = {
     execute(s){ status.player.firewallStacks = (status.player.firewallStacks||0) + 3; s.log('🔥 Firewall raised! +3 stacks','player'); }},
 
   // Secondary
-  grease_fire:{ id:'grease_fire', tier:'secondary', name:'Grease Fire', emoji:'🛢️', element:'Fire',
+  grease_fire:{ id:'grease_fire', tier:'secondary', name:'Grease Fire', emoji:'🛢️', element:'Fire', requiresTag:'burn',
     desc:'Fuel the fire — Burn erupts harder this round', baseCooldown:1,
     execute(s){
       status.enemy.burnStacks = (status.enemy.burnStacks||0) + 5;
@@ -40,7 +40,7 @@ const SPELL_CATALOGUE = {
       s.log('🛢️ Grease Fire! +5 Burn, double burn tick next round','player');
     }},
 
-  extinguish:{ id:'extinguish', tier:'secondary', name:'Extinguish', emoji:'💧', element:'Fire',
+  extinguish:{ id:'extinguish', tier:'secondary', name:'Extinguish', emoji:'💧', element:'Fire', requiresTag:'burn',
     desc:'Trigger burn, then douse both sides — damage from the ashes', baseCooldown:2,
     execute(s){
       const e = combat.enemies[combat.activeEnemyIdx];
@@ -59,7 +59,7 @@ const SPELL_CATALOGUE = {
       s.log(`💧 Extinguish! −${eRemoved} enemy burn, −${pRemoved} self burn, +${bonusDmg} dmg`,'player');
     }},
 
-  fire_heal:{ id:'fire_heal', tier:'secondary', name:'Fire Heal', emoji:'❤️‍🔥', element:'Fire',
+  fire_heal:{ id:'fire_heal', tier:'secondary', name:'Fire Heal', emoji:'❤️‍🔥', element:'Fire', requiresTag:'burn',
     desc:'Draw life from all fire on the battlefield', baseCooldown:2,
     execute(s){
       const total = totalEnemyBurnStacks() + (status.player.burnStacks||0);
@@ -67,7 +67,7 @@ const SPELL_CATALOGUE = {
       s.log(`❤️‍🔥 Fire Heal: +${total} HP from ${total} burn stacks`,'player');
     }},
 
-  fire_rage:{ id:'fire_rage', tier:'secondary', name:'Fire Rage', emoji:'😤', element:'Fire',
+  fire_rage:{ id:'fire_rage', tier:'secondary', name:'Fire Rage', emoji:'😤', element:'Fire', requiresTag:'burn',
     desc:'Channel the rage of fire into raw Power', baseCooldown:5,
     execute(s){
       const total = totalEnemyBurnStacks() + (status.player.burnStacks||0);
@@ -188,7 +188,7 @@ const SPELL_CATALOGUE = {
     }},
 
   // ════════════════════════════════ ICE ════════════════════════════════════════
-  frost_bolt:{ id:'frost_bolt', tier:'primary', name:'Frost Bolt', emoji:'❄️', element:'Ice',
+  frost_bolt:{ id:'frost_bolt', tier:'primary', name:'Frost Bolt', emoji:'❄️', element:'Ice', tags:['freeze'],
     desc:'Cold bolt that frosts the target', baseCooldown:0, isStarter:true,
     execute(s){ s.hit({baseDamage:12, effects:[], abilityElement:'Ice'}); applyFrost('player','enemy',2); s.log('❄️ Frost Bolt!','player'); }},
 
@@ -201,20 +201,20 @@ const SPELL_CATALOGUE = {
       s.log('🧊 Ice Block! Immune this round, 2 Frost to all enemies','player');
     }},
 
-  glacial_spike:{ id:'glacial_spike', tier:'primary', name:'Glacial Spike', emoji:'🗡️', element:'Ice',
+  glacial_spike:{ id:'glacial_spike', tier:'primary', name:'Glacial Spike', emoji:'🗡️', element:'Ice', tags:['freeze'],
     desc:'Heavy ice spike drives frost into the target', baseCooldown:2,
     execute(s){ s.hit({baseDamage:25, effects:[], abilityElement:'Ice'}); applyFrost('player','enemy',1); s.log('🗡️ Glacial Spike!','player'); }},
 
-  snowstorm:{ id:'snowstorm', tier:'primary', name:'Snowstorm', emoji:'🌨️', element:'Ice',
+  snowstorm:{ id:'snowstorm', tier:'primary', name:'Snowstorm', emoji:'🌨️', element:'Ice', tags:['freeze'],
     desc:'Blizzard sweeps all enemies with frost', baseCooldown:1,
     execute(s){ aliveEnemies().forEach((_,i)=>{ setActiveEnemy(combat.enemies.indexOf(aliveEnemies()[i])); s.hit({baseDamage:8, effects:[], abilityElement:'Ice', isAOE:true}); applyFrost('player','enemy',2); }); s.log('🌨️ Snowstorm!','player'); }},
 
   // Secondary
-  flash_freeze:{ id:'flash_freeze', tier:'secondary', name:'Flash Freeze', emoji:'❄️❄️', element:'Ice',
+  flash_freeze:{ id:'flash_freeze', tier:'secondary', name:'Flash Freeze', emoji:'❄️❄️', element:'Ice', requiresTag:'freeze',
     desc:'Rapidly stack Frost on the target', baseCooldown:3,
     execute(s){ applyFrost('player','enemy',5); s.log('❄️❄️ Flash Freeze! +5 Frost','player'); }},
 
-  shatter:{ id:'shatter', tier:'secondary', name:'Shatter', emoji:'💎', element:'Ice',
+  shatter:{ id:'shatter', tier:'secondary', name:'Shatter', emoji:'💎', element:'Ice', requiresTag:'freeze',
     desc:'Shatter a frozen target for massive damage — or pop Frost stacks', baseCooldown:2,
     execute(s){
       const e = combat.enemies[combat.activeEnemyIdx];
@@ -355,8 +355,14 @@ const SPELL_CATALOGUE = {
         const selfDmg = target.enemyDmg || 10;
         s.log(`💡 Short Circuit! ${target.name}'s attack backfires — ${selfDmg} self damage!`,'player');
         target.hp = Math.max(0, target.hp - selfDmg);
-        if(target.hp <= 0){ target.alive = false; log(`💀 ${target.name} defeated by own attack!`,'win'); }
-        renderEnemyCards();
+        if(target.hp <= 0){
+          target.alive = false;
+          log(`💀 ${target.name} defeated by own attack!`,'win');
+          renderEnemyCards();
+          if(aliveEnemies().length===0 && !combat.over){ endBattle(true); return; }
+        } else {
+          renderEnemyCards();
+        }
       } else {
         // Debuff cancelled → enemy applies it to themselves (simulate as stun)
         target.status.stunned = Math.max(target.status.stunned||0, 1);

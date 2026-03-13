@@ -226,6 +226,7 @@ let _runDmgTaken  = 0;          // total damage player took this run
 let _runRoomsCompleted = 0;     // rooms cleared this run
 let _runZoneReached = '';       // last zone element entered
 let zoneBattleCount = 0;        // battles fought in current gym's zone (resets after each gym)
+let _zoneRivalDefeated = false; // rival fight doesn't count as a zone battle slot
 let gymSkips = 0;               // times player skipped gym this zone (resets per gym)
 let gymDefeated = false;        // true when ALL 8 gyms are beaten
 let pendingLevelUps=[];
