@@ -9,12 +9,14 @@
 
 const _MP3_KEYS = new Set([
   'menu',
+  'map',
   'battle_Fire', 'battle_Lightning',
   'battle_Plasma', 'battle_Air', 'battle_Nature', 'battle_Ice', 'battle_Water',
 ]);
 
 const _MP3_PATHS = {
   menu:              'audio/menu.mp3',
+  map:               'audio/map.mp3',
   battle_Fire:       'audio/fire.mp3',
   battle_Lightning:  'audio/lightning.mp3',
   battle_Plasma:     'audio/Wizard League Plasma Theme .mp3',
@@ -37,7 +39,7 @@ function _getAudioEl() {
     _mp3El        = new Audio();
     _mp3El.loop   = true;
     _mp3El.volume = 0;
-    _mp3El.muted  = !_musicEnabled;
+    _mp3El.muted  = false;
   }
   return _mp3El;
 }
@@ -73,7 +75,7 @@ function _mp3FadeOut(el, onDone) {
 // ── Play an MP3 key (resume if previously paused) ─────────────────────────────
 function _mp3Play(key) {
   const el  = _getAudioEl();
-  el.muted  = !_musicEnabled;
+  el.muted = false;
 
   if (_mp3Key !== key) {
     el.src         = _MP3_PATHS[key];
