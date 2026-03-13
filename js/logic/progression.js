@@ -1303,8 +1303,6 @@ function _cloudPlatform(ctx, cx, cy, w, h, bright) {
   ctx.fillRect(l + 1, bodyTop, w - 2, 1);
 }
 
-function _airTree(ctx, cx, baseY, sc) {}
-
 // ──────────────────────────────────────────────────────────────────────────────
 // DISPATCHER
 // ──────────────────────────────────────────────────────────────────────────────

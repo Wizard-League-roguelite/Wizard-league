@@ -107,23 +107,16 @@
     /* COMBAT */
     #combat-screen{gap:0;justify-content:flex-start;padding-top:1.2rem;}
     .combat-header{font-family:'Cinzel',serif;font-size:.65rem;letter-spacing:.2em;color:#444;text-transform:uppercase;margin-bottom:.8rem;text-align:center;}
-    .combatants{display:flex;justify-content:space-between;align-items:flex-start;width:100%;max-width:980px;margin-bottom:.8rem;gap:.8rem;}
-    .fighter-card{flex:1;background:#0f0d0b;border:1px solid #1e1a15;border-radius:6px;padding:1.2rem 1.2rem;text-align:center;}
     .fighter-card .f-label{font-size:.56rem;color:#444;letter-spacing:.15em;text-transform:uppercase;margin-bottom:.2rem;}
     .fighter-card .f-name{font-family:'Cinzel',serif;font-size:1.05rem;margin-bottom:.12rem;}
     .fighter-card .f-emoji{font-size:2.6rem;margin:.35rem 0;display:block;}
     .fighter-card .f-element{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem;}
-    .hp-label{display:flex;justify-content:space-between;font-size:.6rem;color:#666;margin-bottom:3px;}
-    .hp-bar{height:10px;background:#1a1a1a;border-radius:2px;overflow:hidden;}
-    .hp-fill{height:100%;background:#3a8a3a;border-radius:2px;transition:width .35s ease,background .35s;}
-    .status-row{min-height:16px;margin-top:5px;display:flex;flex-wrap:wrap;gap:3px;justify-content:center;}
     .status-tag{font-size:.55rem;padding:1px 5px;border-radius:10px;letter-spacing:.04em;}
     .tag-burn{background:#3a1010;color:#ff6644;border:1px solid #6a2010;}
     .tag-stun{background:#1a1a3a;color:#8888ff;border:1px solid #3a3a6a;}
     .tag-root{background:#0a2010;color:#44aa44;border:1px solid #1a5a2a;}
     .tag-block{background:#1a1508;color:#c8a030;border:1px solid #4a3a10;}
     .tag-phase{background:#1a0a2a;color:#cc88ff;border:1px solid #5a2a8a;}
-    .vs-label{color:#333;font-family:'Cinzel',serif;font-size:1rem;align-self:center;flex-shrink:0;}
     .battle-log{width:100%;max-width:980px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:6px;padding:.65rem .85rem;height:160px;overflow-y:auto;margin-bottom:.8rem;display:flex;flex-direction:column;gap:2px;}
     .log-line{font-size:.72rem;color:#666;line-height:1.5;}
     .log-line.player{color:#aaa;} .log-line.enemy{color:#884444;} .log-line.system{color:#446688;font-style:italic;}
@@ -392,33 +385,6 @@
       letter-spacing: .04em; font-family: 'Cinzel', serif;
     }
 
-    /* Inventory panel on parchment */
-    .inv-panel{
-      background: #f2e0b8;
-      border: none;
-      border-top: 1px solid #c8a060;
-      border-radius: 0 0 8px 0;
-      padding:.5rem;
-      display:none;
-      flex-direction:column;
-      gap:4px;
-    }
-    .inv-panel.open{display:flex;}
-    .inv-item-btn{
-      background:#e8d090;
-      border:1px solid #8a6020;
-      color:#3a1a05;
-      padding:.4rem .7rem;
-      font-family:Georgia,serif;
-      font-size:.72rem;
-      cursor:pointer;
-      border-radius:3px;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-    }
-    .inv-item-btn:hover{background:#d4b870;}
-
     /* Old compat */
     .spell-area{width:100%;max-width:980px;}
     .turn-indicator{font-size:.8rem;color:#555;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem;text-align:center;}
@@ -480,11 +446,6 @@
     .end-turn-btn.ready{border-color:#8a6a30;color:#e8c070;}
 
     /* CONFIRM MODAL */
-    .boo-spell-btn{width:100%;background:#0f0d0b;border:1px solid #2a2020;color:#aaa;padding:.45rem .7rem;font-family:'Cinzel',serif;font-size:.72rem;cursor:pointer;border-radius:4px;display:flex;justify-content:space-between;align-items:center;transition:background .15s,border-color .15s;}
-    .boo-spell-btn:hover{background:#1a1410;border-color:#8a3a20;}
-    .boo-remove-hint{font-size:.6rem;color:#6a3a20;letter-spacing:.06em;text-transform:uppercase;}
-    .boo-spell-btn:hover .boo-remove-hint{color:#e84a4a;}
-    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center;}
     .modal-overlay.open{display:flex;}
     .modal-box{background:#0f0d0b;border:1px solid #3a2a18;border-radius:8px;padding:1.6rem 2rem;text-align:center;max-width:300px;}
     .modal-box h4{font-family:'Cinzel',serif;font-size:1rem;margin-bottom:.6rem;color:#c8a060;}

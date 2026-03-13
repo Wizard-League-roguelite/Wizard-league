@@ -233,16 +233,7 @@ let _wizBuild = {...WIZ_DEFAULTS};
 function _applyWizBuild(patch) {
   Object.assign(_wizBuild, patch);
   patchActiveSlot({ wizardBuild: _wizBuild });
-  _renderWizPreview();
-  if (patch.archetype) {
-    // Refresh archetype section so selection indicator updates
-    const secEl = document.getElementById('wiz-section-archetype');
-    if (secEl) {
-      const inner = secEl.querySelector('.wiz-opts');
-      if (inner) inner.innerHTML = _buildArchetypeOpts();
-    }
-    _renderWizBoon();
-  }
+  _renderWizBuilder();
 }
 
 function showCharacterScreen() {

@@ -125,8 +125,6 @@ function defenseFor(side){
 // Legacy: enemies use scaledPower as a single composite stat
 function enemyPower(){ return enemyScaledStat(); }
 
-// Compat shim — anything that hasn't been updated yet uses attackPower
-function powerFor(side, targetSide){ return attackPowerFor(side, targetSide); }
 function burnDmgPerStack(side){
   const legendary = (side==='player' && hasPassive('fire_roaring_heat')) ||
                     (side==='enemy'   && enemyHasPassive('fire_roaring_heat'));
@@ -285,8 +283,6 @@ function advanceToNextGym(){
   if(currentGymIdx >= GYM_ROSTER.length) gymDefeated = true;
   initZoneSpecial(); // schedule the campfire/shop for new zone
 }
-function hpColor(pct){ return pct>50?"#3a8a3a":pct>25?"#8a7a1a":"#8a2a2a"; }
-
 // ── Status application helpers ────────────────────────────────────────────────
 function applyFrost(attackerSide, defenderSide, stacks){
   if(attackerSide==='player' && hasPassive('ice_stay_frosty')) stacks++;

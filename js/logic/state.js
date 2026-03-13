@@ -216,7 +216,6 @@ function setActiveEnemy(idx){
   if(!combat.enemies[idx]) return;
   combat.activeEnemyIdx = idx;
   combat.enemy = combat.enemies[idx];
-  combat.enemyHP = combat.enemies[idx].hp;
   status.enemy = combat.enemies[idx].status;
 }
 
