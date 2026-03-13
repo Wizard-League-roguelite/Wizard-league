@@ -11,6 +11,10 @@ function musicStop() {}
 // Get the live MP3 element safely (declared later in mp3audio.js)
 function _getVol() { return (typeof _mp3El !== 'undefined' && _mp3El) ? _mp3El : null; }
 
+function _saveVolPrefs() {
+  try { localStorage.setItem('wl_vol', JSON.stringify({ level: _volumeLevel, muted: _mutedByBtn })); } catch(e) {}
+}
+
 function volumeSet(val) {
   const v = Math.max(0, Math.min(100, Number(val))) / 100;
   _volumeLevel  = v;
@@ -19,6 +23,7 @@ function volumeSet(val) {
   const el = _getVol();
   if (el) el.volume = v;
   _updateVolIcon();
+  _saveVolPrefs();
 }
 
 function volumeToggleMute() {
@@ -46,6 +51,7 @@ function volumeToggleMute() {
     if (el) el.volume = 0;
   }
   _updateVolIcon();
+  _saveVolPrefs();
 }
 
 function _updateVolIcon() {
@@ -59,4 +65,19 @@ function musicToggle() {
   volumeToggleMute();
   return _musicEnabled;
 }
+
+// Restore saved volume on page load
+(function(){
+  try {
+    const saved = JSON.parse(localStorage.getItem('wl_vol'));
+    if (saved) {
+      _volumeLevel  = saved.level ?? 0.5;
+      _mutedByBtn   = saved.muted ?? false;
+      _musicEnabled = !_mutedByBtn && _volumeLevel > 0;
+      const slider = document.getElementById('vol-slider');
+      if (slider) slider.value = Math.round(_volumeLevel * 100);
+      _updateVolIcon();
+    }
+  } catch(e) {}
+})();
 
