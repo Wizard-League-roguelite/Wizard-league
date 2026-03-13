@@ -1,0 +1,726 @@
+// ===== combat.js =====
+// ─── COMBAT LOOP ──────────────────────────────────────────────────────────────
+// startRound, queue system, endBattle, summon attacks.
+// Calls into hit.js for damage resolution.
+
+// ===============================
+// QUEUE-BASED SIMULTANEOUS SYSTEM
+// ===============================
+// Player queues up to N actions, then presses End Turn.
+// Enemy simultaneously queues its actions.
+// Both sides resolve action-by-action with a short delay between each pair.
+
+function startRound(){
+  if(combat.over) return;
+
+  // ── Tick player CDs ──
+  if(combat.basicCD>0) combat.basicCD--;
+  player.spellbook.forEach(s=>{ if(s.currentCD>0) s.currentCD--; });
+
+  // ── Apply pending 1-turn power bonuses (Overcharge/Feedback) ──
+  // Clear last round's bonus first, then promote pending to this-turn bonus.
+  status.player.nextTurnPowerBonus = 0;
+  if(status.player.overchargePowerPending > 0){
+    status.player.nextTurnPowerBonus = status.player.overchargePowerPending;
+    log(`⚡ +${status.player.overchargePowerPending} Power this turn (Overcharge/Feedback)`, 'status');
+    status.player.overchargePowerPending = 0;
+    // Note: player.power is NOT mutated — this bonus expires at next round start
+  }
+
+  // ── Charge Shot auto-fire ──
+  if(status.player.chargeShotCharging){
+    status.player.chargeShotCharging = false;
+    const csDmg = 50 + attackPowerFor('player','enemy');
+    aliveEnemies().forEach(e=>{
+      setActiveEnemy(combat.enemies.indexOf(e));
+      applyDirectDamage('player','enemy', csDmg, '🎯⚡ Charge Shot');
+    });
+    log(`🎯⚡ Charge Shot FIRES! ${csDmg} dmg to all`, 'player');
+    if(combat.over) return;
+  }
+
+  // ── Per-enemy round ticks ──
+  combat.enemies.forEach((e,i)=>{
+    if(!e.alive) return;
+    setActiveEnemy(i);
+    if(e.basicCD>0) e.basicCD--;
+
+    // Tick ability cooldowns
+    if(e.abilities) e.abilities.forEach(a=>{ if(a.cd>0) a.cd--; });
+    // Tick static field
+    if(e._staticFieldTurns > 0){
+      e._staticFieldTurns--;
+      if(e._staticFieldTurns <= 0 && e._staticPowerBonus){
+        e.scaledPower = Math.max(0, e.scaledPower - e._staticPowerBonus);
+        e._staticPowerBonus = 0;
+        log(`🌩️ ${e.name}'s Static Field fades.`, 'status');
+      }
+    }
+
+    // Shock: promote pending
+    e.status.shockStacks = e.status.shockPending||0;
+    e.status.shockPending = 0;
+
+    // Foam expires
+    if(e.status.foamStacks>0) e.status.foamStacks--;
+
+    // Root decay
+    if(e.status.rootStacks>0) e.status.rootStacks--;
+
+    // Stone stance reset + decay (25%, skip if Living Mountain enemy)
+    e.status.stoneStanceThisTurn = false;
+    if(e.status.stoneStacks>0){
+      const decay = Math.max(1, Math.floor(e.status.stoneStacks*0.25));
+      e.status.stoneStacks = Math.max(0, e.status.stoneStacks - decay);
+    }
+
+    // Wildfire: 33% chance to double enemy burn
+    if(hasPassive('fire_wildfire') && e.status.burnStacks>0 && Math.random()<0.33){
+      e.status.burnStacks *= 2;
+      log(`🌪️ Wildfire! ${e.name} burn ×2 (×${e.status.burnStacks})`, 'status');
+    }
+
+    // Burn tick (1 or 1.5 per stack; Grease Fire doubles once)
+    if(e.status.burnStacks>0){
+      const grease = status.player.greasefirePending;
+      const mult = grease ? 2 : 1;
+      if(grease){ status.player.greasefirePending = false; log('🛢️ Grease Fire: burn tick doubled!','status'); }
+      const bdmg = Math.ceil(e.status.burnStacks * burnDmgPerStack('player') * mult);
+      if(bdmg>0) applyEffectDamage('player','enemy', bdmg, '🔥 Burn');
+      if(combat.over) return;
+    }
+
+    // Frost tick (1 or 3 per stack; skip while frozen)
+    if(e.status.frostStacks>0 && !e.status.frozen){
+      const frostPer = hasPassive('ice_permafrost_core') ? 3 : 1;
+      const fdmg = e.status.frostStacks * frostPer;
+      if(fdmg>0) applyEffectDamage('player','enemy', fdmg, `❄️ Frost (×${e.status.frostStacks})`);
+      if(combat.over) return;
+    }
+
+    // Frozen Ground: apply 2 Frost to all enemies for N rounds
+    if(status.player.frozenGroundTurns > 0){
+      applyFrost('player','enemy', 2);
+    }
+  });
+  if(combat.over) return;
+
+  // Frozen Ground countdown
+  if(status.player.frozenGroundTurns > 0){
+    status.player.frozenGroundTurns--;
+    if(status.player.frozenGroundTurns===0) log('❄️ Frozen Ground fades.', 'status');
+  }
+
+  // Spreading Vines: 1 root to all enemies + 1 armor for N rounds
+  if(status.player.spreadingVinesTurns > 0){
+    aliveEnemies().forEach(e=>{
+      setActiveEnemy(combat.enemies.indexOf(e));
+      applyRoot('player','enemy', 1);
+    });
+    gainBlock('player', 1);
+    status.player.spreadingVinesTurns--;
+    if(status.player.spreadingVinesTurns===0) log('🌿 Spreading Vines fades.', 'status');
+  }
+
+  // ── Player per-round ticks ──
+  status.player.shockStacks = status.player.shockPending||0;
+  status.player.shockPending = 0;
+  if(status.player.foamStacks>0) status.player.foamStacks--;
+  if(status.player.rootStacks>0) status.player.rootStacks--;
+  status.player.stoneStanceThisTurn = false;
+  if(status.player.stoneStacks>0 && !hasPassive('earth_living_mountain')){
+    const decay = Math.max(1, Math.floor(status.player.stoneStacks*0.25));
+    status.player.stoneStacks = Math.max(0, status.player.stoneStacks - decay);
+  }
+  if(status.player.debuffImmune>0) status.player.debuffImmune--;
+  if(status.player.rageBoostTurns>0){
+    status.player.rageBoostTurns--;
+    if(status.player.rageBoostTurns===0) status.player.rageBoostPow=0;
+  }
+
+  // Fortify: convert pending armor into Stone stacks (1 stack per 5 armor)
+  if(status.player.fortifyPending>0){
+    const armorLeft = Math.min(status.player.fortifyPending, status.player.block||0);
+    const stacks = Math.max(1, Math.floor(armorLeft/5));
+    status.player.block = Math.max(0, (status.player.block||0) - armorLeft);
+    status.player.fortifyPending = 0;
+    addStoneStacks('player', stacks);
+    log(`🏰 Fortify breaks — ${armorLeft} Armor → ${stacks} Stone stacks`, 'status');
+  }
+
+  // Player burn tick
+  if(status.player.burnStacks>0){
+    const anyEnemy = combat.enemies.find(e=>e.alive);
+    if(anyEnemy) setActiveEnemy(combat.enemies.indexOf(anyEnemy));
+    const bdmg = Math.ceil(status.player.burnStacks * burnDmgPerStack('enemy'));
+    if(bdmg>0){ applyEffectDamage('enemy','player', bdmg, '🔥 Burn'); if(combat.over) return; }
+  }
+
+  // Player frost tick
+  if(status.player.frostStacks>0 && !status.player.frozen){
+    const frostPer = enemyHasPassive('ice_permafrost_core') ? 3 : 1;
+    const fdmg = status.player.frostStacks * frostPer;
+    if(fdmg>0){ applyEffectDamage('enemy','player', fdmg, `❄️ Frost (×${status.player.frostStacks})`); if(combat.over) return; }
+  }
+
+  // Restore target reference
+  if(!combat.enemies[combat.targetIdx]||!combat.enemies[combat.targetIdx].alive)
+    combat.targetIdx=firstAliveIdx();
+  setActiveEnemy(combat.targetIdx);
+
+  // ── Zone passive tick ──
+  applyZoneTick();
+  if(combat.over) return;
+
+  // Summon auto-attacks
+  resolveSummonAttacks();
+  if(combat.over) return;
+
+  // Player stunned: skip planning, all enemies act
+  if(status.player.stunned>0){
+    status.player.stunned--;
+    log(`${playerEmoji} You are stunned — skip your turn!`,'status');
+    renderStatusTags();
+    setPlayerTurnUI(false);
+    let delay=400;
+    combat.enemies.forEach((e,i)=>{
+      if(!e.alive) return;
+      setTimeout(()=>{ if(combat.over) return; setActiveEnemy(i); executeOneEnemyAction(i); }, delay);
+      delay+=300;
+    });
+    setTimeout(startRound, delay+200);
+    return;
+  }
+
+  combat.turnInBattle++;
+  combat.actionQueue=[];
+  combat.actionsLeft=actionsPerTurnFor('player') + artifactExtraActions();
+  combat.plasmaChargeReserved = 0; // reset reserved charge each new round
+
+  // ── Plasma: round-start charge management ──
+  if(playerElement === 'Plasma'){
+    // Stall regain
+    if(status.player.stallActive){
+      status.player.stallActive = false;
+      const regain = status.player.stallCharge || 0;
+      status.player.stallCharge = 0;
+      status.player.plasmaCharge = (status.player.plasmaCharge||0) + regain;
+      log(`🫧 Stall ends — regained ${regain} Charge (${status.player.plasmaCharge} total)`, 'status');
+    }
+    // Borrowed Power penalty
+    if(status.player.borrowedCharge > 0){
+      const penalty = status.player.borrowedCharge * 50;
+      status.player.borrowedCharge = 0;
+      applyEffectDamage('enemy','player', penalty, '⏳ Borrowed Power debt');
+      if(combat.over) return;
+    }
+    // Stabilized Core: +3 charge per turn start (passive only)
+    if(hasPassive('plasma_stabilized_core')){
+      status.player.plasmaCharge = (status.player.plasmaCharge||0) + 3;
+      log(`🔋 Stabilized Core: +3 Charge → ${status.player.plasmaCharge}`, 'status');
+    }
+    // Overcharge check: >= 20 at turn start
+    combat.plasmaOvercharged = (status.player.plasmaCharge||0) >= 20;
+    if(combat.plasmaOvercharged) log('✦ OVERCHARGE! Plasma abilities 1.5× this turn.', 'status');
+    // (Plasma Shield reduction persists the whole battle — only reset in loadBattle)
+    // Energy Feedback: power bonus from current charge
+    if(hasPassive('plasma_energy_feedback')){
+      // This is applied dynamically in attackPowerFor — just log it
+      log(`⚡ Energy Feedback: +${status.player.plasmaCharge} Power from Charge`, 'status');
+    }
+    updateChargeUI();
+  }
+  renderEnemyCards();
+  renderQueue();
+  updateActionUI();
+  setPlayerTurnUI(true);
+}
+
+// ===============================
+// QUEUE-BASED SIMULTANEOUS SYSTEM
+// ===============================
+function queueAction(label, fn){
+  if(!combat.playerTurn||combat.over) return;
+  if(combat.actionQueue.length>=combat.actionsLeft) return;
+  const snapTarget = combat.targetIdx;
+  combat.actionQueue.push({label, fn, targetIdx:snapTarget, isPlasma:false});
+  renderQueue();
+  updateActionUI();
+  renderSpellButtons();
+}
+
+// Plasma abilities: bypass action cap, only gate by charge reserved
+function queuePlasmaAction(label, fn, chargeToReserve, spellId){
+  if(!combat.playerTurn||combat.over) return;
+  const avail = (status.player.plasmaCharge||0) - (combat.plasmaChargeReserved||0);
+  if(chargeToReserve > 0 && avail < chargeToReserve) return;
+  const snapTarget = combat.targetIdx;
+  combat.plasmaChargeReserved = (combat.plasmaChargeReserved||0) + (chargeToReserve||0);
+  combat.actionQueue.push({label, fn, targetIdx:snapTarget, isPlasma:true, chargeReserved: chargeToReserve||0, spellId: spellId||null});
+  renderQueue();
+  updateActionUI();
+  renderSpellButtons();
+}
+
+function removeFromQueue(idx){
+  if(!combat.playerTurn||combat.over) return;
+  const a = combat.actionQueue[idx];
+  if(a && a.undoCD) a.undoCD();
+  // Refund reserved Plasma charge
+  if(a && a.isPlasma && a.chargeReserved > 0){
+    combat.plasmaChargeReserved = Math.max(0, (combat.plasmaChargeReserved||0) - a.chargeReserved);
+    updateChargeUI();
+  }
+  combat.actionQueue.splice(idx,1);
+  renderQueue();
+  updateActionUI();
+  renderSpellButtons();
+}
+
+function renderQueue(){
+  const slots=document.getElementById("queue-slots");
+  const endBtn=document.getElementById("end-turn-btn");
+  if(!slots) return;
+  slots.innerHTML="";
+  if(!combat.actionQueue||combat.actionQueue.length===0){
+    slots.innerHTML='<span class="queue-empty">No actions queued — select actions below</span>';
+  } else {
+    combat.actionQueue.forEach((a,i)=>{
+      const s=document.createElement("div"); s.className="queue-slot";
+      const tname = combat.enemies[a.targetIdx]?` → ${combat.enemies[a.targetIdx].name}`:'';
+      s.innerHTML=`${a.label}${tname} <span class="qs-x">✕</span>`;
+      s.onclick=()=>removeFromQueue(i);
+      slots.appendChild(s);
+    });
+  }
+  if(endBtn){
+    const hasActions=combat.actionQueue&&combat.actionQueue.length>0;
+    endBtn.disabled=!combat.playerTurn||combat.over||!hasActions;
+    endBtn.className=hasActions?'end-turn-btn ready':'end-turn-btn';
+    endBtn.textContent=hasActions
+      ?`⚔ End Turn — Resolve ${combat.actionQueue.length} Action${combat.actionQueue.length>1?'s':''}`
+      :'⚔ End Turn';
+  }
+}
+
+function updateActionUI(){
+  const el=document.getElementById("turn-indicator");
+  const slotsTxt=document.getElementById("queue-slots-left");
+  if(!el) return;
+  if(combat.playerTurn){
+    const queued=combat.actionQueue?combat.actionQueue.length:0;
+    const total=combat.actionsLeft||0;
+    const alive=aliveEnemies();
+    const tgt=combat.enemies[combat.targetIdx];
+    el.textContent=`Planning — Target: ${tgt?tgt.name:'?'} (${alive.length} alive)`;
+    if(slotsTxt) slotsTxt.textContent=`(${queued}/${total} queued)`;
+  } else {
+    el.textContent=`Resolving...`;
+    if(slotsTxt) slotsTxt.textContent='';
+  }
+}
+
+// Player hits End Turn — build all enemy queues then resolve
+function queueSwitchBook(bookIdx) {
+  if (!combat.playerTurn || combat.over) return;
+  const book = player.spellbooks[bookIdx];
+  if (!book) return;
+  queueAction('📖 ' + book.name, () => {
+    switchBook(bookIdx);
+    renderSpellButtons();
+    updateActionUI();
+  });
+}
+
+function commitEndTurn(){
+  if(!combat.playerTurn||combat.over) return;
+  if(!combat.actionQueue||combat.actionQueue.length===0) return;
+  setPlayerTurnUI(false);
+
+  // Split player queue: non-Plasma first, Plasma last
+  const allPlayerActions = [...combat.actionQueue];
+  combat.actionQueue = [];
+  renderQueue();
+
+  const normalPlayerActions = allPlayerActions.filter(a => !a.isPlasma);
+  const plasmaPlayerActions = allPlayerActions.filter(a => a.isPlasma);
+
+  // Each enemy builds its own independent queue (same count as normal player actions)
+  const enemyActionCount = actionsPerTurnFor('enemy');
+  const allEnemyQueues = combat.enemies.map((e,i) => {
+    if(!e.alive) return [];
+    return buildEnemyQueueFor(i, enemyActionCount);
+  });
+
+  // Priority sort among non-Plasma participants
+  const participants = [];
+  if(normalPlayerActions.length > 0)
+    participants.push({ id:'player', queue:normalPlayerActions, hp:player.hp, power:player.attackPower });
+  combat.enemies.forEach((e,i) => {
+    if(!e.alive) return;
+    participants.push({ id:'enemy_'+i, idx:i, queue:allEnemyQueues[i]||[], hp:e.hp, power:e.scaledPower||0 });
+  });
+
+  participants.sort((a,b) => {
+    if(b.queue.length !== a.queue.length) return b.queue.length - a.queue.length;
+    if(a.hp !== b.hp) return a.hp - b.hp;
+    return a.power - b.power;
+  });
+
+  // Log initiative order
+  const names = participants.map(p => {
+    const name = p.id==='player' ? playerName : combat.enemies[p.idx].name;
+    return (p.id==='player'?'🟢':'🔴') + name + '(' + p.queue.length + ')';
+  });
+  if(plasmaPlayerActions.length > 0) names.push('🔮Plasma('+plasmaPlayerActions.length+')');
+  log('Initiative: ' + names.join(' → '), 'system');
+
+  // Weave non-Plasma into flat interleaved list
+  const flatActions = [];
+  const maxLen = Math.max(...participants.map(p=>p.queue.length), 0);
+  for(let slot=0; slot<maxLen; slot++){
+    participants.forEach(p => {
+      if(slot < p.queue.length) flatActions.push({p, action:p.queue[slot]});
+    });
+  }
+
+  // Plasma actions go at the very end
+  plasmaPlayerActions.forEach(a => {
+    flatActions.push({p:{id:'player'}, action:a, isPlasmaFinal:true});
+  });
+
+  resolveFlat(flatActions, 0);
+}
+
+function resolveFlat(flatActions, idx){
+  if(idx >= flatActions.length){
+    // All actions done — now check deferred death
+    if(player.hp <= 0 && !combat.over){
+      endBattle(false);
+      return;
+    }
+    if(combat.over) return;
+    if(!combat.enemies[combat.targetIdx]||!combat.enemies[combat.targetIdx].alive)
+      combat.targetIdx=firstAliveIdx();
+    setActiveEnemy(combat.targetIdx);
+    setTimeout(startRound, 650);
+    return;
+  }
+
+  const {p, action, isPlasmaFinal} = flatActions[idx];
+  const next = ()=>{ if(!combat.over) setTimeout(()=>resolveFlat(flatActions, idx+1), 320); };
+
+  if(p.id === 'player'){
+    const snapTgt = action.targetIdx != null ? action.targetIdx : combat.targetIdx;
+    combat.targetIdx = snapTgt;
+    setActiveEnemy(snapTgt);
+    action.fn();
+    updateHPBars(); renderStatusTags();
+    if(!isPlasmaFinal && player.hp <= 0 && !combat.over){
+      log('💀 You dropped to 0 HP — Plasma heals may save you!', 'status');
+    }
+    next();
+  } else {
+    const eIdx = p.idx;
+    if(!combat.enemies[eIdx]||!combat.enemies[eIdx].alive){ next(); return; }
+    setActiveEnemy(eIdx);
+    if(combat.enemies[eIdx].status.stunned > 0){
+      combat.enemies[eIdx].status.stunned--;
+      log(combat.enemies[eIdx].emoji + ' ' + combat.enemies[eIdx].name + ' is stunned!', 'status');
+      renderStatusTags();
+    } else {
+      action.fn();
+      updateHPBars(); renderStatusTags();
+    }
+    next();
+  }
+}
+
+function buildEnemyQueueFor(idx, count){
+  const e=combat.enemies[idx];
+  const q=[];
+  const cdPenalty=enemyCooldownPenaltyFor(idx);
+  let cd=e.basicCD;
+  for(let j=0;j<count;j++){
+    if(cd<=0){
+      const snapIdx=idx;
+      const isGymEnemy = !!combat.enemies[idx].isGym;
+      if(isGymEnemy){
+        const gymE = combat.enemies[idx];
+        if(!gymE.gymPhase2 && gymE.hp <= gymE.enemyMaxHP * 0.5){
+          gymE.gymPhase2 = true;
+          gymE.enemyDmg = gymE.gymPhase2Dmg;
+          if(gymE.gymPhase2Passive && gymE.gymPhase2Passive !== gymE.passive){
+            gymE.passive = gymE.gymPhase2Passive;
+          }
+          q.push({label:'Rage', fn:()=>{
+            log('💢 ' + gymE.name + ' ENRAGES! ' + (gymE.gymPhase2Passive ? '(' + gymE.gymPhase2Passive + ' activated)' : 'Damage surges!'), 'enemy');
+            gymE.hp = Math.min(gymE.enemyMaxHP, (gymE.hp||0)+40);
+            renderEnemyCards();
+          }});
+          cd=1+cdPenalty;
+          continue;
+        }
+        gymE.gymHitCounter = (gymE.gymHitCounter||0) + 1;
+        const isCharge = gymE.gymChargeInterval && (gymE.gymHitCounter % gymE.gymChargeInterval === 0);
+        q.push({label: isCharge ? '⚡ Charge' : 'Attack', fn:()=>{
+          setActiveEnemy(snapIdx);
+          const gem = combat.enemies[snapIdx];
+          const dmg = isCharge ? Math.round(gem.enemyDmg * 2.5) : gem.enemyDmg;
+          if(isCharge) log('💥 ' + gem.name + ' winds up a CHARGE ATTACK!', 'enemy');
+          const gemEl = primaryElement(gem.element||'');
+          performHit('enemy','player',{baseDamage:dmg, effects:enemyElementalEffects(gemEl), isBasic:true, isEnemyAttack:true, abilityElement:gemEl});
+          if(!combat.over) applyEnemyElementalProc(gemEl, snapIdx);
+        }});
+      } else {
+        // Try to use an ability this action
+        const ability = pickEnemyAbility(e, currentGymIdx);
+        if(ability){
+          ability.cd = ability.baseCd;
+          const snapAbility = ability;
+          q.push({label: snapAbility.emoji+' '+snapAbility.name, fn:()=>{
+            if(combat.over) return;
+            if(!combat.enemies[snapIdx].alive) return;
+            setActiveEnemy(snapIdx);
+            snapAbility.fn(snapIdx);
+            updateHPBars(); renderStatusTags(); updateStatsUI();
+          }});
+        } else {
+          // Basic attack
+          q.push({label:'Attack', fn:()=>{
+            setActiveEnemy(snapIdx);
+            const e2 = combat.enemies[snapIdx];
+            const el = primaryElement(e2.element||'');
+            performHit('enemy','player',{baseDamage:e2.enemyDmg, effects:enemyElementalEffects(el), isBasic:true, isEnemyAttack:true, abilityElement:el});
+            if(!combat.over) applyEnemyElementalProc(el, snapIdx);
+            if(combat.activeZoneElement && !combat.over){
+              const zfx = ZONE_EFFECTS[combat.activeZoneElement];
+              if(zfx) zfx.apply('player', snapIdx);
+              updateHPBars(); renderStatusTags();
+            }
+          }});
+        }
+      }
+      cd=1+cdPenalty;
+    } else {
+      const snapIdx=idx;
+      q.push({label:'Wait', fn:()=>{ log(combat.enemies[snapIdx].emoji + ' ' + combat.enemies[snapIdx].name + ' waits.', 'enemy'); }});
+      cd--;
+    }
+  }
+  e.basicCD=Math.max(0,cd);
+  return q;
+}
+
+function executeOneEnemyAction(idx){
+  if(combat.over) return;
+  const e=combat.enemies[idx];
+  if(!e||!e.alive) return;
+  setActiveEnemy(idx);
+  if(e.status.stunned>0){
+    e.status.stunned--;
+    log(`${e.emoji} ${e.name} is stunned!`,'status');
+    renderStatusTags();
+    return;
+  }
+  if(e.basicCD<=0){
+    e.basicCD=1+enemyCooldownPenalty();
+    const el = primaryElement(e.element||'');
+    performHit('enemy','player',{baseDamage:e.enemyDmg, effects:enemyElementalEffects(el), isBasic:true, isEnemyAttack:true, abilityElement:el});
+    if(!combat.over) applyEnemyElementalProc(el, combat.enemies.indexOf(e));
+  }
+}
+
+function resolveSummonAttacks(){
+  if(!combat.summons||combat.summons.length===0) return;
+  const alive=aliveEnemies();
+  if(alive.length===0) return;
+  combat.summons.forEach(s=>{
+    if(s.hp<=0) return;
+    if(s.cd>0){ s.cd--; return; }
+    const target=alive[Math.floor(Math.random()*alive.length)];
+    const tIdx=combat.enemies.indexOf(target);
+    setActiveEnemy(tIdx);
+    log(`🌳 ${s.name} strikes ${target.name}!`, 'player');
+    performHit('player','enemy',{baseDamage:s.dmg, effects:[], isBasic:false, abilityElement:'Nature', isSummon:true});
+    if(!combat.over && Math.random()<(s.rootChance||0.5)){
+      applyRoot('player','enemy', 1);
+    }
+  });
+  // Remove dead summons
+  combat.summons=combat.summons.filter(s=>s.hp>0);
+  renderSummonsRow();
+}
+
+
+function toggleInventory(){
+  if(!combat.playerTurn||combat.over) return;
+  document.getElementById("inv-panel").classList.toggle("open");
+}
+
+function useItemInCombat(idx){
+  if(!combat.playerTurn||combat.over) return;
+  const item=player.inventory[idx]; if(!item) return;
+  if((combat.actionQueue||[]).length>=combat.actionsLeft) return;
+  document.getElementById("inv-panel").classList.remove("open");
+  // snapshot item, remove from inv immediately to prevent double-queue
+  const snapItem={...item};
+  removeItemAt(idx);
+  renderCombatInventory();
+  queueAction(`${snapItem.emoji} ${snapItem.name}`, ()=>{
+    const result=snapItem.use();
+    if(result) log(`${snapItem.emoji} ${result}`,"item");
+    updateHPBars(); updateStatsUI();
+  });
+}
+
+function renderCombatInventory(){
+  const panel=document.getElementById("inv-panel");
+  const count=player.inventory.length;
+  document.getElementById("inv-count-label").textContent=`${count} item${count===1?"":"s"}`;
+  panel.innerHTML="";
+  if(count===0){ panel.innerHTML='<div class="inv-empty">No items</div>'; }
+  else {
+    player.inventory.forEach((item,idx)=>{
+      const b=document.createElement("button"); b.className="inv-item-btn";
+      b.innerHTML=`<span>${item.emoji} ${item.name} <span style="color:#666;font-size:.63rem;">— ${item.desc}</span></span><span style="color:#555;font-size:.63rem;">USE (1)</span>`;
+      b.onclick=()=>useItemInCombat(idx);
+      panel.appendChild(b);
+    });
+  }
+}
+
+
+
+
+function endBattle(won){
+  if(combat.over) return;
+  combat.over=true; setPlayerTurnUI(false);
+  stopBattleLoop();
+  combat.summons=[];
+  if(won){
+    const isGym=combat.enemies.some(e=>e.isGym);
+    log(`⚔ Victory!`,"win");
+    applyHeal('player', BATTLE_HEAL, '✦ Post-battle heal');
+    const gold=combat.totalGold||0;
+    player.gold+=gold;
+    if(gold>0) log(`✦ Gained ${gold} gold.`,"item");
+    if(Math.random()<ITEM_DROP_CHANCE){
+      const id=ITEM_DROP_POOL[Math.floor(Math.random()*ITEM_DROP_POOL.length)];
+      addItem(id); log(`✦ Item dropped: ${ITEM_CATALOGUE[id].emoji} ${ITEM_CATALOGUE[id].name}!`,"item");
+    }
+    updateHPBars(); updateStatsUI();
+    const isRival = !!(combat._isRival);
+    if(isGym){
+      const beatenGym = currentGymDef();
+      const gymIdx = currentGymIdx;
+      if(beatenGym) log('🏆 Gym '+(currentGymIdx+1)+' — '+beatenGym.name+' defeated!','win');
+      // Artifact unlock
+      const newArt = onGymDefeated(gymIdx);
+      if(newArt){
+        const def = ARTIFACT_CATALOGUE[newArt.id];
+        if(def){
+          const starLabel = newArt.star===0?'Unlocked':newArt.star===1?'★ Upgraded':newArt.star===2?'★★ Upgraded':'★★★ MAX';
+          log('🏺 Artifact '+starLabel+': '+def.emoji+' '+def.name+' — '+def.desc[newArt.star], 'item');
+        }
+      }
+      advanceToNextGym(); // resets zoneBattleCount and gymSkips
+    } else if(isRival){
+      log('⚔ Rival '+RIVAL.name+' defeated! Passive reward incoming...','win');
+      battleNumber++;
+      _runRoomsCompleted++;
+      zoneBattleCount++;
+    } else {
+      battleNumber++;
+      _runRoomsCompleted++;
+      zoneBattleCount++; // track progress through this gym's zone
+    }
+    // Warlord's Banner reward on every win
+    applyBannerReward();
+    // Increment artifact room counters for non-gym battles
+    if(!isGym){
+      const artUpgrade = incrementArtifactRooms();
+      if(artUpgrade){
+        const def = ARTIFACT_CATALOGUE[artUpgrade.id];
+        if(def) log(`🏺 ${def.emoji} ${def.name} upgraded to ${'★'.repeat(artUpgrade.star)}!`, 'item');
+      }
+    }
+    setTimeout(()=>{ showBattleRewardScreen(isGym, combat._isSpellBattle||false, isRival); }, 900);
+  } else {
+    if(player.revives > 0){
+      player.revives--;
+      const reviveHP = Math.floor(maxHPFor('player') * 0.75);
+      player.hp = reviveHP + (player._gritHealOnRevive||0);
+      player.hp = Math.min(player.hp, maxHPFor('player'));
+      combat.over = false;
+      log(`💀 Fatal blow! ❤️ Life lost — reviving to ${player.hp} HP. (${player.revives} lives left)`, "win");
+      updateHPBars(); updateStatsUI();
+      setTimeout(startRound, 1400);
+    } else {
+      log("💀 All lives lost. Your run ends here.", "lose");
+      setTimeout(showGameOver, 1200);
+    }
+  }
+}
+
+// ── ZONE TICK ─────────────────────────────────────────────────────────────────
+// Called once per round at startRound. Applies small passive zone pressure.
+function applyZoneTick(){
+  if(!combat.activeZoneElement || combat.over) return;
+  const el = combat.activeZoneElement;
+  switch(el){
+    case 'Fire':
+      // +2 burn on player from the scorched environment
+      status.player.burnStacks = (status.player.burnStacks||0) + 2;
+      status.player.burnSourcePower = Math.max(status.player.burnSourcePower||0, Math.floor(battleNumber*1.5));
+      log('🔥 Zone: searing heat applies +2 Burn.','status');
+      break;
+    case 'Ice':
+      // +2 frost on player from the frozen air
+      applyFrost('enemy','player', 2);
+      log('❄️ Zone: biting cold applies +2 Frost.','status');
+      break;
+    case 'Lightning':
+      // +1 shock on player from static in the air
+      status.player.shockPending = (status.player.shockPending||0) + 1;
+      log('⚡ Zone: static charge applies +1 Shock.','status');
+      break;
+    case 'Earth':
+      // All alive enemies gain +1 stone stack — they're on home turf
+      aliveEnemies().forEach(e=>{
+        e.status.stoneStacks = (e.status.stoneStacks||0) + 1;
+      });
+      log('🪨 Zone: earthen power grants enemies +1 Stone.','status');
+      break;
+    case 'Nature':
+      // 40% chance to root player — vines creep in
+      if(Math.random() < 0.40){
+        applyRoot('enemy','player', 1);
+        log('🌿 Zone: creeping vines apply 1 Root.','status');
+      }
+      break;
+    case 'Water':
+      // +1 foam on player — drenched environment blunts defences
+      status.player.foamStacks = (status.player.foamStacks||0) + 1;
+      log('🫧 Zone: sea spray applies +1 Foam (reduces your Block).','status');
+      break;
+    case 'Plasma':
+      // All alive enemies gain +3% dodge this round from phasing reality
+      aliveEnemies().forEach(e=>{
+        e.status.battleDodgeBonus = Math.min(0.30, (e.status.battleDodgeBonus||0) + 0.03);
+      });
+      log('🔮 Zone: reality flickers — enemies +3% dodge.','status');
+      break;
+    case 'Air':
+      // 25% chance to stun player 1t from battering winds
+      if(Math.random() < 0.25){
+        status.player.stunned = Math.max(status.player.stunned||0, 1);
+        log('🌀 Zone: battering winds stun you for 1 turn!','status');
+      }
+      break;
+  }
+  renderStatusTags();
+  renderEnemyCards();
+}
+
+
