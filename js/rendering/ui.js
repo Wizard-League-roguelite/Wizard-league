@@ -170,7 +170,7 @@ function showScreen(id){
   if(id === 'combat-screen'){
     musicPlaySmart(_zone ? 'battle_' + _zone : 'battle_Fire');
   } else if(['map-screen','campfire-screen','shop-screen','gym-screen','rival-screen'].includes(id)){
-    musicPlaySmart(_zone ? 'map_' + _zone : 'map_Fire');
+    musicPlaySmart('map');
   } else if(_menuScreens.includes(id)){
     musicPlaySmart('menu');
   } else if(id === 'between-runs-screen'){

@@ -487,9 +487,30 @@ function loadBattle(enc){
   if(typeof switchCombatTab === 'function') switchCombatTab('actions');
 
   showScreen("combat-screen");
-  // Show sandbox skip button
+  // Show sandbox buttons
+  const isSandbox = (typeof sandboxMode !== 'undefined' && sandboxMode);
   const skipBtn = document.getElementById('sandbox-skip-btn');
-  if(skipBtn) skipBtn.style.display = (typeof sandboxMode !== 'undefined' && sandboxMode) ? 'block' : 'none';
+  if(skipBtn) skipBtn.style.display = isSandbox ? 'block' : 'none';
+  const enemyBtn = document.getElementById('sandbox-enemy-btn');
+  if(enemyBtn) enemyBtn.style.display = isSandbox ? 'block' : 'none';
+  // Sandbox zone switcher for combat
+  const combatZoneBar = document.getElementById('sandbox-zone-combat-bar');
+  if(combatZoneBar){
+    if(typeof sandboxMode !== 'undefined' && sandboxMode){
+      combatZoneBar.style.display = 'flex';
+      combatZoneBar.innerHTML = '<span style="color:#888;font-size:.6rem;align-self:center;margin-right:4px;">ZONE:</span>';
+      (GYM_ROSTER||[]).forEach(gym => {
+        const btn = document.createElement('button');
+        btn.textContent = gym.emoji + ' ' + gym.element;
+        const isActive = combat.activeZoneElement === gym.element;
+        btn.style.cssText = `background:${isActive?gym.color+'33':'#111'};border:1px solid ${isActive?gym.color:'#333'};color:${isActive?gym.color:'#888'};border-radius:4px;padding:2px 7px;font-size:.58rem;font-family:'Cinzel',serif;cursor:pointer;`;
+        btn.onclick = () => sandboxSetCombatZone(gym.element);
+        combatZoneBar.appendChild(btn);
+      });
+    } else {
+      combatZoneBar.style.display = 'none';
+    }
+  }
   // Init canvas AFTER screen is visible so clientWidth is correct
   setTimeout(()=>{ initBattleCanvas(); startBattleLoop(); renderEnemyCards(); updateHPBars(); updateStatsUI();
     renderSpellButtons(); renderCombatInventory(); renderStatusTags(); updateActionUI(); }, 0);
