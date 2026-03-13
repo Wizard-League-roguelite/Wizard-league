@@ -28,6 +28,7 @@ let _lobbyTick = 0;
 let _lobbyAnimFrame = null;
 let _lobbyShootingStars = []; // { x, y, vx, vy, life, maxLife, len }
 let _lobbyFacingLeft = false;
+let _lobbyReturnPos = null;   // if set, start here instead of plaza (used when returning from tailor)
 let _lobbyCinematic = null;   // null | 'castle_enter' | 'castle_teeth' | 'castle_fade'
 let _lobbyCinematicTick = 0;
 
@@ -38,9 +39,12 @@ function showBetweenRuns_map() {
   canvas.width  = Math.round(wrap.clientWidth  || window.innerWidth);
   canvas.height = Math.round(wrap.clientHeight || window.innerHeight);
 
-  // Start player at plaza (just south of fountain)
-  _lobbyPlayerX = LOBBY_PLAZA.x; _lobbyPlayerY = LOBBY_PLAZA.y;
-  _lobbyTargetX = LOBBY_PLAZA.x; _lobbyTargetY = LOBBY_PLAZA.y;
+  // Start player at return position (e.g. tailor) or default plaza
+  const _startX = _lobbyReturnPos ? _lobbyReturnPos.x : LOBBY_PLAZA.x;
+  const _startY = _lobbyReturnPos ? _lobbyReturnPos.y : LOBBY_PLAZA.y;
+  _lobbyReturnPos = null;
+  _lobbyPlayerX = _startX; _lobbyPlayerY = _startY;
+  _lobbyTargetX = _startX; _lobbyTargetY = _startY;
   _lobbyWalking = false; _lobbyWalkDest = null; _lobbyShootingStars = [];
   _lobbyCinematic = null; _lobbyCinematicTick = 0;
 
@@ -747,8 +751,9 @@ function _drawLobbyPlayer(ctx, W, H) {
   // Bob when walking
   const bobY = _lobbyWalking ? Math.round(Math.sin(_lobbyTick * 0.25) * 2) : 0;
 
-  // Get player sprite rows
-  const rows = (typeof getPlayerSprite === 'function') ? getPlayerSprite() : SPRITE_CHAR_MAGE;
+  // Get player sprite rows based on wizard archetype
+  const _archId = (typeof _wizBuild !== 'undefined' && _wizBuild) ? _wizBuild.archetype : 'arcanist';
+  const rows = (typeof getPlayerCharSprite === 'function') ? getPlayerCharSprite(_archId) : SPRITE_CHAR_MAGE;
   const sprW = 24 * scale;
   const sprH = rows.length * scale;
   const sx = x - sprW / 2;
@@ -762,9 +767,22 @@ function _drawLobbyPlayer(ctx, W, H) {
     ctx.scale(-1, 1);
   }
 
-  // Build palette from wizard build
-  const pal = _lobbyGetPlayerPal();
-  drawSprite(ctx, rows, sx, sy, scale, pal, 24);
+  // Draw sprite with full custom color map matching wizard build
+  const colorMap = _lobbyBuildColorMap();
+  if (colorMap) {
+    for (let row = 0; row < rows.length; row++) {
+      for (let col = 0; col < 24; col++) {
+        const c = (rows[row] || '')[col] || '.';
+        const color = colorMap[c];
+        if (!color) continue;
+        ctx.fillStyle = color;
+        ctx.fillRect(Math.floor(sx + col * scale), Math.floor(sy + row * scale), scale, scale);
+      }
+    }
+  } else {
+    const pal = _lobbyGetPlayerPal();
+    drawSprite(ctx, rows, sx, sy, scale, pal, 24);
+  }
 
   // Name label
   ctx.restore();
@@ -783,6 +801,32 @@ function _lobbyGetPlayerPal() {
   const outfit = (typeof WIZ_OUTFIT_COLORS !== 'undefined' ? WIZ_OUTFIT_COLORS : []).find(o => o.id === b.outfit);
   if (outfit) return [outfit.p0, outfit.p1, outfit.p2, outfit.p3];
   return ['#aa6622','#cc8833','#eebb55','#ffdd88'];
+}
+
+function _lobbyBuildColorMap() {
+  const b = (typeof _wizBuild !== 'undefined') ? _wizBuild : null;
+  if (!b) return null;
+  const hatClr   = (typeof WIZ_HAT_COLORS   !== 'undefined' ? WIZ_HAT_COLORS   : []).find(c => c.id === b.hatColor);
+  const outClr   = (typeof WIZ_OUTFIT_COLORS !== 'undefined' ? WIZ_OUTFIT_COLORS : []).find(c => c.id === b.outfit);
+  const beardClr = (typeof WIZ_BEARD_COLORS  !== 'undefined' ? WIZ_BEARD_COLORS  : []).find(c => c.id === b.beardColor);
+  const staffClr = (typeof WIZ_STAFF_COLORS  !== 'undefined' ? WIZ_STAFF_COLORS  : []).find(c => c.id === b.staffColor);
+  const glowClr  = (typeof WIZ_STAFF_GLOWS   !== 'undefined' ? WIZ_STAFF_GLOWS   : []).find(g => g.id === b.staffGlow);
+  const eyeClr   = (typeof WIZ_EYE_COLORS    !== 'undefined' ? WIZ_EYE_COLORS    : []).find(e => e.id === b.eyeColor);
+  const showBeard = b.beardStyle !== 'none';
+  return {
+    '.': null,
+    '1': outClr   ? outClr.p0    : '#aa6622',
+    '2': outClr   ? outClr.p1    : '#cc8833',
+    '3': outClr   ? outClr.p2    : '#eebb55',
+    '4': outClr   ? outClr.p3    : '#ffdd88',
+    'h': hatClr   ? hatClr.color : '#2244aa',
+    's': (typeof SKIN_C !== 'undefined') ? SKIN_C : '#e8b888',
+    'e': eyeClr   ? eyeClr.color : '#ff2222',
+    'b': (typeof BOOT_C !== 'undefined') ? BOOT_C : '#3a2010',
+    'w': (showBeard && beardClr) ? beardClr.color : null,
+    'f': staffClr ? staffClr.color : '#8b5a2b',
+    'g': glowClr  ? glowClr.color  : null,
+  };
 }
 
 let _lobbyHoveredId = null;
@@ -857,7 +901,11 @@ function _openLobbyLocation(id) {
     if (canvas) canvas.onclick = null; // disable clicks during cinematic
     return;
   }
-  if (id === 'tailor') { stopLobbyMap(); _wizBuilderFromLobby = true; showCharacterScreen(); return; }
+  if (id === 'tailor') {
+    const tailorLoc = LOBBY_LOCATIONS.find(l => l.id === 'tailor');
+    if (tailorLoc) _lobbyReturnPos = { x: tailorLoc.x, y: tailorLoc.y };
+    stopLobbyMap(); _wizBuilderFromLobby = true; showCharacterScreen(); return;
+  }
   const panel = document.getElementById('lobby-panel');
   const content = document.getElementById('lobby-panel-content');
   if (!panel || !content) return;
