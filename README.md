@@ -4,7 +4,7 @@
 
 🎮 **Play now:** [https://jonahbyu.github.io/Wizard-league/](https://jonahbyu.github.io/Wizard-league/)
 
----
+----
 
 ## What is it?
 
