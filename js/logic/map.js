@@ -124,6 +124,165 @@ function showGameOver(){
   drawScene();
 }
 
+// ── Run Victory Screen ────────────────────────────────────────────────────────
+let _victoryFreeplay = false;
+
+function showRunVictory() {
+  _victoryFreeplay = false;
+  _lastRunPhos = saveRunStats();
+
+  // Populate stats panel
+  const statsEl = document.getElementById('victory-stats');
+  if (statsEl) {
+    const phos = _lastRunPhos || 0;
+    statsEl.innerHTML =
+      `<div style="color:#aaffaa;font-size:.9rem;text-align:center;margin-bottom:.6rem;letter-spacing:.06em;">✦ RUN COMPLETE ✦</div>` +
+      `<div style="display:grid;grid-template-columns:1fr 1fr;gap:.15rem .8rem;">` +
+      `<span style="color:#559955;">Element</span><span style="color:#ccffcc;">${playerEmoji || ''} ${playerElement || '?'}</span>` +
+      `<span style="color:#559955;">Battles</span><span style="color:#ccffcc;">${battleNumber}</span>` +
+      `<span style="color:#559955;">Damage Dealt</span><span style="color:#ccffcc;">${(_runDmgDealt||0).toLocaleString()}</span>` +
+      `<span style="color:#559955;">Damage Taken</span><span style="color:#ccffcc;">${(_runDmgTaken||0).toLocaleString()}</span>` +
+      `<span style="color:#559955;">Gold Earned</span><span style="color:#ccffcc;">${player.gold}</span>` +
+      `<span style="color:#559955;">Spells</span><span style="color:#ccffcc;">${player.spellbook.length}</span>` +
+      `<span style="color:#559955;">Phos Earned</span><span style="color:#ffdd88;">✦ ${phos}</span>` +
+      `</div>`;
+  }
+
+  showScreen('run-victory-screen');
+  _startVictoryCanvas();
+}
+
+function _startVictoryCanvas() {
+  const canvas = document.getElementById('victory-canvas');
+  if (!canvas) return;
+  const W = 160, H = 90;
+  canvas.width  = W;
+  canvas.height = H;
+  canvas.style.width    = '100%';
+  canvas.style.maxWidth = '480px';
+  const ctx = canvas.getContext('2d');
+
+  let frame = 0;
+  let stopped = false;
+  canvas._vcStop = () => { stopped = true; };
+
+  // Star positions
+  const stars = [
+    [12,8],[35,5],[58,12],[80,4],[105,9],[128,6],[150,11],[20,20],[70,18],[140,22],
+    [45,30],[95,25],[160,15],[8,35],[130,30],[50,42],[115,38],[75,50]
+  ];
+
+  // Confetti particles
+  const confetti = Array.from({length:22}, (_,i) => ({
+    x: (i * 7.5) % 160,
+    y: Math.random() * 90,
+    vy: 0.4 + Math.random() * 0.5,
+    col: ['#ffdd44','#44ffaa','#ff88cc','#88ccff','#ffaa44'][i % 5],
+    phase: Math.random() * Math.PI * 2,
+  }));
+
+  function drawScene() {
+    if (stopped) return;
+
+    // Sky
+    ctx.fillStyle = '#06180a';
+    ctx.fillRect(0, 0, W, H);
+
+    // Stars
+    stars.forEach(([sx, sy], i) => {
+      const twinkle = Math.sin(frame * 0.05 + i * 1.3);
+      ctx.globalAlpha = 0.4 + twinkle * 0.3;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(sx, sy, 1, 1);
+    });
+    ctx.globalAlpha = 1;
+
+    // Ground
+    ctx.fillStyle = '#0a2010';
+    ctx.fillRect(0, H - 18, W, 18);
+    ctx.fillStyle = '#072a10';
+    ctx.fillRect(0, H - 20, W, 2);
+
+    // Player sprite — standing upright, slight bob
+    const bob = Math.round(Math.sin(frame * 0.07) * 1);
+    const charRows = typeof getPlayerCharSprite === 'function' ? getPlayerCharSprite() : SPRITE_CHAR_MAGE;
+    const colorMap = typeof getWizColorMap === 'function' ? getWizColorMap() : null;
+    const scale = 2;
+    const sprW = 24, sprH = charRows.length;
+    const sx = Math.floor((W - sprW * scale) / 2);
+    const sy = H - 18 - sprH * scale + bob;
+    for (let r = 0; r < sprH; r++) {
+      for (let c = 0; c < sprW; c++) {
+        const ch = (charRows[r] || '')[c] || '.';
+        let color = null;
+        if (colorMap) {
+          color = colorMap[ch];
+        } else {
+          color = ch !== '.' ? '#c8a060' : null;
+        }
+        if (!color) continue;
+        ctx.fillStyle = color;
+        ctx.fillRect(sx + c * scale, sy + r * scale, scale, scale);
+      }
+    }
+
+    // Trophy pixel art (simple crown shape)
+    const trophyX = 110, trophyY = H - 34;
+    const glow = 0.7 + Math.sin(frame * 0.06) * 0.2;
+    ctx.globalAlpha = glow;
+    ctx.fillStyle = '#ffdd44';
+    // Cup
+    [[1,0,1],[1,1,1],[0,1,0],[0,1,0],[1,1,1]].forEach((row, ry) =>
+      row.forEach((on, cx) => { if (on) ctx.fillRect(trophyX + cx*3, trophyY + ry*3, 3, 3); })
+    );
+    ctx.globalAlpha = 1;
+
+    // Confetti
+    confetti.forEach(p => {
+      p.y += p.vy;
+      if (p.y > H) p.y = -4;
+      const wx = p.x + Math.sin(frame * 0.04 + p.phase) * 3;
+      ctx.fillStyle = p.col;
+      ctx.globalAlpha = 0.75;
+      ctx.fillRect(Math.round(wx), Math.round(p.y), 2, 2);
+    });
+    ctx.globalAlpha = 1;
+
+    // "VICTORY" text
+    const alpha = Math.min(1, frame / 35);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#66ff88';
+    ctx.font = 'bold 13px "Cinzel", serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('VICTORY', W / 2, 20);
+    ctx.globalAlpha = 1;
+
+    // Vignette
+    const vign = ctx.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.75);
+    vign.addColorStop(0, 'rgba(0,0,0,0)');
+    vign.addColorStop(1, 'rgba(0,0,0,0.5)');
+    ctx.fillStyle = vign;
+    ctx.fillRect(0, 0, W, H);
+
+    frame++;
+    requestAnimationFrame(drawScene);
+  }
+  drawScene();
+}
+
+function victoryBackToLobby() {
+  const vc = document.getElementById('victory-canvas');
+  if (vc && vc._vcStop) vc._vcStop();
+  showBetweenRuns();
+}
+
+function victoryFreeplay() {
+  _victoryFreeplay = true;
+  const vc = document.getElementById('victory-canvas');
+  if (vc && vc._vcStop) vc._vcStop();
+  showMap();
+}
+
 // ── Shop Canvas Animation ─────────────────────────────────────────────────────
 function startShopCanvas(){
   const canvas = document.getElementById('shop-canvas');

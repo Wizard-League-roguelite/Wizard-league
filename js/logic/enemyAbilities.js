@@ -509,9 +509,9 @@ function pickEnemyAbility(e, gymIdx){
 
 // Scale enemy base stats by zone depth (applied in makeEnemyObj)
 function scaleEnemyForZone(enc, gymIdx){
-  // HP and damage scale per zone — roughly +15% HP and +10% dmg per zone
-  const hpMult  = 1 + gymIdx * 0.18;
-  const dmgMult = 1 + gymIdx * 0.12;
+  // HP and damage scale per zone — roughly +25% HP and +20% dmg per zone
+  const hpMult  = 1 + gymIdx * 0.28;
+  const dmgMult = 1 + gymIdx * 0.22;
   return {
     enemyMaxHP: Math.round(enc.enemyMaxHP * hpMult),
     enemyDmg:   Math.round(enc.enemyDmg   * dmgMult),

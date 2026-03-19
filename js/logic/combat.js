@@ -776,7 +776,13 @@ function endBattle(won){
         const def = ARTIFACT_CATALOGUE[newArt.id];
         if(def) log('🏺 Artifact Discovered: '+def.emoji+' '+def.name+' — check the Vault!', 'item');
       }
+      const _beatenGymIdx = currentGymIdx; // capture before advancing
       advanceToNextGym(); // resets zoneBattleCount and gymSkips
+      // 3rd gym (index 2) = run victory
+      if (_beatenGymIdx === 2 && typeof showRunVictory === 'function') {
+        setTimeout(showRunVictory, 1200);
+        return;
+      }
     } else if(isRival){
       log('⚔ Rival '+RIVAL.name+' defeated! Passive reward incoming...','win');
       _zoneRivalDefeated = true;

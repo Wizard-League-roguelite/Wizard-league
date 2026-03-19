@@ -626,7 +626,20 @@ function renderBattlefield() {
   ctx.restore();
   if (typeof playerElement !== 'undefined') {
     const rows = getPlayerCharSprite();
-    drawSprite(ctx, rows, px, py, P_SCALE, getElemPal(playerElement), 24);
+    if (typeof getWizColorMap === 'function') {
+      const colorMap = getWizColorMap();
+      for (let row = 0; row < rows.length; row++) {
+        for (let col = 0; col < 24; col++) {
+          const c = (rows[row] || '')[col] || '.';
+          const color = colorMap[c];
+          if (!color) continue;
+          ctx.fillStyle = color;
+          ctx.fillRect(Math.floor(px + col * P_SCALE), Math.floor(py + row * P_SCALE), P_SCALE, P_SCALE);
+        }
+      }
+    } else {
+      drawSprite(ctx, rows, px, py, P_SCALE, getElemPal(playerElement), 24);
+    }
   }
 
   // ── Enemies ──

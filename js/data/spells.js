@@ -78,7 +78,7 @@ const SPELL_CATALOGUE = {
     }},
 
   brave_burn:{ id:'brave_burn', tier:'legendary', name:'Brave Burn', emoji:'🔥💀', element:'Fire',
-    desc:'Match the enemy burn — become untouchable for a moment', baseCooldown:4,
+    desc:'Copy the highest burn stack count from any enemy onto yourself — gain debuff immunity for 1 turn', baseCooldown:4,
     execute(s){
       const maxStacks = Math.max(...combat.enemies.map(e=>e.alive?(e.status.burnStacks||0):0));
       if(maxStacks > 0){

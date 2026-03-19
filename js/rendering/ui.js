@@ -180,9 +180,11 @@ function log(msg,type=""){
 function showScreen(id){
   // Stop lobby map when navigating away from between-runs
   if (id !== 'between-runs-screen' && typeof stopLobbyMap === 'function') stopLobbyMap();
-  // Stop any running game over animation
+  // Stop any running game over / victory animation
   const goCanvas = document.getElementById('gameover-canvas');
   if(goCanvas && goCanvas._goStop) goCanvas._goStop();
+  const vcCanvas = document.getElementById('victory-canvas');
+  if(vcCanvas && vcCanvas._vcStop) vcCanvas._vcStop();
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 
@@ -197,6 +199,8 @@ function showScreen(id){
   } else if(['map-screen','campfire-screen','shop-screen','gym-screen','rival-screen'].includes(id)){
     musicPlaySmart('map');
   } else if(_menuScreens.includes(id)){
+    musicPlaySmart('menu');
+  } else if(id === 'run-victory-screen'){
     musicPlaySmart('menu');
   } else if(id === 'between-runs-screen'){
     musicStopAll();

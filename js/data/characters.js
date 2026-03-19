@@ -237,6 +237,31 @@ function _applyWizBuild(patch) {
   _renderWizBuilder();
 }
 
+function getWizColorMap() {
+  const b = _wizBuild;
+  const hatClr   = WIZ_HAT_COLORS.find(c => c.id === b.hatColor)   || WIZ_HAT_COLORS[0];
+  const outClr   = WIZ_OUTFIT_COLORS.find(c => c.id === b.outfit)   || WIZ_OUTFIT_COLORS[0];
+  const beardClr = WIZ_BEARD_COLORS.find(c => c.id === b.beardColor)|| WIZ_BEARD_COLORS[0];
+  const staffClr = WIZ_STAFF_COLORS.find(c => c.id === b.staffColor)|| WIZ_STAFF_COLORS[0];
+  const glowClr  = WIZ_STAFF_GLOWS.find(g => g.id === b.staffGlow)  || WIZ_STAFF_GLOWS[0];
+  const eyeClr   = WIZ_EYE_COLORS.find(e => e.id === b.eyeColor)    || WIZ_EYE_COLORS[0];
+  const showBeard = b.beardStyle !== 'none';
+  return {
+    '.': null,
+    '1': outClr.p0,
+    '2': outClr.p1,
+    '3': outClr.p2,
+    '4': outClr.p3,
+    'h': hatClr.color,
+    's': SKIN_C,
+    'e': eyeClr.color,
+    'b': BOOT_C,
+    'w': showBeard ? beardClr.color : null,
+    'f': staffClr.color,
+    'g': glowClr.color || outClr.p3,
+  };
+}
+
 function showCharacterScreen() {
   const slotData = getActiveSlotData();
   if (slotData.wizardBuild) {

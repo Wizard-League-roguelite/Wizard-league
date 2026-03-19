@@ -12,13 +12,13 @@ function makeEnemyObj(enc){
     const pool=(PASSIVE_CHOICES[el]||[]).filter(p=>!p.legendary);
     passive=pool.length?pool[Math.floor(Math.random()*pool.length)].id:null;
   }
-  const scaledPower=BASE_POWER+Math.floor(currentGymIdx*4)+(enc.isGym?8:0);
+  const scaledPower=BASE_POWER+Math.floor(currentGymIdx*4.4)+(enc.isGym?8:0);
 
   // Scale HP and dmg by zone depth (non-gym enemies only; gym bosses and dummies have fixed stats)
   const zoneScaled = (enc.isGym || enc.isTargetDummy) ? {} : scaleEnemyForZone(enc, currentGymIdx);
   const mistHPMult  = player._mistEnemyHPMult  || 1.0;
   const mistDmgMult = player._mistEnemyDmgMult || 1.0;
-  const finalMaxHP  = Math.round((zoneScaled.enemyMaxHP || enc.enemyMaxHP) * mistHPMult);
+  const finalMaxHP  = Math.round((zoneScaled.enemyMaxHP || enc.enemyMaxHP) * mistHPMult * 1.25);
   const finalDmg    = Math.round((zoneScaled.enemyDmg   || enc.enemyDmg)   * mistDmgMult);
 
   // Build ability list based on element + zone depth

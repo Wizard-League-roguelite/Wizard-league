@@ -164,7 +164,7 @@ const TALENT_TREE = {
   Air: {
     label: '🌀 Air',
     nodes: [
-      { id:'air_actions',     name:'Slipstream',     emoji:'💨', desc:'+1 bonus action every 4 turns (alternating) per level.', maxLevel:3, cost: lvl => lvl * 5, apply(lvl){ player.bonusActions = (player.bonusActions||0) + lvl; } },
+      { id:'air_actions',     name:'Slipstream',     emoji:'💨', desc:'+1 bonus action per turn per level.', maxLevel:3, cost: lvl => lvl * 5, apply(lvl){ player.bonusActions = (player.bonusActions||0) + lvl; } },
       { id:'air_multihit',    name:'Gust',           emoji:'🌪️', desc:'+1 hit on multi-hit Air spells per level.', maxLevel:3, cost: lvl => lvl * 4, apply(lvl){ player._talentAirHits = (player._talentAirHits||0) + lvl; } },
       { id:'air_spell_dmg',   name:'Windshear',      emoji:'🌬️', desc:'+5% air spell damage per level.',  maxLevel:4, cost: lvl => lvl * 4, apply(lvl){ player._talentAirDmgMult = (player._talentAirDmgMult||1.0) + lvl * 0.05; } },
     ],
