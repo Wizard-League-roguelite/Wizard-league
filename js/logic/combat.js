@@ -19,6 +19,46 @@ function _tickPlayerCDs(){
   });
 }
 
+// Apply catalogue book effects after a spell action resolves
+function _applyBookSpellEffect(action) {
+  if (!action || !action.isSpellAction || !action.bookCatalogueId) return;
+  if (typeof SPELLBOOK_CATALOGUE === 'undefined') return;
+  const cat = SPELLBOOK_CATALOGUE[action.bookCatalogueId];
+  if (!cat) return;
+  const book = (player.spellbooks||[]).find(b => b.catalogueId === action.bookCatalogueId);
+  const lvl = book ? (book.upgradeLevel || 0) : 0;
+  const spell = action.spellObj;
+
+  if (combat.over) return;
+
+  // onSpellExecute hook
+  if (cat.onSpellExecute && spell) {
+    try { cat.onSpellExecute(spell, lvl); } catch(e) { console.warn('Book onSpellExecute error:', e); }
+  }
+
+  if (combat.over) return;
+
+  // Tome of Time: reduce spell CD by cdBonus after spell sets it
+  const aura = cat.aura ? cat.aura(lvl) : {};
+  if (aura.cdBonus && aura.cdBonus < 0 && spell && !spell.isBuiltin) {
+    spell.currentCD = Math.max(0, (spell.currentCD || 0) + aura.cdBonus);
+  }
+
+  // Echo Grimoire: first non-builtin spell each turn gets bonus damage
+  if (aura.echoBonus && combat._echoReady && spell && !spell.isBuiltin) {
+    combat._echoReady = false;
+    const echoDmg = Math.round((player.attackPower || 0) * aura.echoBonus);
+    if (echoDmg > 0 && !combat.over) {
+      const anyEnemy = aliveEnemies ? aliveEnemies()[0] : null;
+      if (anyEnemy) {
+        setActiveEnemy(combat.enemies.indexOf(anyEnemy));
+        applyDirectDamage('player', 'enemy', echoDmg, '🌀 Echo');
+        log(`🌀 Echo Grimoire: +${echoDmg} echo damage!`, 'player');
+      }
+    }
+  }
+}
+
 function startRound(){
   if(combat.over) return;
 
@@ -257,6 +297,17 @@ function startRound(){
     }
     updateChargeUI();
   }
+  // ── Book onTurnStart hook (e.g. Verdant Codex regen) ──
+  const _abTurn = activeBook();
+  if (_abTurn && _abTurn.catalogueId && typeof SPELLBOOK_CATALOGUE !== 'undefined') {
+    const _abCat = SPELLBOOK_CATALOGUE[_abTurn.catalogueId];
+    if (_abCat && _abCat.onTurnStart) {
+      try { _abCat.onTurnStart(_abTurn.upgradeLevel || 0); } catch(e) {}
+      if (combat.over) return;
+    }
+  }
+  combat._echoReady = true;  // reset echo for this turn
+
   renderEnemyCards();
   renderQueue();
   updateActionUI();
@@ -280,6 +331,9 @@ function queueAction(label, fn, opts){
     stormRushAction:    !!(opts && opts.stormRushAction),
     stormRushDependent: !!(opts && opts.stormRushDependent),
     undoOnQueue:        (opts && opts.undoOnQueue) || null,
+    isSpellAction:      !!(opts && opts.isSpellAction),
+    bookCatalogueId:    (opts && opts.bookCatalogueId) || null,
+    spellObj:           (opts && opts.spellObj) || null,
   });
   renderQueue();
   updateActionUI();
@@ -371,9 +425,22 @@ function queueSwitchBook(bookIdx) {
   const book = player.spellbooks[bookIdx];
   if (!book || bookIdx === player.activeBookIdx) return;
 
-  // Ensure there's room in the queue before switching display
+  // Check freeSwitch on target book
+  const targetCat = (book.catalogueId && typeof SPELLBOOK_CATALOGUE !== 'undefined')
+    ? SPELLBOOK_CATALOGUE[book.catalogueId] : null;
+  const isFreeSwitch = !!(targetCat && targetCat.freeSwitch);
+
+  // Check stickySwitch on current book (costs extra action to leave)
+  const curBook = activeBook();
+  const curCat = (curBook && curBook.catalogueId && typeof SPELLBOOK_CATALOGUE !== 'undefined')
+    ? SPELLBOOK_CATALOGUE[curBook.catalogueId] : null;
+  const isSticky = !!(curCat && curCat.stickySwitch);
+
   const nonFreeCount = (combat.actionQueue||[]).filter(a=>!a.isFree).length;
-  if (nonFreeCount >= (combat.actionsLeft||0)) return;
+  if (!isFreeSwitch) {
+    const needed = isSticky ? 2 : 1;
+    if (nonFreeCount + needed > (combat.actionsLeft||0)) return;
+  }
 
   const prevIdx = player.activeBookIdx;
 
@@ -383,18 +450,24 @@ function queueSwitchBook(bookIdx) {
   updateActionUI();
 
   queueAction('📖 ' + book.name, () => {
-    // Confirm switch at resolve time (may already be correct)
     if (player.activeBookIdx !== bookIdx) switchBook(bookIdx);
     renderSpellButtons();
     updateActionUI();
   }, {
+    isFree: isFreeSwitch,
     undoOnQueue: () => {
-      // Revert display if the switch action is removed from the queue
       switchBook(prevIdx);
       renderSpellButtons();
       updateActionUI();
     }
   });
+
+  // Sticky: consume an extra action slot when leaving the Tome of Time
+  if (isSticky && !isFreeSwitch) {
+    queueAction('⏳ Time Toll', () => {
+      log('⏳ Tome of Time: extra action spent leaving the book.', 'status');
+    }, {});
+  }
 }
 
 function commitEndTurn(){
@@ -481,6 +554,7 @@ function resolveFlat(flatActions, idx){
     combat.targetIdx = snapTgt;
     setActiveEnemy(snapTgt);
     action.fn();
+    if(!combat.over && action.isSpellAction) _applyBookSpellEffect(action);
     updateHPBars(); renderStatusTags();
     if(!isPlasmaFinal && player.hp <= 0 && !combat.over){
       log('💀 You dropped to 0 HP — Plasma heals may save you!', 'status');
@@ -677,9 +751,10 @@ function endBattle(won){
     const isGym=combat.enemies.some(e=>e.isGym);
     log(`⚔ Victory!`,"win");
     applyHeal('player', BATTLE_HEAL, '✦ Post-battle heal');
-    const gold=combat.totalGold||0;
+    const goldBase=combat.totalGold||0;
+    const gold=Math.round(goldBase*(1+(player._goldBonus||0)));
     player.gold+=gold;
-    if(gold>0) log(`✦ Gained ${gold} gold.`,"item");
+    if(gold>0) log(`✦ Gained ${gold} gold${player._goldBonus>0?' ('+Math.round(player._goldBonus*100)+'% bonus)':''}.`,"item");
     if(Math.random()<ITEM_DROP_CHANCE){
       const id=ITEM_DROP_POOL[Math.floor(Math.random()*ITEM_DROP_POOL.length)];
       addItem(id); log(`✦ Item dropped: ${ITEM_CATALOGUE[id].emoji} ${ITEM_CATALOGUE[id].name}!`,"item");
@@ -695,14 +770,11 @@ function endBattle(won){
       const beatenGym = currentGymDef();
       const gymIdx = currentGymIdx;
       if(beatenGym) log('🏆 Gym '+(currentGymIdx+1)+' — '+beatenGym.name+' defeated!','win');
-      // Artifact unlock
+      // Artifact discovery (65% chance)
       const newArt = onGymDefeated(gymIdx);
       if(newArt){
         const def = ARTIFACT_CATALOGUE[newArt.id];
-        if(def){
-          const starLabel = newArt.star===0?'Unlocked':newArt.star===1?'★ Upgraded':newArt.star===2?'★★ Upgraded':'★★★ MAX';
-          log('🏺 Artifact '+starLabel+': '+def.emoji+' '+def.name+' — '+def.desc[newArt.star], 'item');
-        }
+        if(def) log('🏺 Artifact Discovered: '+def.emoji+' '+def.name+' — check the Vault!', 'item');
       }
       advanceToNextGym(); // resets zoneBattleCount and gymSkips
     } else if(isRival){
@@ -718,19 +790,20 @@ function endBattle(won){
     }
     // Warlord's Banner reward on every win
     applyBannerReward();
-    // Increment artifact room counters for non-gym battles
+    // Increment active artifact room counter for non-gym battles
     if(!isGym){
       const artUpgrade = incrementArtifactRooms();
       if(artUpgrade){
         const def = ARTIFACT_CATALOGUE[artUpgrade.id];
-        if(def) log(`🏺 ${def.emoji} ${def.name} upgraded to ${'★'.repeat(artUpgrade.star)}!`, 'item');
+        if(def) log(`🏺 ${def.emoji} ${def.name} ${'★'.repeat(artUpgrade.star)} — Artifact leveled up!`, 'item');
       }
     }
     setTimeout(()=>{ showBattleRewardScreen(isGym, combat._isSpellBattle||false, isRival); }, 900);
   } else {
     if(player.revives > 0){
       player.revives--;
-      const reviveHP = Math.floor(maxHPFor('player') * 0.75);
+      const revivePct = Math.min(1.0, 0.75 + (player._talentReviveBonus||0));
+      const reviveHP = Math.floor(maxHPFor('player') * revivePct);
       player.hp = reviveHP + (player._gritHealOnRevive||0);
       player.hp = Math.min(player.hp, maxHPFor('player'));
       combat.over = false;

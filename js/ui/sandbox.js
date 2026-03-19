@@ -229,6 +229,97 @@ function sandboxToggleSpell(spellId){
   if(typeof renderSpellButtons === 'function') renderSpellButtons();
 }
 
+function sandboxOpenBookPicker(){
+  if(!sandboxMode) return;
+  const content = document.getElementById('sbo-content');
+  if(!content) return;
+  content.innerHTML = '';
+
+  const headStyle    = 'font-family:"Cinzel",serif;font-size:.62rem;color:#aa6aff;letter-spacing:.1em;text-transform:uppercase;margin:.7rem 0 .3rem;';
+  const gridStyle    = 'display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.4rem;';
+  const btnBase      = 'border-radius:4px;padding:4px 9px;font-size:.6rem;font-family:"Cinzel",serif;cursor:pointer;border-width:1px;border-style:solid;text-align:left;';
+
+  const currentIds = new Set((player.spellbooks||[]).map(b=>b.catalogueId).filter(Boolean));
+  const rarityOrder  = ['element','generic','legendary'];
+  const rarityLabels = { element:'Element Books', generic:'Generic Books', legendary:'Legendary Books' };
+  const rarityColors = { element:'#c8a060', generic:'#80c8ff', legendary:'#d4a0ff' };
+
+  // Note: only 1 book active at start of sandbox
+  const noteEl = document.createElement('div');
+  noteEl.style.cssText = 'font-size:.58rem;color:#555;margin-bottom:.6rem;';
+  noteEl.textContent = 'Active books in your run are highlighted. Max 3 books per run.';
+  content.appendChild(noteEl);
+
+  rarityOrder.forEach(rarity => {
+    if(typeof SPELLBOOK_CATALOGUE === 'undefined') return;
+    const books = Object.values(SPELLBOOK_CATALOGUE).filter(b=>b.rarity===rarity);
+    if(!books.length) return;
+
+    const head = document.createElement('div');
+    head.style.cssText = headStyle;
+    head.textContent = rarityLabels[rarity];
+    content.appendChild(head);
+
+    const grid = document.createElement('div');
+    grid.style.cssText = gridStyle;
+    const col = rarityColors[rarity];
+
+    books.forEach(cat => {
+      const active = currentIds.has(cat.id);
+      const btn = document.createElement('button');
+      if(active){
+        btn.style.cssText = btnBase + `background:#1a0a2a;border-color:${col};color:${col};`;
+        btn.innerHTML = `${cat.emoji} ${cat.name} <span style="font-size:.5rem;opacity:.7;">✓ Remove</span>`;
+      } else {
+        btn.style.cssText = btnBase + `background:#0d0b09;border-color:${col}55;color:${col}88;`;
+        btn.innerHTML = `${cat.emoji} ${cat.name} <span style="font-size:.5rem;opacity:.55;">+ Add</span>`;
+      }
+      btn.onclick = () => { sandboxToggleBook(cat.id); sandboxOpenBookPicker(); };
+      grid.appendChild(btn);
+    });
+    content.appendChild(grid);
+  });
+
+  document.getElementById('sandbox-book-overlay').style.display = 'block';
+}
+
+function sandboxToggleBook(catalogueId){
+  if(!sandboxMode) return;
+  if(typeof SPELLBOOK_CATALOGUE==='undefined' || typeof makeBookInstance==='undefined') return;
+
+  const books = player.spellbooks || [];
+  const idx = books.findIndex(b=>b.catalogueId===catalogueId);
+
+  if(idx >= 0){
+    // Remove — must keep at least 1 book
+    if(books.length <= 1){ log('📚 Sandbox: must keep at least one book.','system'); return; }
+    // If removing the active book, switch to another first
+    if(idx === player.activeBookIdx){
+      player.activeBookIdx = idx === 0 ? 1 : 0;
+      syncActiveBook();
+    } else if(idx < player.activeBookIdx){
+      player.activeBookIdx--;
+    }
+    books.splice(idx, 1);
+    const cat = SPELLBOOK_CATALOGUE[catalogueId];
+    log(`📚 Sandbox: removed ${cat ? cat.emoji+' '+cat.name : catalogueId}.`,'system');
+  } else {
+    // Add (cap at 3 in sandbox too)
+    if(books.length >= 3){ log('📚 Sandbox: max 3 books per run.','system'); return; }
+    const cat = SPELLBOOK_CATALOGUE[catalogueId];
+    if(!cat) return;
+    const newBook = makeBookInstance(catalogueId);
+    if(!newBook) return;
+    // Copy builtins from first book so new book has Basic Attack + Armor
+    const builtins = (books[0] ? books[0].spells : []).filter(s=>s.isBuiltin);
+    newBook.spells = [...builtins];
+    books.push(newBook);
+    log(`📚 Sandbox: added ${cat.emoji} ${cat.name}.`,'system');
+  }
+
+  if(typeof renderSpellButtons==='function') renderSpellButtons();
+}
+
 function sandboxSetCombatZone(element){
   if(!sandboxMode) return;
   combat.activeZoneElement = element;

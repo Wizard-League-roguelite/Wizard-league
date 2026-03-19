@@ -30,6 +30,8 @@ const player = {
   // ── Spellbook system ──
   spellbooks: [],       // array of spellbook objects
   activeBookIdx: 0,     // which book is active
+  _activeBookAura: null,   // {atk,def,efx,catalogueId} currently applied aura
+  _chosenStartBookId: null, // catalogue ID chosen at run start (null = default)
 };
 
 // ── SPELLBOOK HELPERS ─────────────────────────────────────────────────────────
@@ -49,6 +51,55 @@ function makeSpellbook(element, name) {
     effect:       null,  // on-switch combat effect (null = none for basic book)
     isPlasmaBook: false, // true only for the dedicated Plasma abilities book
   };
+}
+
+
+// Create a run-book instance from a catalogue entry
+function makeBookInstance(catalogueId) {
+  if (typeof SPELLBOOK_CATALOGUE === 'undefined') return null;
+  const cat = SPELLBOOK_CATALOGUE[catalogueId];
+  if (!cat) return null;
+  const meta = getMeta();
+  const upgradeLevel = (meta.bookUpgradeLevels || {})[catalogueId] || 0;
+  const base = makeSpellbook(cat.element || 'Neutral', cat.name);
+  applyBookUpgrades(base, catalogueId); // apply per-book slot upgrades
+  base.id = catalogueId;
+  base.catalogueId = catalogueId;
+  base.upgradeLevel = upgradeLevel;
+  base.emoji = cat.emoji || '📖';
+  // Apply slot modifiers from catalogue
+  if ((cat.spellSlots || 0) !== 0) base.spellSlots = Math.max(3, base.spellSlots + cat.spellSlots);
+  if ((cat.passiveSlots || 0) !== 0) base.passiveSlots = Math.max(1, base.passiveSlots + cat.passiveSlots);
+  // Wire on-switch-to effect
+  const _lvl = upgradeLevel;
+  base.effect = () => { if (cat.onSwitchTo) cat.onSwitchTo(_lvl); };
+  return base;
+}
+
+// Apply a catalogue book's aura to player stats (call when switching to or initializing a book)
+function _applyBookAuraToPlayer(book) {
+  _removeBookAuraFromPlayer(); // always clear old aura first
+  if (!book || !book.catalogueId) return;
+  if (typeof SPELLBOOK_CATALOGUE === 'undefined') return;
+  const cat = SPELLBOOK_CATALOGUE[book.catalogueId];
+  if (!cat || !cat.aura) return;
+  const aura = cat.aura(book.upgradeLevel || 0);
+  const atk = aura.atk || 0;
+  const def = aura.def || 0;
+  const efx = aura.efx || 0;
+  if (atk !== 0) player.attackPower += atk;
+  if (def !== 0) player.defense     += def;
+  if (efx !== 0) player.effectPower += efx;
+  player._activeBookAura = { atk, def, efx, catalogueId: book.catalogueId };
+}
+
+// Remove the currently applied book aura from player stats
+function _removeBookAuraFromPlayer() {
+  if (!player._activeBookAura) return;
+  player.attackPower -= (player._activeBookAura.atk || 0);
+  player.defense     -= (player._activeBookAura.def || 0);
+  player.effectPower -= (player._activeBookAura.efx || 0);
+  player._activeBookAura = null;
 }
 
 // Returns the index of the plasma-only book, or -1 if none exists
@@ -77,6 +128,7 @@ function syncActiveBook() {
   if (!book) return;
   player.spellbook = book.spells;
   player.passives  = book.passives;
+  _applyBookAuraToPlayer(book);
 }
 
 // Override hasPassive to always read from active book
@@ -109,11 +161,17 @@ function initSpellbooksForRun() {
 function switchBook(idx) {
   if (idx < 0 || idx >= player.spellbooks.length) return;
   if (idx === player.activeBookIdx) return;
+  // Notify current book we're leaving
+  const oldBook = activeBook();
+  if (oldBook && oldBook.catalogueId && typeof SPELLBOOK_CATALOGUE !== 'undefined') {
+    const oldCat = SPELLBOOK_CATALOGUE[oldBook.catalogueId];
+    if (oldCat && oldCat.onSwitchAway) oldCat.onSwitchAway(oldBook.upgradeLevel || 0);
+  }
   player.activeBookIdx = idx;
-  syncActiveBook();
+  syncActiveBook(); // also applies new book's aura
   const book = activeBook();
   log('📖 Switched to ' + book.name, 'player');
-  // Trigger book effect if any
+  // Trigger book effect if any (includes catalogue onSwitchTo via makeBookInstance)
   if (book.effect && typeof book.effect === 'function') book.effect();
 }
 
@@ -180,6 +238,7 @@ function addPassiveToBook(passiveId, bookIdx) {
     return;
   }
   book.passives.push(passiveId);
+  if (passiveId === 'air_tailwind') player.attackPower += 15;
   if (targetIdx === player.activeBookIdx) syncActiveBook();
 }
 

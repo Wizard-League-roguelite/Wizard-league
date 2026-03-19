@@ -81,24 +81,32 @@ function switchBrunTab(tab, btnEl) {
       </div>`).join('');
 
   } else if (tab === 'artifacts') {
+    markArtifactsSeen();
     if (!meta.artifacts || !meta.artifacts.length) {
-      content.innerHTML = '<div class="brun-empty">No artifacts yet — defeat a Gym Leader!</div>';
+      content.innerHTML = '<div class="brun-empty">No artifacts yet — defeat a Gym Leader to have a chance at one!</div>';
       return;
     }
+    const activeId = meta.activeArtifactId || null;
+    const header = `<div style="font-size:.62rem;color:#4a3820;text-align:center;margin-bottom:.8rem;line-height:1.5;">Equip one artifact per run. It scales with use — earning stars after 25 battles.</div>`;
     const rows = meta.artifacts.map(a => {
       const def = (typeof ARTIFACT_CATALOGUE !== 'undefined') ? ARTIFACT_CATALOGUE[a.id] : null;
       if (!def) return '';
+      const isActive = a.id === activeId;
       const stars  = a.star > 0 ? '★'.repeat(a.star) : '—';
       const sColor = ['#888','#c8a030','#e8d060','#00ccff'][Math.min(a.star||0, 3)];
-      const prog   = a.star < 3 ? `${a.roomsUsed||0}/25` : 'MAX';
-      return `<div class="brun-art-row">
-        <div>
-          <div class="brun-art-name">${def.emoji} ${def.name} <span class="brun-art-star" style="color:${sColor}">${stars}</span></div>
-          <div class="brun-art-desc">${def.desc[a.star||0]} · <span style="color:#4a4a4a">${prog} rooms</span></div>
+      const prog   = a.star < 3 ? `${a.roomsUsed||0}/25 rooms` : 'MAX';
+      const equipBtn = isActive
+        ? `<button onclick="unequipArtifact();switchBrunTab('artifacts')" style="background:#1a1205;border:1px solid #5a4020;color:#8a6030;font-family:'Cinzel',serif;font-size:.55rem;padding:.25rem .6rem;border-radius:3px;cursor:pointer;">Unequip</button>`
+        : `<button onclick="equipArtifact('${a.id}');switchBrunTab('artifacts')" style="background:#1a1205;border:1px solid #8a6020;color:#c8a060;font-family:'Cinzel',serif;font-size:.55rem;padding:.25rem .6rem;border-radius:3px;cursor:pointer;">Equip</button>`;
+      return `<div class="brun-art-row" style="border-color:${isActive?'#8a6020':'#1a1a14'};background:${isActive?'#1a1205':'#0f0d0b'};">
+        <div style="flex:1;">
+          <div class="brun-art-name">${def.emoji} ${def.name} <span class="brun-art-star" style="color:${sColor}">${stars}</span>${isActive?'<span style="color:#c8a060;font-size:.55rem;margin-left:.4rem;font-family:Cinzel,serif;"> ✦ ACTIVE</span>':''}</div>
+          <div class="brun-art-desc">${def.desc[a.star||0]} · <span style="color:#4a4a4a">${prog}</span></div>
         </div>
+        <div>${equipBtn}</div>
       </div>`;
     }).join('');
-    content.innerHTML = rows || '<div class="brun-empty">No artifacts.</div>';
+    content.innerHTML = header + (rows || '<div class="brun-empty">No artifacts.</div>');
 
   } else if (tab === 'talents') {
     renderTalentTab(content, meta);
@@ -185,69 +193,159 @@ function _lobbySelectWizard(charId) {
   if (content) _renderWizardUnlockTab(content, meta);
 }
 
+function _bookSlotPips(current, max) {
+  let s = '';
+  for (let i = 0; i < max; i++) {
+    const f = i < current;
+    s += `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:2px;background:${f?'#a0c060':'#252520'};border:1px solid ${f?'#6a8a30':'#3a3030'};"></span>`;
+  }
+  return s;
+}
+
+function _bookSlotRow(label, current, max, extra, maxExtra, costFn, bookKey, type, phos) {
+  const maxed = extra >= maxExtra;
+  const cost = maxed ? 0 : costFn(extra);
+  const canAfford = phos >= cost;
+  return `<div style="margin-top:.4rem;">
+    <div style="display:flex;align-items:center;gap:.35rem;margin-bottom:.18rem;">
+      <span style="font-size:.56rem;color:#5a5a6a;text-transform:uppercase;letter-spacing:.07em;">${label}:</span>
+      ${_bookSlotPips(current, max)}
+      <span style="font-size:.56rem;color:#7a8a5a;">${current}/${max}</span>
+    </div>
+    ${maxed
+      ? `<div style="font-size:.56rem;color:#4a8a4a;">✓ Full</div>`
+      : `<button onclick="purchaseBookSlotUpgrade('${bookKey}','${type}')" ${canAfford?'':'disabled'}
+           style="width:100%;background:${canAfford?'#0a140a':'#0a0a0a'};border:1px solid ${canAfford?'#4a6a20':'#1a1a1a'};
+           color:${canAfford?'#90b050':'#2a3010'};padding:.22rem .4rem;font-family:'Cinzel',serif;font-size:.57rem;
+           letter-spacing:.07em;cursor:${canAfford?'pointer':'not-allowed'};border-radius:4px;text-transform:uppercase;">
+           +1 ${label} — ${cost} ✦</button>`}
+  </div>`;
+}
+
 function renderBookUpgradesTab(content, meta) {
   const phos = meta.phos || 0;
-  const bookUpgrades = meta.bookUpgrades || {};
-
-  // Upgrade definitions: { key, label, desc, cost, maxLevel, stat }
-  const BOOK_UPGRADES = [
-    { key:'spell_slots',   label:'Extra Spell Slot',   desc:'Adds +1 spell slot to your starting book.',   cost: lvl => (lvl+1)*8,  maxLevel:4, stat:'spellSlots'   },
-    { key:'passive_slots', label:'Extra Passive Slot',  desc:'Adds +1 passive slot to your starting book.', cost: lvl => (lvl+1)*10, maxLevel:3, stat:'passiveSlots' },
-  ];
+  const ownedBookIds = meta.ownedBookIds || [];
+  const bookUpgradeLevels = meta.bookUpgradeLevels || {};
+  const bookSlotUpgrades  = meta.bookSlotUpgrades  || {};
 
   let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem;">
-    <div style="font-family:'Cinzel',serif;font-size:.78rem;color:#c8a060;">📖 Spellbook Upgrades</div>
+    <div style="font-family:'Cinzel',serif;font-size:.78rem;color:#c8a060;">📖 Spellbooks</div>
     <div style="font-size:.72rem;color:#a080ff;">${phos} ✦ Phos</div>
-  </div>
-  <div style="font-size:.62rem;color:#4a4a60;margin-bottom:.8rem;line-height:1.5;">Permanent upgrades to your starting spellbook. Applied at the start of every run.</div>`;
+  </div>`;
 
-  BOOK_UPGRADES.forEach(upg => {
-    const lvl     = bookUpgrades[upg.key] || 0;
-    const maxed   = lvl >= upg.maxLevel;
-    const cost    = maxed ? 0 : upg.cost(lvl);
-    const canAfford = phos >= cost;
-    html += `<div style="background:#0f0d0b;border:1px solid #2a2020;border-radius:6px;padding:.7rem .9rem;margin-bottom:.5rem;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem;">
-        <div style="font-family:'Cinzel',serif;font-size:.75rem;color:#c8a060;">${upg.label}</div>
-        <div style="font-size:.65rem;color:#6a5a30;">${lvl} / ${upg.maxLevel}</div>
-      </div>
-      <div style="font-size:.63rem;color:#666;margin-bottom:.5rem;">${upg.desc}</div>
-      ${maxed
-        ? '<div style="font-size:.62rem;color:#4a8a4a;letter-spacing:.08em;">✓ MAXED</div>'
-        : `<button onclick="purchaseBookUpgrade('${upg.key}')" ${canAfford?'':'disabled'}
-             style="width:100%;background:${canAfford?'#1a1a0a':'#0a0a0a'};border:1px solid ${canAfford?'#6a5a20':'#2a2020'};
-             color:${canAfford?'#c8a060':'#3a3020'};padding:.3rem;font-family:'Cinzel',serif;font-size:.62rem;
-             letter-spacing:.08em;cursor:${canAfford?'pointer':'not-allowed'};border-radius:4px;text-transform:uppercase;">
-             Upgrade — ${cost} ✦
-           </button>`}
-    </div>`;
-  });
+  if (typeof SPELLBOOK_CATALOGUE === 'undefined') { content.innerHTML = html; return; }
+
+  // ── Owned catalogue books ─────────────────────────────────────────────────
+  if (ownedBookIds.length === 0) {
+    html += `<div style="font-size:.65rem;color:#3a3a4a;font-style:italic;padding:.5rem 0;">No spellbooks discovered yet. Beat bosses during runs to find books!</div>`;
+  } else {
+    ownedBookIds.forEach(bookId => {
+      const cat = SPELLBOOK_CATALOGUE[bookId];
+      if (!cat) return;
+      const lvl     = bookUpgradeLevels[bookId] || 0;
+      const maxLvl  = 4;
+      const maxedEff = lvl >= maxLvl;
+      const upgCost  = maxedEff ? 0 : (cat.upgradeCosts || [])[lvl] || 0;
+      const canAffordEff = phos >= upgCost;
+      const rarityColor = cat.rarity === 'legendary' ? '#d4a0ff' : cat.rarity === 'generic' ? '#80c8ff' : '#c8a060';
+      const rarityLabel = cat.rarity === 'legendary' ? '✦ Legendary' : cat.rarity === 'generic' ? '⚡ Generic' : `${cat.element || ''} Book`;
+      const perBook      = bookSlotUpgrades[bookId] || {};
+      const extraSpell   = perBook.spellSlots   || 0;
+      const extraPassive = perBook.passiveSlots  || 0;
+      const baseSpell    = BOOK_SPELL_SLOTS_BASE   + (cat.spellSlots   || 0);
+      const basePasv     = BOOK_PASSIVE_SLOTS_BASE + (cat.passiveSlots || 0);
+      html += `<div style="background:#0f0d0b;border:1px solid #2a2020;border-radius:6px;padding:.65rem .85rem;margin-bottom:.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.15rem;">
+          <div style="font-family:'Cinzel',serif;font-size:.74rem;color:${rarityColor};">${cat.emoji} ${cat.name}</div>
+          <div style="font-size:.56rem;color:#5a5a5a;">${rarityLabel} · Lv ${lvl}/${maxLvl}</div>
+        </div>
+        <div style="font-size:.6rem;color:#888;margin-bottom:.1rem;">${cat.desc}</div>
+        <div style="font-size:.57rem;color:#7a4a30;margin-bottom:.3rem;">⚠ ${cat.negative}</div>
+        <div style="font-size:.6rem;color:#7a8a5a;padding:.3rem 0;border-top:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a;margin-bottom:.3rem;">
+          ${cat.levelDescs ? cat.levelDescs[lvl] : ''}
+        </div>
+        ${maxedEff
+          ? `<div style="font-size:.6rem;color:#4a8a4a;margin-bottom:.3rem;">✓ Effect Maxed</div>`
+          : `<button onclick="purchaseCatalogueBookUpgrade('${bookId}')" ${canAffordEff?'':'disabled'}
+               style="width:100%;background:${canAffordEff?'#0a1a0a':'#0a0a0a'};border:1px solid ${canAffordEff?'#5a7a20':'#2a2020'};
+               color:${canAffordEff?'#a0c060':'#3a4020'};padding:.25rem;font-family:'Cinzel',serif;font-size:.6rem;
+               letter-spacing:.08em;cursor:${canAffordEff?'pointer':'not-allowed'};border-radius:4px;text-transform:uppercase;margin-bottom:.3rem;">
+               Upgrade Effect Lv${lvl}→${lvl+1} — ${upgCost} ✦</button>`}
+        <div style="border-top:1px solid #1a1818;padding-top:.3rem;">
+          ${_bookSlotRow('Spell Slots', baseSpell+extraSpell, baseSpell+BOOK_SLOT_MAX_SPELL, extraSpell, BOOK_SLOT_MAX_SPELL, _spellSlotCost, bookId, 'spellSlots', phos)}
+          ${_bookSlotRow('Passive Slots', basePasv+extraPassive, basePasv+BOOK_SLOT_MAX_PASSIVE, extraPassive, BOOK_SLOT_MAX_PASSIVE, _passiveSlotCost, bookId, 'passiveSlots', phos)}
+        </div>
+      </div>`;
+    });
+  }
+
+  // ── Default Book ──────────────────────────────────────────────────────────
+  html += `<div style="font-size:.62rem;color:#4a4a60;margin:.5rem 0 .4rem;letter-spacing:.08em;text-transform:uppercase;">Default Spellbook</div>`;
+  const defBook      = bookSlotUpgrades['default'] || {};
+  const defExtraSpell   = defBook.spellSlots   || 0;
+  const defExtraPassive = defBook.passiveSlots  || 0;
+  html += `<div style="background:#0f0d0b;border:1px solid #2a2020;border-radius:6px;padding:.65rem .85rem;margin-bottom:.5rem;">
+    <div style="font-family:'Cinzel',serif;font-size:.74rem;color:#a08060;margin-bottom:.15rem;">📖 Default Spellbook</div>
+    <div style="font-size:.6rem;color:#555;margin-bottom:.35rem;">Your base spellbook when no catalogue book is equipped.</div>
+    ${_bookSlotRow('Spell Slots', BOOK_SPELL_SLOTS_BASE+defExtraSpell, BOOK_SPELL_SLOTS_BASE+BOOK_SLOT_MAX_SPELL, defExtraSpell, BOOK_SLOT_MAX_SPELL, _spellSlotCost, 'default', 'spellSlots', phos)}
+    ${_bookSlotRow('Passive Slots', BOOK_PASSIVE_SLOTS_BASE+defExtraPassive, BOOK_PASSIVE_SLOTS_BASE+BOOK_SLOT_MAX_PASSIVE, defExtraPassive, BOOK_SLOT_MAX_PASSIVE, _passiveSlotCost, 'default', 'passiveSlots', phos)}
+  </div>`;
 
   content.innerHTML = html;
 }
 
-function purchaseBookUpgrade(key) {
+function purchaseCatalogueBookUpgrade(catalogueId) {
+  if (typeof SPELLBOOK_CATALOGUE === 'undefined') return;
+  const cat = SPELLBOOK_CATALOGUE[catalogueId];
+  if (!cat) return;
   const meta = getMeta();
-  const COSTS = { spell_slots: lvl => (lvl+1)*8, passive_slots: lvl => (lvl+1)*10 };
-  const MAX   = { spell_slots: 4, passive_slots: 3 };
-  if (!meta.bookUpgrades) meta.bookUpgrades = {};
-  const lvl  = meta.bookUpgrades[key] || 0;
-  if (lvl >= MAX[key]) return;
-  const cost = COSTS[key](lvl);
-  if ((meta.phos||0) < cost) return;
+  if (!meta.bookUpgradeLevels) meta.bookUpgradeLevels = {};
+  const lvl = meta.bookUpgradeLevels[catalogueId] || 0;
+  if (lvl >= 4) return;
+  const cost = (cat.upgradeCosts || [])[lvl] || 0;
+  if ((meta.phos || 0) < cost) return;
   meta.phos -= cost;
-  meta.bookUpgrades[key] = lvl + 1;
+  meta.bookUpgradeLevels[catalogueId] = lvl + 1;
   saveMeta();
-  // Re-render
-  switchBrunTab('books', document.querySelector('.brun-tab[onclick*="books"]'));
+  _rerenderBookPanel();
 }
 
-// Apply book upgrades at run start (called in initSpellbooksForRun)
-function applyBookUpgrades(book) {
+const BOOK_SLOT_MAX_SPELL   = 3;  // max extra spell slots purchasable per book
+const BOOK_SLOT_MAX_PASSIVE = 2;  // max extra passive slots purchasable per book
+const _spellSlotCost   = n => (n + 1) * 10; // 10, 20, 30
+const _passiveSlotCost = n => (n + 1) * 12; // 12, 24
+
+function _rerenderBookPanel() {
+  const freshMeta = getMeta();
+  const c1 = document.getElementById('brun-tab-content');
+  if (c1) renderBookUpgradesTab(c1, freshMeta);
+  const c2 = document.getElementById('lobby-panel-content');
+  if (c2 && c2.style.display !== 'none') renderBookUpgradesTab(c2, freshMeta);
+}
+
+function purchaseBookSlotUpgrade(bookKey, type) {
   const meta = getMeta();
-  const upg  = meta.bookUpgrades || {};
-  book.spellSlots   = BOOK_SPELL_SLOTS_BASE   + (upg.spell_slots   || 0);
-  book.passiveSlots = BOOK_PASSIVE_SLOTS_BASE + (upg.passive_slots || 0);
+  if (!meta.bookSlotUpgrades) meta.bookSlotUpgrades = {};
+  if (!meta.bookSlotUpgrades[bookKey]) meta.bookSlotUpgrades[bookKey] = {};
+  const current = meta.bookSlotUpgrades[bookKey][type] || 0;
+  const max = type === 'spellSlots' ? BOOK_SLOT_MAX_SPELL : BOOK_SLOT_MAX_PASSIVE;
+  if (current >= max) return;
+  const cost = (type === 'spellSlots' ? _spellSlotCost : _passiveSlotCost)(current);
+  if ((meta.phos || 0) < cost) return;
+  meta.phos -= cost;
+  meta.bookSlotUpgrades[bookKey][type] = current + 1;
+  saveMeta();
+  _rerenderBookPanel();
+}
+
+// Apply per-book slot upgrades at run start (called in initSpellbooksForRun and makeBookInstance)
+function applyBookUpgrades(book, catalogueId) {
+  const meta = getMeta();
+  const slotUpgs = meta.bookSlotUpgrades || {};
+  const key = catalogueId || 'default';
+  const perBook = slotUpgs[key] || {};
+  book.spellSlots   = BOOK_SPELL_SLOTS_BASE   + (perBook.spellSlots   || 0);
+  book.passiveSlots = BOOK_PASSIVE_SLOTS_BASE + (perBook.passiveSlots || 0);
 }
 
 function renderTalentTab(content, meta) {

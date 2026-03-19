@@ -1,8 +1,8 @@
 // ===== artifacts.js =====
 // ─── ARTIFACT SYSTEM ─────────────────────────────────────────────────────────
 // Permanent meta-progression items earned by beating gym leaders.
-// Each artifact has 3 upgrade tiers (★ ★★ ★★★), earned after 25 rooms each.
-// All unlocked artifacts are always active — no equipping needed.
+// Each artifact has 3 upgrade tiers (★ ★★ ★★★), earned after 25 rooms of use.
+// Only ONE artifact is active per run — equip it in the Vault between runs.
 
 // ── Catalogue ─────────────────────────────────────────────────────────────────
 // desc[0] = base, desc[1] = ★, desc[2] = ★★, desc[3] = ★★★
@@ -182,9 +182,9 @@ function getMeta() {
     try {
       const raw = localStorage.getItem(_metaKey());
       cache[slot] = raw ? JSON.parse(raw)
-        : { artifacts:[], totalRuns:0, bestLevel:0, gymsBeaten:0, runHistory:[] };
+        : { artifacts:[], totalRuns:0, bestLevel:0, gymsBeaten:0, runHistory:[], activeArtifactId:null, unseenArtifacts:[] };
     } catch(e) {
-      cache[slot] = { artifacts:[], totalRuns:0, bestLevel:0, gymsBeaten:0, runHistory:[] };
+      cache[slot] = { artifacts:[], totalRuns:0, bestLevel:0, gymsBeaten:0, runHistory:[], activeArtifactId:null, unseenArtifacts:[], ownedBookIds:[], bookUpgradeLevels:{}, unseenBookIds:[] };
     }
   }
   return cache[slot];
@@ -194,54 +194,93 @@ function saveMeta() {
   try { localStorage.setItem(_metaKey(), JSON.stringify(getMeta())); } catch(e) {}
 }
 
-// Called at run start — apply all artifact bonuses to player state
+// Called at run start — apply only the active artifact's bonuses
 function applyArtifactBonuses() {
   const meta = getMeta();
-  (meta.artifacts||[]).forEach(a => {
-    const def = ARTIFACT_CATALOGUE[a.id];
-    if(def) def.applyToRun(a.star||0);
-  });
+  const activeId = meta.activeArtifactId;
+  if (!activeId) return;
+  const a = (meta.artifacts||[]).find(x => x.id === activeId);
+  if (!a) return;
+  const def = ARTIFACT_CATALOGUE[a.id];
+  if (def) def.applyToRun(a.star||0);
 }
 
-// Called when a gym is beaten — unlock or upgrade artifact
-// Returns the artifact object that was changed (for display)
+// Called when a gym is beaten — 65% chance to discover a new random artifact.
+// Returns the new artifact object if one was discovered, or null.
 function onGymDefeated(gymIdx) {
   const meta = getMeta();
-  const nextId = ARTIFACT_ORDER[gymIdx % ARTIFACT_ORDER.length];
-  let target = (meta.artifacts||[]).find(a => a.id === nextId);
-  if(target) {
-    if(target.star < 3) {
-      target.star++;
-      target.roomsUsed = 0; // reset rooms-to-next-upgrade after star bump
-    }
-  } else {
-    if(!meta.artifacts) meta.artifacts = [];
-    target = { id:nextId, star:0, roomsUsed:0 };
-    meta.artifacts.push(target);
-  }
   meta.gymsBeaten = Math.max(meta.gymsBeaten||0, gymIdx+1);
+  if (!meta.artifacts) meta.artifacts = [];
+  if (!meta.unseenArtifacts) meta.unseenArtifacts = [];
+
+  // Find all artifact IDs not yet discovered
+  const discovered = new Set((meta.artifacts).map(a => a.id));
+  const undiscovered = ARTIFACT_ORDER.filter(id => !discovered.has(id));
+  if (!undiscovered.length || Math.random() > 0.65) {
+    saveMeta();
+    return null; // no discovery this time
+  }
+
+  // Pick a random undiscovered artifact
+  const chosenId = undiscovered[Math.floor(Math.random() * undiscovered.length)];
+  const target = { id: chosenId, star: 0, roomsUsed: 0 };
+  meta.artifacts.push(target);
+  meta.unseenArtifacts.push(chosenId);
   saveMeta();
-  window._lastArtifactUnlock = target; // expose for UI notification
+  window._lastArtifactUnlock = target;
   return target;
 }
 
-// Called after each non-gym room is cleared — progress artifact room counters
+// Equip an artifact as the single active one
+function equipArtifact(id) {
+  const meta = getMeta();
+  meta.activeArtifactId = id;
+  saveMeta();
+}
+
+// Unequip the active artifact
+function unequipArtifact() {
+  const meta = getMeta();
+  meta.activeArtifactId = null;
+  saveMeta();
+}
+
+// Returns true if there are newly discovered artifacts the player hasn't seen
+function hasUnseenArtifact() {
+  const meta = getMeta();
+  return (meta.unseenArtifacts || []).length > 0;
+}
+
+// Called when the player opens the vault — clears unseen notification
+function markArtifactsSeen() {
+  const meta = getMeta();
+  meta.unseenArtifacts = [];
+  saveMeta();
+}
+
+// Called when the player opens the library — clears unseen book notification
+function markBooksSeen() {
+  const meta = getMeta();
+  meta.unseenBookIds = [];
+  saveMeta();
+}
+
+// Called after each non-gym room is cleared — progress the ACTIVE artifact only
 function incrementArtifactRooms() {
   const meta = getMeta();
-  const ROOMS_PER_STAR = 25;
-  let upgraded = null;
-  (meta.artifacts||[]).forEach(a => {
-    if(a.star >= 3) return;
-    a.roomsUsed = (a.roomsUsed||0) + 1;
-    const threshold = ROOMS_PER_STAR; // 25 rooms per tier (cumulative)
-    if(a.roomsUsed >= threshold) {
-      a.star++;
-      a.roomsUsed = 0;
-      upgraded = a;
-    }
-  });
-  if(upgraded) saveMeta();
-  return upgraded;
+  const activeId = meta.activeArtifactId;
+  if (!activeId) return null;
+  const a = (meta.artifacts||[]).find(x => x.id === activeId);
+  if (!a || a.star >= 3) return null;
+  a.roomsUsed = (a.roomsUsed||0) + 1;
+  if (a.roomsUsed >= 25) {
+    a.star++;
+    a.roomsUsed = 0;
+    saveMeta();
+    return a;
+  }
+  saveMeta();
+  return null;
 }
 
 // Called on run end — save stats
@@ -281,45 +320,45 @@ function starColor(star) {
 
 // ── Combat hooks (called from startRound / endBattle) ─────────────────────────
 
-// Returns extra actions from artifacts for player this turn
+// Returns extra actions from the active artifact for player this turn
 function artifactExtraActions() {
   const meta = getMeta();
+  const activeId = meta.activeArtifactId;
+  if (!activeId) return 0;
+  const a = (meta.artifacts||[]).find(x => x.id === activeId);
+  if (!a) return 0;
+  const star = a.star||0;
   let extra = 0;
 
-  meta.artifacts.forEach(a => {
-    const def = ARTIFACT_CATALOGUE[a.id];
-    if(!def) return;
-    const star = a.star||0;
+  if (activeId === 'battle_rhythm') {
+    const interval = star >= 3 ? 1 : (star >= 1 ? 2 : 3);
+    const t = combat.turnInBattle||0;
+    if (t > 0 && t % interval === 0) extra++;
+  }
 
-    if(a.id === 'battle_rhythm'){
-      const interval = star >= 3 ? 1 : (star >= 1 ? 2 : 3);
-      const t = combat.turnInBattle||0;
-      if(t > 0 && t % interval === 0) extra++;
+  if (activeId === 'quick_hands') {
+    if (star >= 3) {
+      extra++;
+    } else {
+      const battleLimit = [1,3,5][Math.min(star,2)];
+      if (battleNumber <= battleLimit) extra++;
     }
-
-    if(a.id === 'quick_hands'){
-      if(star >= 3){
-        extra++; // always +1
-      } else {
-        const battleLimit = [1,3,5][Math.min(star,2)];
-        if(battleNumber <= battleLimit) extra++;
-      }
-    }
-  });
+  }
 
   return extra;
 }
 
-// Called from endBattle(won=true) — warlord's banner
+// Called from endBattle(won=true) — warlord's banner (only if active)
 function applyBannerReward() {
   const meta = getMeta();
+  if (meta.activeArtifactId !== 'warlords_banner') return;
   const a = (meta.artifacts||[]).find(x => x.id === 'warlords_banner');
-  if(!a) return;
+  if (!a) return;
   const star = a.star||0;
   const gold = [5,10,10,15][star];
   player.gold += gold;
   log(`🚩 Warlord's Banner: +${gold} gold!`, 'item');
-  if(star >= 2){
+  if (star >= 2) {
     const atkBonus = star >= 3 ? 2 : 1;
     player.attackPower += atkBonus;
     log(`🚩 Banner: +${atkBonus} ATK!`, 'item');

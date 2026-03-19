@@ -59,6 +59,8 @@ function loadBattle(enc){
   combat.basicCD=0; combat.actionQueue=[]; combat.summons=[];
   combat.totalGold=0; combat.hitFlashes=[]; combat.turnInBattle=0;
   combat.activeZoneElement=(inGymZone()&&!enc.isGym)?(currentGymDef()||{}).element:null;
+  combat._echoReady = false;    // will be set true in startRound
+  combat._swiftbladeSwitch = 0; // reset per-battle swiftblade switch counter
 
   // Zone background = the map zone you are fighting in, never the enemy element
   const _gymDef = currentGymDef();
@@ -76,9 +78,10 @@ function loadBattle(enc){
   });
   // Apply per-battle character buff effects
   if(player._blockStart > 0) status.player.block = (status.player.block||0) + player._blockStart;
+  if((player._talentStoneStart||0) > 0) status.player.stoneStacks = (status.player.stoneStacks||0) + player._talentStoneStart;
   // Plasma: start each battle with 3 charge (+ Reserve Cell bonus)
   if(playerElement === 'Plasma'){
-    const startCharge = 3 + (hasPassive('plasma_reserve_cell') ? 10 : 0);
+    const startCharge = 3 + (hasPassive('plasma_reserve_cell') ? 10 : 0) + (player._talentChargeStart||0);
     status.player.plasmaCharge = startCharge;
     status.player.plasmaChargeHalf = 0;
     combat.plasmaChargeReserved = 0;
@@ -104,6 +107,9 @@ function loadBattle(enc){
     combat.totalGold=enc.gold; combat._isSpellBattle=enc._isSpellBattle||false; combat._isRival=enc.isRival||false;
   }
   combat.targetIdx=0; setActiveEnemy(0);
+  // Apply talent-granted battle-start stacks to enemies
+  if((player._talentBurnStart||0) > 0) combat.enemies.forEach(e=>{ if(e.alive) e.status.burnStacks=(e.status.burnStacks||0)+player._talentBurnStart; });
+  if((player._talentFoamStart||0) > 0) combat.enemies.forEach(e=>{ if(e.alive) e.status.foamStacks=(e.status.foamStacks||0)+player._talentFoamStart; });
 
   const label=enc.isGym?`⚔ Gym ${currentGymIdx+1} — ${enc.name} ⚔`
     :enc.isPack?`⚔ Pack Encounter ⚔`:`⚔ Battle ${battleNumber} ⚔`;
@@ -127,6 +133,8 @@ function loadBattle(enc){
   if(enemyBtn) enemyBtn.style.display = isSandbox ? 'block' : 'none';
   const spellBtn = document.getElementById('sandbox-spell-btn');
   if(spellBtn) spellBtn.style.display = isSandbox ? 'block' : 'none';
+  const bookBtn = document.getElementById('sandbox-book-btn');
+  if(bookBtn) bookBtn.style.display = isSandbox ? 'block' : 'none';
   // Sandbox zone switcher for combat
   const combatZoneBar = document.getElementById('sandbox-zone-combat-bar');
   if(combatZoneBar){

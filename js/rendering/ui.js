@@ -7,10 +7,16 @@ function updateStatsUI(){
   // Build lives string: filled hearts for remaining, empty for lost
   const maxDisplay = Math.max(player.revives, 3);
   const heartsStr = '❤'.repeat(player.revives) + '🖤'.repeat(Math.max(0, maxDisplay - player.revives));
+  // During combat show effective (status-modified) stats; outside show base
+  const inCombat = (typeof combat !== 'undefined' && !combat.over
+    && typeof status !== 'undefined' && status.player);
+  const dispAtk = inCombat ? attackPowerFor('player') : player.attackPower;
+  const dispEfx = inCombat ? effectPowerFor('player') : player.effectPower;
+  const dispDef = inCombat ? defenseFor('player')     : player.defense;
   ["map","combat"].forEach(prefix=>{
-    const ap=document.getElementById(prefix+"-atk");  if(ap) ap.textContent=player.attackPower;
-    const ep=document.getElementById(prefix+"-ep");   if(ep) ep.textContent=player.effectPower;
-    const df=document.getElementById(prefix+"-def");  if(df) df.textContent=player.defense;
+    const ap=document.getElementById(prefix+"-atk");  if(ap) ap.textContent=dispAtk;
+    const ep=document.getElementById(prefix+"-ep");   if(ep) ep.textContent=dispEfx;
+    const df=document.getElementById(prefix+"-def");  if(df) df.textContent=dispDef;
     const g =document.getElementById(prefix+"-gold");    if(g)  g.textContent=player.gold;
     const lh=document.getElementById(prefix+"-lives");  if(lh) lh.textContent=heartsStr;
   });
@@ -58,18 +64,23 @@ function renderEnemyCards(){
   });
 
   // Status tags per enemy
+  const _mistHPPct = Math.round(((player._mistEnemyHPMult||1)-1)*100);
   (combat.enemies||[]).forEach((e, i)=>{
     const row = document.getElementById(`estatus-${i}`);
     if(!row) return;
     const s = e.status;
-    if(s.burnStacks>0)       row.appendChild(tag(`🔥${s.burnStacks}`,'tag-burn'));
-    if(s.stunned>0)          row.appendChild(tag(`❄${s.stunned}t`,'tag-stun'));
-    if(s.rootStacks>0)       row.appendChild(tag(`🌿${s.rootStacks}`,'tag-root'));
-    if(s.overgrowthStacks>0) row.appendChild(tag(`🌿G${s.overgrowthStacks}`,'tag-root'));
-    if(s.foamStacks>0)       row.appendChild(tag(`🫧${s.foamStacks}`,'tag-block'));
-    if(s.shockStacks>0)      row.appendChild(tag(`⚡${s.shockStacks}`,'tag-stun'));
-    if(s.block>0)            row.appendChild(tag(`🛡${s.block}`,'tag-block'));
-    if(s.phaseTurns>0)       row.appendChild(tag(`🔮`,'tag-phase'));
+    if(s.burnStacks>0)       row.appendChild(tag(`🔥${s.burnStacks}`,'tag-burn',`Burn ×${s.burnStacks} — deals ${s.burnStacks} dmg/turn`));
+    if(s.stunned>0)          row.appendChild(tag(`❄${s.stunned}t`,'tag-stun',`Stunned — skips ${s.stunned} turn(s)`));
+    if(s.rootStacks>0)       row.appendChild(tag(`🌿${s.rootStacks}`,'tag-root',`Root ×${s.rootStacks} — takes +${s.rootStacks*ROOT_POWER_PER_STACK} bonus damage`));
+    if(s.overgrowthStacks>0) row.appendChild(tag(`🌿G${s.overgrowthStacks}`,'tag-root',`Overgrowth ×${s.overgrowthStacks} — +${s.overgrowthStacks*ROOT_POWER_PER_STACK} bonus damage`));
+    if(s.foamStacks>0)       row.appendChild(tag(`🫧${s.foamStacks}`,'tag-block',`Foam ×${s.foamStacks} — -${s.foamStacks*10}% ATK, -${s.foamStacks*5} Armor`));
+    if(s.shockStacks>0)      row.appendChild(tag(`⚡${s.shockStacks}`,'tag-stun',`Shock ×${s.shockStacks} — reduces outgoing damage by ${s.shockStacks*5}%`));
+    if(s.block>0)            row.appendChild(tag(`🛡${s.block}`,'tag-block',`Armor ${s.block} — absorbs ${s.block} damage`));
+    if(s.phaseTurns>0)       row.appendChild(tag(`🔮`,'tag-phase',`Phase — immune to damage for ${s.phaseTurns} turn(s)`));
+    if(s.frostStacks>0)      row.appendChild(tag(`❄️${s.frostStacks}`,'tag-stun',`Frost ×${s.frostStacks} — -${s.frostStacks} ATK/Armor`));
+    if(s.stoneStacks>0)      row.appendChild(tag(`🪨${s.stoneStacks}`,'tag-block',`Stone ×${s.stoneStacks} — +${s.stoneStacks*3} ATK, +${s.stoneStacks*2} Armor`));
+    // Mist HP bonus: undispellable indicator
+    if(_mistHPPct > 0){ const t=tag(`🌫+${_mistHPPct}%HP`,'tag-block',`Mist — Veil pact grants this enemy +${_mistHPPct}% max HP (cannot be removed)`); t.style.opacity='.7'; row.appendChild(t); }
   });
 
   renderBattlefield();
@@ -121,32 +132,34 @@ function renderStatusTags(){
   if(pr){
     pr.innerHTML = '';
     const s = status.player;
-    if(s.burnStacks>0)       pr.appendChild(tag(`🔥${s.burnStacks}`,'tag-burn'));
-    if(s.stunned>0)          pr.appendChild(tag(`❄${s.stunned}t`,'tag-stun'));
-    if(s.rootStacks>0)       pr.appendChild(tag(`🌿${s.rootStacks}`,'tag-root'));
-    if(s.overgrowthStacks>0) pr.appendChild(tag(`🌿G${s.overgrowthStacks}`,'tag-root'));
-    if(s.foamStacks>0)       pr.appendChild(tag(`🫧${s.foamStacks}`,'tag-block'));
-    if(s.shockStacks>0)      pr.appendChild(tag(`⚡${s.shockStacks}`,'tag-stun'));
-    if(s.block>0)            pr.appendChild(tag(`🛡${s.block}`,'tag-block'));
-    if(s.phaseTurns>0)       pr.appendChild(tag('🔮','tag-phase'));
+    if(s.burnStacks>0)       pr.appendChild(tag(`🔥${s.burnStacks}`,'tag-burn',`Burn ×${s.burnStacks} — deals ${s.burnStacks} dmg/turn (1 per stack)`));
+    if(s.stunned>0)          pr.appendChild(tag(`❄${s.stunned}t`,'tag-stun',`Stunned — skip ${s.stunned} turn(s)`));
+    if(s.rootStacks>0)       pr.appendChild(tag(`🌿${s.rootStacks}`,'tag-root',`Root ×${s.rootStacks} — you take +${s.rootStacks*ROOT_POWER_PER_STACK} bonus damage from attacks`));
+    if(s.overgrowthStacks>0) pr.appendChild(tag(`🌿G${s.overgrowthStacks}`,'tag-root',`Overgrowth ×${s.overgrowthStacks} — enhanced root, +${s.overgrowthStacks*ROOT_POWER_PER_STACK} bonus damage`));
+    if(s.foamStacks>0)       pr.appendChild(tag(`🫧${s.foamStacks}`,'tag-block',`Foam ×${s.foamStacks} — -${s.foamStacks*10}% ATK & EFX, -${s.foamStacks*5} Armor`));
+    if(s.shockStacks>0)      pr.appendChild(tag(`⚡${s.shockStacks}`,'tag-stun',`Shock ×${s.shockStacks} — reduces your outgoing damage by ${s.shockStacks*5}%`));
+    if(s.block>0)            pr.appendChild(tag(`🛡${s.block}`,'tag-block',`Armor ${s.block} — absorbs ${s.block} incoming damage`));
+    if(s.phaseTurns>0)       pr.appendChild(tag('🔮','tag-phase',`Phase — immune to damage for ${s.phaseTurns} turn(s)`));
+    if(s.frostStacks>0)      pr.appendChild(tag(`❄️${s.frostStacks}`,'tag-stun',`Frost ×${s.frostStacks} — -${s.frostStacks} ATK/EFX/Armor; at 10 stacks: Frozen (stunned)`));
+    if(s.stoneStacks>0)      pr.appendChild(tag(`🪨${s.stoneStacks}`,'tag-block',`Stone ×${s.stoneStacks} — +${s.stoneStacks*3} ATK, +${s.stoneStacks*2} Armor; decays 25%/turn`));
     // Plasma
     if(playerElement==='Plasma'){
-      if(s.stallActive)           pr.appendChild(tag('🫧 Stall','tag-phase'));
-      if(s.borrowedCharge>0)      pr.appendChild(tag(`⏳${s.borrowedCharge}debt`,'tag-burn'));
-      if(s.plasmaShieldReduction>0) pr.appendChild(tag(`🛡${s.plasmaShieldReduction}%`,'tag-block'));
-      if(combat.plasmaOvercharged) pr.appendChild(tag('✦ OC','tag-phase'));
+      if(s.stallActive)           pr.appendChild(tag('🫧 Stall','tag-phase','Stall — enemy action delayed, charge refunded next turn'));
+      if(s.borrowedCharge>0)      pr.appendChild(tag(`⏳${s.borrowedCharge}debt`,'tag-burn',`Borrowed Charge — ${s.borrowedCharge} charge debt to repay`));
+      if(s.plasmaShieldReduction>0) pr.appendChild(tag(`🛡${s.plasmaShieldReduction}%`,'tag-block',`Plasma Shield — ${s.plasmaShieldReduction}% incoming damage reduced`));
+      if(combat.plasmaOvercharged) pr.appendChild(tag('✦ OC','tag-phase','Overcharged — next plasma cast has bonus power'));
     }
     // Air: Momentum
     if(playerElement==='Air'){
-      if((s.momentumStacks||0)>0)   pr.appendChild(tag(`💨${s.momentumStacks}M`,'tag-phase'));
-      if(s.windWallActive)           pr.appendChild(tag('🛡️WW','tag-block'));
-      if(s.tornadoAoENext)           pr.appendChild(tag('🌪️AoE','tag-phase'));
+      if((s.momentumStacks||0)>0)   pr.appendChild(tag(`💨${s.momentumStacks}M`,'tag-phase',`Momentum ×${s.momentumStacks} — +${s.momentumStacks} ATK, +${s.momentumStacks*2}% dodge; decays each turn`));
+      if(s.windWallActive)           pr.appendChild(tag('🛡️WW','tag-block','Wind Wall — blocks next instance of damage'));
+      if(s.tornadoAoENext)           pr.appendChild(tag('🌪️AoE','tag-phase','Tornado AoE — next attack hits all enemies'));
     }
   }
   renderEnemyCards();
 }
 
-function tag(text,cls){ const t=document.createElement("span");t.className="status-tag "+cls;t.textContent=text;return t; }
+function tag(text,cls,tooltip){ const t=document.createElement("span");t.className="status-tag "+cls;t.textContent=text;if(tooltip){t.title=tooltip;t.style.cursor='help';}return t; }
 function hpColor(pct){ return pct>50?"#3a8a3a":pct>25?"#8a7a1a":"#8a2a2a"; }
 
 function log(msg,type=""){
@@ -246,6 +259,108 @@ function basicSpellDamagePreview(){
 function doBasicAttack(ctx){
   const dmg = Math.round((BASE_DMG + (combat.tempDmgBonus||0) + (player.basicDmgFlat||0)) * (player.basicDmgMult||1.0));
   ctx.hit({ baseDamage: dmg, effects: [], isBasic: true, abilityElement: playerElement });
+}
+
+// ── Spell damage preview for tooltips ────────────────────────────────────────
+function _spellDmgPreview(spell) {
+  if (!spell || !spell.execute) return '';
+  const src = spell.execute.toString();
+  let atk, efx, def;
+  try { atk = attackPowerFor('player'); efx = effectPowerFor('player'); def = defenseFor('player'); }
+  catch(e) { atk = player.attackPower; efx = player.effectPower; def = player.defense; }
+  const mult = spell.dmgMult || 1.0;
+
+  // Special cases: spells whose damage doesn't follow simple baseDamage+ATK
+  try { switch(spell.id) {
+    case 'zap': {
+      const b = 25 + Math.floor(atk/10);
+      return `~${Math.round((b + atk) * mult)} dmg`;
+    }
+    case 'echo_slam': {
+      const n = aliveEnemies().length || 1;
+      return `~${Math.round((5*n + atk) * mult)} dmg to all (${n} × 5 base)`;
+    }
+    case 'earthshaker':  return `~${atk*3} dmg (ATK × 3)`;
+    case 'tidal_surge':  return `~${Math.round((20+atk)*mult)} dmg · heals ~${10+Math.ceil(def/2)} HP`;
+    case 'vampiric_strike': { const d=Math.round((30+atk)*mult); return `~${d} dmg · heals ~${Math.round(d*0.4)} HP`; }
+    case 'tidal_shield':    return `+${20+Math.floor(def/2)} armor`;
+    case 'seismic_wave':    return `~${Math.round((20+atk)*mult)} dmg · -5 enemy armor, +5 armor`;
+    case 'shatter': {
+      const e2 = combat.enemies[combat.activeEnemyIdx];
+      if (e2 && e2.status.frozen) return `~${Math.round((40+Math.floor(atk/5)+atk)*mult)} dmg (Frozen target)`;
+      const fr = e2 ? (e2.status.frostStacks||0) : 0;
+      return fr > 0 ? `${fr} Frost × 4 = ${fr*4} dmg, clears Frost` : 'vs Frozen: ~40+ATK | vs Frosted: Frost×4';
+    }
+    case 'blitz': {
+      const e2 = combat.enemies[combat.activeEnemyIdx];
+      const sh = e2 ? (e2.status.shockStacks||0) : 0;
+      const hpow = Math.max(1,Math.floor(atk/2));
+      return sh > 0 ? `${sh} Shock × ${hpow} = ${sh*hpow} dmg` : `Shock stacks × ATK÷2 dmg`;
+    }
+    case 'cataclysm': {
+      const st = status.player.stoneStacks||0;
+      return st > 0 ? `${st} Stone × 25 = ${st*25} dmg to all` : 'X Stone × 25 dmg to all';
+    }
+    case 'break_momentum': {
+      const m = status.player.momentumStacks||0;
+      return m > 0 ? `${m} Momentum × 5 = ${m*5} dmg` : 'X Momentum × 5 dmg';
+    }
+    case 'natures_wrath':   return 'X Root stacks × 20 dmg to all (consumes root)';
+    case 'tsunami':         return 'X Foam stacks × 10 dmg per enemy (consumes foam)';
+    case 'extinguish':      return 'Triggers burn tick + (removed stacks × 2) bonus dmg';
+    case 'fire_heal':       return 'Heals (all burn stacks on field) HP';
+    case 'fire_rage':       return '+(total burn ÷ 2) ATK for 2 turns';
+    case 'cleanse_current': return 'Heals (debuffs removed × 20) HP';
+    case 'plasma_lance': {
+      const ch = status.player.plasmaCharge||0;
+      return `${ch}⚡ → ~${ch*5+atk+efx} dmg (spend×5 + ATK+EFX)`;
+    }
+    case 'obliteration': {
+      const ch = status.player.plasmaCharge||0;
+      return `${ch}⚡ → ${ch*2} hits × ${5+atk+efx} dmg`;
+    }
+    case 'energy_infusion':  return 'spend ⚡ → +⚡ Power this battle';
+    case 'plasma_shield':    return 'spend ⚡ → +⚡% damage reduction (max 75%)';
+    case 'self_sacrifice': {
+      const ch = status.player.plasmaCharge||0;
+      return `${ch}⚡ → ${ch*2} hits of 5 self-dmg (each hit generates charge)`;
+    }
+    case 'borrowed_power':   return '+10 Charge now — 500 dmg next turn if unpaid';
+    case 'plasma_stall':     return `Stores ${status.player.plasmaCharge||0} Charge, immune this turn, regain next`;
+    case 'singularity':      return 'Next Plasma ability has doubled effects';
+    case 'chain_lightning':  return `4 hits × ~${Math.round((5+atk)*mult)} dmg (random enemies)`;
+    case 'natures_call':     return hasPassive('nature_verdant_legion') ? 'Summon Treant (50 HP, 15 dmg, 100% root)' : 'Summon Treant (25 HP, 5 dmg, 50% root)';
+    case 'living_forest': {
+      const ts = combat.summons.filter(t=>t.hp>0);
+      return ts.length ? `${ts.length} Treants × 2 strikes of ${ts[0].dmg} dmg` : 'Commands all Treants to strike twice';
+    }
+    case 'storm_rush':  return '+3 actions this turn · +5 Momentum · all CDs -1';
+    case 'overcharge':  return '+3 Shock on target · +30 Power next turn';
+    case 'feedback':    return '+2 Shock on target · 5 self-dmg · +15 Power next turn';
+  }} catch(e2) {}
+
+  // Generic: parse s.hit({baseDamage:X, hits:Y, isAOE:true})
+  const hasHit   = /\bs\.hit\s*\(/.test(src);
+  const dmgMatch = src.match(/baseDamage\s*:\s*(\d+)/);
+  const hitMatch = src.match(/\bhits\s*:\s*(\d+)/);
+  const isAOE    = /isAOE\s*:\s*true/.test(src) || (src.includes('aliveEnemies()') && hasHit);
+  const noAtk    = /_noAtk\s*:\s*true/.test(src);
+  const parts    = [];
+
+  if (hasHit && dmgMatch) {
+    const base   = parseInt(dmgMatch[1]);
+    const hits   = hitMatch ? parseInt(hitMatch[1]) : 1;
+    const perHit = noAtk ? Math.round(base * mult) : Math.round((base + atk) * mult);
+    const total  = perHit * hits;
+    parts.push(hits > 1 ? `${hits} hits × ${perHit} = ${total} dmg` : `~${total} dmg`);
+    if (isAOE) parts.push('(all enemies)');
+  }
+  const healMatch  = src.match(/healSelf\s*\(\s*(\d+)/);
+  if (healMatch) parts.push(`heals ~${healMatch[1]} HP`);
+  const blockMatch = src.match(/gainBlock\s*\([^,]+,\s*(\d+)/);
+  if (blockMatch) parts.push(`+${parseInt(blockMatch[1])} armor`);
+
+  return parts.join(' · ');
 }
 
 function renderSpellButtons(){
@@ -353,6 +468,14 @@ function renderSpellButtons(){
           (onCD?'CD:'+spell.currentCD : costLabel)+
         '</div>' +
         (alreadyQueued ? '<div class="sb-spell-queued-badge">✓</div>' : '');
+      {
+        const chargeCostStr = isVar ? `Cost: variable ⚡ (adjust with +/-)` : fixedCost > 0 ? `Cost: ${fixedCost} ⚡` : 'Cost: Free';
+        const cdInfo  = (spell.baseCooldown||0) > 0 ? `CD: ${spell.baseCooldown} turn${spell.baseCooldown!==1?'s':''}` : '';
+        const dmgPrev = _spellDmgPreview(spell);
+        const atkLine = `ATK: ${attackPowerFor('player')}  EFX: ${effectPowerFor('player')}  Charge: ${status.player.plasmaCharge||0}⚡`;
+        const parts   = [spell.name+' [Plasma]', spell.desc||'', dmgPrev, chargeCostStr, cdInfo, atkLine].filter(Boolean);
+        cell.title = parts.join('\n');
+      }
       if(isVar){
         cell.style.cursor = 'default';
         cell.onclick = null;
@@ -428,6 +551,7 @@ function renderSpellButtons(){
         '</div>' +
         basicPPLabel +
         (basicQueued ? '<div class="sb-spell-queued-badge">✓</div>' : '');
+      cell.title = `Basic Attack [${playerElement}]\nDeals ~${basicDmgEst} dmg (ATK: ${attackPowerFor('player')})\nCooldown: 1 turn`;
       const basicSpellRef = spell;
       cell.onclick = ()=>{
         if(!isMyTurn||queueFull||basicOnCD||basicQueued||basicOutOfPP) return;
@@ -461,6 +585,7 @@ function renderSpellButtons(){
         '<div class="sb-spell-cd ready">'+(armorOutOfPP ? 'No PP' : '+'+armAmt+' Block')+'</div>' +
         armorPPLabel +
         (armorQueued ? '<div class="sb-spell-queued-badge">✓</div>' : '');
+      cell.title = `Armor\n+${armAmt} Block (10 base + DEF÷5, DEF: ${defenseFor('player')})\nBlock absorbs damage before HP\nNo cooldown`;
       const armorSpellRef = spell;
       cell.onclick = ()=>{
         if(!isMyTurn||armorQueued||queueFull||armorOutOfPP) return;
@@ -500,6 +625,16 @@ function renderSpellButtons(){
       '<div class="sb-spell-cd '+(onCD||outOfPP?'on-cd':'ready')+'">'+cdLabel+'</div>' +
       ppLabel +
       (alreadyQueued ? '<div class="sb-spell-queued-badge">✓</div>' : '');
+    {
+      const cdInfo   = spell.baseCooldown > 0 ? `CD: ${spell.baseCooldown} turn${spell.baseCooldown!==1?'s':''}` : 'No cooldown';
+      const ppInfo   = spell.maxPP !== undefined ? `PP: ${spell.currentPP||0}/${spell.maxPP}` : '';
+      const elemInfo = spell.element ? `[${spell.element}]` : '';
+      const rankInfo = rankPct > 100 ? `Rank: +${rankPct-100}% damage` : '';
+      const dmgPrev  = _spellDmgPreview(spell);
+      const atkLine  = `ATK: ${attackPowerFor('player')}  EFX: ${effectPowerFor('player')}  DEF: ${defenseFor('player')}`;
+      const parts    = [spell.name+' '+elemInfo, spell.desc||'', dmgPrev, cdInfo, ppInfo, rankInfo, atkLine].filter(Boolean);
+      cell.title = parts.join('\n');
+    }
     cell.onclick = ()=>{
       if(!isMyTurn || !canQueue) return;
       const snapTgt=combat.targetIdx;
@@ -508,7 +643,11 @@ function renderSpellButtons(){
       const snapCD=(!spell.multiUse) ? (adjustedCooldownFor('player',spell.baseCooldown)||1) : 0;
       // Tag as stormRushDependent if it's only queueable due to the CD preview
       const isStormRushDependent = stormRushQueued && rawCD > 0 && effectiveCD === 0;
-      const opts = {isFree, stormRushDependent: isStormRushDependent};
+      const opts = {isFree, stormRushDependent: isStormRushDependent,
+        isSpellAction: true,
+        bookCatalogueId: (activeBook() && activeBook().catalogueId) ? activeBook().catalogueId : null,
+        spellObj: spell,
+      };
       if(spell.onQueue) opts.onQueue = ()=>spell.onQueue();
       if(spell.undoOnQueue) opts.undoOnQueue = ()=>spell.undoOnQueue();
       if(spell.id === 'storm_rush') opts.stormRushAction = true;

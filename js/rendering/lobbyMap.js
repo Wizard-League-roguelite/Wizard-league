@@ -14,7 +14,7 @@ const LOBBY_LOCATIONS = [
   { id:'talents',  label:'Talent Tree',      desc:'Spend Phos on permanent upgrades',        x:0.74, y:0.91 },
   { id:'guild',    label:'Wizard Guild',     desc:'Unlock and choose your wizard',           x:0.17, y:0.82 },
   { id:'tailor',   label:'Customize Wizard', desc:'Change your wizard\'s look',              x:0.83, y:0.82 },
-  { id:'veil',     label:'The Veil',         desc:'Make a pact — choose your burdens',       x:0.50, y:0.96 },
+  { id:'veil',     label:'The Veil',         desc:'Make a pact — choose your burdens',       x:0.355, y:0.748 },
 ];
 
 // Player walk state
@@ -1511,6 +1511,16 @@ function _drawLobbyPathsActual(ctx, W, H) {
   const bridgeBotX = 0.50 * W, bridgeBotY = H * 0.76;
   _drawCobblestonePath(ctx, bp0x, bp0y, 0.50*W, (bp0y + bridgeBotY)*0.5, bridgeBotX, bridgeBotY, pathW);
 
+  // ── VEIL PATH: branch left from bridge path toward grass beside bridge ───
+  const veilLoc = LOBBY_LOCATIONS.find(l => l.id === 'veil');
+  // Branch starts partway along bridge path (t≈0.55, near the lower portion)
+  const bpCPy = (bp0y + bridgeBotY) * 0.5;
+  const [vjx, vjy] = bezPt(bp0x, bp0y, 0.50*W, bpCPy, bridgeBotX, bridgeBotY, 0.55);
+  const vl_ex = veilLoc.x * W, vl_ey = veilLoc.y * H;
+  _drawCobblestonePath(ctx, vjx, vjy,
+    (vjx + vl_ex) * 0.5, (vjy + vl_ey) * 0.5 - H * 0.01,
+    vl_ex, vl_ey, branchW);
+
   // Thin perspective elliptical ring (drawn last to cap all path starts cleanly)
   _drawCobblestoneRing(ctx, fcx, fcy, plazaRX, plazaRY, pathW);
 }
@@ -1718,6 +1728,45 @@ function _drawLobbyForeground(ctx, W, H) {
   });
 }
 
+// ── Notification badge check ───────────────────────────────────────────────
+function _lobbyBuildingHasNotif(id) {
+  try {
+    const meta = getMeta();
+    const phos = meta.phos || 0;
+    if (id === 'vault') return (meta.unseenArtifacts || []).length > 0;
+    if (id === 'library') {
+      if ((meta.unseenBookIds || []).length > 0) return true;
+      if (typeof SPELLBOOK_CATALOGUE === 'undefined') return false;
+      const bul = meta.bookUpgradeLevels || {};
+      const bsl = meta.bookSlotUpgrades  || {};
+      for (const bid of (meta.ownedBookIds || [])) {
+        const cat = SPELLBOOK_CATALOGUE[bid];
+        if (!cat) continue;
+        const lvl = bul[bid] || 0;
+        if (lvl < 4 && phos >= ((cat.upgradeCosts || [])[lvl] || 0)) return true;
+        const ps = bsl[bid] || {};
+        if ((ps.spellSlots   || 0) < 3 && phos >= ((ps.spellSlots   || 0) + 1) * 10) return true;
+        if ((ps.passiveSlots || 0) < 2 && phos >= ((ps.passiveSlots || 0) + 1) * 12) return true;
+      }
+      const def = bsl['default'] || {};
+      if ((def.spellSlots   || 0) < 3 && phos >= ((def.spellSlots   || 0) + 1) * 10) return true;
+      if ((def.passiveSlots || 0) < 2 && phos >= ((def.passiveSlots || 0) + 1) * 12) return true;
+      return false;
+    }
+    if (id === 'talents') {
+      const talents = meta.talents || {};
+      for (const key of Object.keys(TALENT_TREE||{})) {
+        for (const node of TALENT_TREE[key].nodes) {
+          const lvl = talents[node.id] || 0;
+          if (lvl < node.maxLevel && phos >= node.cost(lvl+1)) return true;
+        }
+      }
+      return false;
+    }
+  } catch(e) {}
+  return false;
+}
+
 // ── Building dispatcher ────────────────────────────────────────────────────
 function _drawLobbyBuilding(ctx, loc, W, H) {
   const hovered = _lobbyHoveredId === loc.id;
@@ -1743,6 +1792,29 @@ function _drawLobbyBuilding(ctx, loc, W, H) {
   ctx.fillStyle = hovered ? '#c8a060' : '#6a5030';
   ctx.fillText(loc.label, bx, by + Math.max(4, bs * 0.15));
   ctx.restore();
+
+  // Notification dot — drawn after restore so it's always on top
+  if (_lobbyBuildingHasNotif(loc.id)) {
+    const dotR = Math.max(3, Math.round(bs * 0.22));
+    const dotX = bx + Math.round(bs * 0.85);
+    const dotY = by - Math.round(bs * 1.15);
+    const pulse = 0.65 + 0.35 * Math.sin(t * 0.09);
+    const isArtifact = loc.id === 'vault';
+    ctx.save();
+    // Glow ring
+    ctx.globalAlpha = pulse * 0.4;
+    ctx.fillStyle = isArtifact ? '#a080ff' : '#c8a060';
+    ctx.beginPath(); ctx.arc(dotX, dotY, dotR + 2, 0, Math.PI*2); ctx.fill();
+    // Solid dot
+    ctx.globalAlpha = 0.95;
+    ctx.fillStyle = isArtifact ? '#9060ee' : '#c8a030';
+    ctx.beginPath(); ctx.arc(dotX, dotY, dotR, 0, Math.PI*2); ctx.fill();
+    // White highlight
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(dotX - dotR*0.3, dotY - dotR*0.3, dotR*0.35, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
 }
 
 // ── Archive — squat stone records hall ────────────────────────────────────
@@ -2322,18 +2394,18 @@ const _PNODES = {
   tailor:    [0.830, 0.820],
   library:   [0.230, 0.910],
   talents:   [0.740, 0.910],
-  veil_mid:  [0.500, 0.938],
-  veil:      [0.500, 0.958],
+  veil_mid:  [0.430, 0.792],
+  veil:      [0.355, 0.748],
 };
 
 const _PEDGES = {
   plaza:     ['ring_bot'],
-  ring_bot:  ['plaza', 'ring_bl', 'ring_br', 'veil_mid'],
+  ring_bot:  ['plaza', 'ring_bl', 'ring_br'],
   ring_bl:   ['ring_bot', 'ring_tl', 'lib_mid'],
   ring_br:   ['ring_bot', 'ring_tr', 'tal_mid'],
   ring_tl:   ['ring_bl', 'ring_top', 'left_mid'],
   ring_tr:   ['ring_br', 'ring_top', 'right_mid'],
-  ring_top:  ['ring_tl', 'ring_tr', 'bridge'],
+  ring_top:  ['ring_tl', 'ring_tr', 'bridge', 'veil_mid'],
   left_mid:  ['ring_tl', 'junc_l'],
   junc_l:    ['left_mid', 'arc_mid', 'guild_mid'],
   arc_mid:   ['junc_l', 'archive'],
@@ -2351,7 +2423,7 @@ const _PEDGES = {
   tailor:    ['tlr_mid'],
   library:   ['lib_mid'],
   talents:   ['tal_mid'],
-  veil_mid:  ['ring_bot', 'veil'],
+  veil_mid:  ['ring_top', 'veil'],
   veil:      ['veil_mid'],
 };
 
@@ -2476,25 +2548,36 @@ function _openLobbyLocation(id) {
     content.innerHTML = html;
     panel.style.display = 'block';
   } else if (id === 'vault') {
+    markArtifactsSeen();
     let html = `<div class="lobby-panel-title">${title}</div>`;
     if (!meta.artifacts || !meta.artifacts.length) {
-      html += '<div class="brun-empty">No artifacts yet — defeat a Gym Leader!</div>';
+      html += '<div class="brun-empty">No artifacts yet — defeat a Gym Leader to have a chance at one!</div>';
     } else {
+      const activeId = meta.activeArtifactId || null;
+      html += '<div style="font-size:.6rem;color:#4a3820;text-align:center;margin-bottom:.6rem;">Equip one artifact per run. It earns stars after 25 battles of use.</div>';
       html += meta.artifacts.map(a => {
         const def = ARTIFACT_CATALOGUE[a.id];
         if (!def) return '';
+        const isActive = a.id === activeId;
         const stars = a.star > 0 ? '★'.repeat(a.star) : '—';
         const sColor = ['#888','#c8a030','#e8d060','#00ccff'][Math.min(a.star||0,3)];
         const prog = a.star < 3 ? `${a.roomsUsed||0}/25 rooms` : 'MAX';
-        return `<div class="brun-art-row">
-          <div class="brun-art-name">${def.emoji} ${def.name} <span class="brun-art-star" style="color:${sColor}">${stars}</span></div>
-          <div class="brun-art-desc">${def.desc[a.star||0]} · <span style="color:#4a4a4a">${prog}</span></div>
+        const btn = isActive
+          ? `<button onclick="unequipArtifact();_openLobbyLocation('vault')" style="background:#1a1205;border:1px solid #5a4020;color:#7a5020;font-family:'Cinzel',serif;font-size:.55rem;padding:.2rem .5rem;border-radius:3px;cursor:pointer;white-space:nowrap;">Unequip</button>`
+          : `<button onclick="equipArtifact('${a.id}');_openLobbyLocation('vault')" style="background:#1a1205;border:1px solid #8a6020;color:#c8a060;font-family:'Cinzel',serif;font-size:.55rem;padding:.2rem .5rem;border-radius:3px;cursor:pointer;white-space:nowrap;">Equip</button>`;
+        return `<div class="brun-art-row" style="border-color:${isActive?'#8a6020':'#1a1a14'};background:${isActive?'#1a1205':'#0f0d0b'};display:flex;align-items:center;gap:.5rem;">
+          <div style="flex:1;">
+            <div class="brun-art-name">${def.emoji} ${def.name} <span class="brun-art-star" style="color:${sColor}">${stars}</span>${isActive?'<span style="color:#c8a060;font-size:.55rem;margin-left:.4rem;"> ✦ ACTIVE</span>':''}</div>
+            <div class="brun-art-desc">${def.desc[a.star||0]} · <span style="color:#4a4a4a">${prog}</span></div>
+          </div>
+          ${btn}
         </div>`;
       }).join('');
     }
     content.innerHTML = html;
     panel.style.display = 'block';
   } else if (id === 'library') {
+    markBooksSeen();
     content.innerHTML = `<div class="lobby-panel-title">${title}</div>`;
     renderBookUpgradesTab(content, meta);
     panel.style.display = 'block';

@@ -113,7 +113,29 @@ function grantRandomLegendary() {
   }
 }
 
+function toggleRewardLog(btn) {
+  const panel = document.getElementById('br-log-panel');
+  if (!panel) return;
+  const open = panel.style.display !== 'none';
+  if (open) {
+    panel.style.display = 'none';
+    btn.textContent = '📋 Battle Log ▾';
+  } else {
+    const src = document.getElementById('battle-log');
+    panel.innerHTML = src ? src.innerHTML : '<span style="color:#333">No log.</span>';
+    panel.style.display = 'block';
+    panel.scrollTop = panel.scrollHeight;
+    btn.textContent = '📋 Battle Log ▴';
+  }
+}
+
 function showBattleRewardScreen(isGym, isSpellBattle, isRival) {
+  // Reset log panel to closed state
+  const brLog = document.getElementById('br-log-panel');
+  if (brLog) brLog.style.display = 'none';
+  const brLogBtn = document.querySelector('#battle-reward-screen button[onclick*="toggleRewardLog"]');
+  if (brLogBtn) brLogBtn.textContent = '📋 Battle Log ▾';
+
   _currentRewardIsGym = isGym;
   const badge = document.getElementById('br-badge');
   const title = document.getElementById('br-title');
@@ -165,52 +187,72 @@ function showBattleRewardScreen(isGym, isSpellBattle, isRival) {
 }
 
 function getZoneRewardType(battleSlot, gymIdx) {
+  // Zone layout is 14 battles. Rival appears on the map at count 8 (zone 1) or 6 (zone 2+).
+  // Battles that make zoneBattleCount reach the rival slot give minor rewards ("before rival").
+  // Battles fought while rival is on the map (player picks a regular battle) also give minor ("after rival").
   if (gymIdx === 0) {
-    if (battleSlot === 1) return 'primary_spell';
-    if (battleSlot === 4) return 'secondary_spell';
-    if (battleSlot === 6) return 'rival';
-    if (battleSlot === 7) return 'secondary_spell';
-    if (battleSlot >= 8) return 'gym_available';
+    // Zone 1: rival card appears at count 8
+    if (battleSlot === 1)  return 'primary_spell';
+    if (battleSlot === 4)  return 'secondary_spell';
+    if (battleSlot === 8)  return 'minor';          // before rival (rival now on map)
+    if (battleSlot === 9)  return 'minor';          // after rival (skipped rival or extra battle)
+    if (battleSlot === 10) return 'secondary_spell';
+    if (battleSlot >= 12)  return 'gym_available';
     return battleSlot % 2 === 0 ? 'minor' : 'major';
   } else {
-    if (battleSlot === 3) return 'secondary_spell';
-    if (battleSlot === 4) return 'rival';
-    if (battleSlot >= 8) return 'gym_available';
+    // Zone 2+: rival card appears at count 6
+    if (battleSlot === 3)  return 'secondary_spell';
+    if (battleSlot === 6)  return 'minor';          // before rival
+    if (battleSlot === 7)  return 'minor';          // after rival
+    if (battleSlot === 10) return 'secondary_spell';
+    if (battleSlot >= 12)  return 'gym_available';
     return battleSlot % 2 === 1 ? 'major' : 'minor';
   }
 }
 
 function buildMinorUpgradePool() {
   return [
-    { label:'+5 Attack Power', emoji:'⚔️', tag:'Minor Upgrade', desc:'Permanently gain +5 Attack Power.',
-      apply(){ player.attackPower += 5; } },
-    { label:'+5 Effect Power', emoji:'✦', tag:'Minor Upgrade', desc:'Permanently gain +5 Effect Power.',
-      apply(){ player.effectPower += 5; } },
-    { label:'+5 Defense', emoji:'🛡️', tag:'Minor Upgrade', desc:'Permanently gain +5 Defense.',
-      apply(){ player.defense += 5; } },
-    { label:'+15 Max HP', emoji:'❤️', tag:'Minor Upgrade', desc:'Permanently increase max HP by 15.',
-      apply(){ player.baseMaxHPBonus=(player.baseMaxHPBonus||0)+15; player.hp=Math.min(maxHPFor('player'),player.hp+15); } },
-    { label:'+40 Gold', emoji:'💰', tag:'Minor Upgrade', desc:'Gain 40 gold.',
-      apply(){ player.gold += 40; } },
-    { label:'Heal 30%', emoji:'💚', tag:'Minor Upgrade', desc:'Restore 30% of your max HP.',
+    { label:'+5 Attack Power',    emoji:'⚔️', tag:'Minor', desc:'Permanently gain +5 Attack Power.',
+      apply(){ player.attackPower += 5; updateStatsUI(); } },
+    { label:'+5 Effect Power',    emoji:'✦',  tag:'Minor', desc:'Permanently gain +5 Effect Power.',
+      apply(){ player.effectPower += 5; updateStatsUI(); } },
+    { label:'+5 Defense',         emoji:'🛡️', tag:'Minor', desc:'Permanently gain +5 Defense.',
+      apply(){ player.defense += 5; updateStatsUI(); } },
+    { label:'+20 Max HP',         emoji:'❤️', tag:'Minor', desc:'Permanently increase max HP by 20.',
+      apply(){ player.baseMaxHPBonus=(player.baseMaxHPBonus||0)+20; player.hp=Math.min(maxHPFor('player'),player.hp+20); } },
+    { label:'+60 Gold',           emoji:'💰', tag:'Minor', desc:'Gain 60 gold.',
+      apply(){ player.gold += 60; } },
+    { label:'Heal 30%',           emoji:'💚', tag:'Minor', desc:'Restore 30% of your max HP.',
       apply(){ applyHeal('player', Math.floor(maxHPFor('player')*0.30), '✦ Minor Heal'); } },
+    { label:'+3 ATK & +3 EFX',   emoji:'⚡', tag:'Minor', desc:'Gain +3 Attack Power and +3 Effect Power.',
+      apply(){ player.attackPower += 3; player.effectPower += 3; updateStatsUI(); } },
+    { label:'Heal 20% + Restore PP', emoji:'🔮', tag:'Minor', desc:'Heal 20% HP and restore all spell PP.',
+      apply(){ applyHeal('player', Math.floor(maxHPFor('player')*0.20), '✦ Rest'); restoreAllPP(); } },
+    { label:'+3 DEF & +10 HP',    emoji:'🪨', tag:'Minor', desc:'Gain +3 Defense and +10 Max HP.',
+      apply(){ player.defense += 3; player.baseMaxHPBonus=(player.baseMaxHPBonus||0)+10; player.hp=Math.min(maxHPFor('player'),player.hp+10); updateStatsUI(); } },
   ];
 }
 
 function buildMajorUpgradePool() {
   return [
-    { label:'Extra Action', emoji:'⚡', tag:'Major Upgrade', desc:'Permanently gain +1 action per turn.',
-      apply(){ player.bonusActions = (player.bonusActions||0) + 1; log('⚡ Extra action per turn!','win'); } },
-    { label:'Extra Life', emoji:'❤️', tag:'Major Upgrade', desc:'Gain one extra life — survive a killing blow.',
-      apply(){ player.revives = (player.revives||0) + 1; log('❤ Extra life gained!','win'); } },
-    { label:'Extra Spell Slot', emoji:'📖', tag:'Major Upgrade', desc:'+1 spell slot in your active spellbook.',
+    { label:'Extra Action',       emoji:'⚡', tag:'Major', desc:'Permanently gain +1 action per turn in combat.',
+      apply(){ player.bonusActions=(player.bonusActions||0)+1; log('⚡ Extra action per turn!','win'); } },
+    { label:'Extra Life',         emoji:'❤️', tag:'Major', desc:'Gain one extra life — survive a killing blow at 75% HP.',
+      apply(){ player.revives=(player.revives||0)+1; log('❤ Extra life gained!','win'); } },
+    { label:'Extra Spell Slot',   emoji:'📖', tag:'Major', desc:'+1 spell slot in your active spellbook.',
       apply(){ const b=activeBook(); if(b){ b.spellSlots++; log('📖 Spell slot added!','win'); } } },
-    { label:'Reroll Token', emoji:'🎲', tag:'Major Upgrade', desc:'Gain 1 reroll — re-draw any future reward screen.',
-      apply(){ player._rerolls = (player._rerolls||0) + 1; log('🎲 Reroll token!','win'); } },
-    { label:'+20 Max HP', emoji:'💪', tag:'Major Upgrade', desc:'Permanently gain +20 max HP.',
-      apply(){ player.baseMaxHPBonus=(player.baseMaxHPBonus||0)+20; player.hp=Math.min(maxHPFor('player'),player.hp+20); } },
-    { label:'Full Heal', emoji:'✨', tag:'Major Upgrade', desc:'Fully restore HP.',
-      apply(){ applyHeal('player', maxHPFor('player'), '✨ Major Heal'); } },
+    { label:'Extra Passive Slot', emoji:'📿', tag:'Major', desc:'+1 passive slot in your active spellbook.',
+      apply(){ const b=activeBook(); if(b){ b.passiveSlots=(b.passiveSlots||2)+1; log('📿 Passive slot added!','win'); } } },
+    { label:'+12 ATK',            emoji:'⚔️', tag:'Major', desc:'Permanently gain +12 Attack Power.',
+      apply(){ player.attackPower += 12; updateStatsUI(); log('⚔️ +12 Attack Power!','win'); } },
+    { label:'+12 EFX',            emoji:'✦',  tag:'Major', desc:'Permanently gain +12 Effect Power.',
+      apply(){ player.effectPower += 12; updateStatsUI(); log('✦ +12 Effect Power!','win'); } },
+    { label:'+30 Max HP',         emoji:'💪', tag:'Major', desc:'Permanently gain +30 max HP.',
+      apply(){ player.baseMaxHPBonus=(player.baseMaxHPBonus||0)+30; player.hp=Math.min(maxHPFor('player'),player.hp+30); } },
+    { label:'Full Heal',          emoji:'✨', tag:'Major', desc:'Fully restore HP and all spell PP.',
+      apply(){ applyHeal('player', maxHPFor('player'), '✨ Major Heal'); restoreAllPP(); } },
+    { label:'Reroll Token',       emoji:'🎲', tag:'Major', desc:'Gain 1 reroll — re-draw choices on any future reward screen.',
+      apply(){ player._rerolls=(player._rerolls||0)+1; log('🎲 Reroll token!','win'); } },
   ];
 }
 
@@ -235,7 +277,98 @@ function _renderUpgradeChoices(tier) {
   }
 }
 
-function _doGymRewardFlow() {
+// Build weighted book discovery pool (all catalogue books minus ones already in run)
+function _buildBookDiscoveryChoices(n) {
+  if (typeof SPELLBOOK_CATALOGUE === 'undefined') return [];
+  const meta = getMeta();
+  const inRunIds = new Set((player.spellbooks||[]).map(b=>b.catalogueId).filter(Boolean));
+  const elements = [playerElement, ...(player.unlockedElements||[])];
+
+  const pool = [];
+  Object.keys(SPELLBOOK_CATALOGUE).forEach(id => {
+    if (inRunIds.has(id)) return; // already in run
+    const cat = SPELLBOOK_CATALOGUE[id];
+    let weight = { element:3, generic:2, legendary:1 }[cat.rarity] || 2;
+    // Boost weight for matching elements
+    if (cat.element && elements.includes(cat.element)) weight += 2;
+    for (let i = 0; i < weight; i++) pool.push(id);
+  });
+
+  // Shuffle and pick n unique
+  const seen = new Set();
+  const result = [];
+  const shuffled = pool.sort(() => Math.random() - 0.5);
+  for (const id of shuffled) {
+    if (!seen.has(id)) { seen.add(id); result.push(id); }
+    if (result.length >= n) break;
+  }
+  return result;
+}
+
+// Show pick-1-of-3 book discovery screen after a boss
+function showBookDiscoveryScreen() {
+  const meta = getMeta();
+  const cont = document.getElementById('bd-choices');
+  const badge = document.getElementById('bd-badge');
+  const sub = document.getElementById('bd-sub');
+  if (!cont) { _continueGymFlow(); return; }
+
+  const choices = _buildBookDiscoveryChoices(3);
+  if (choices.length === 0) { _continueGymFlow(); return; }
+
+  if (badge) badge.textContent = 'Boss Clear';
+  if (sub) sub.textContent = 'A spellbook has revealed itself. Choose one to take with you this run.';
+
+  cont.innerHTML = '';
+  choices.forEach(id => {
+    const cat = SPELLBOOK_CATALOGUE[id];
+    if (!cat) return;
+    const isOwned = (meta.ownedBookIds || []).includes(id);
+    const lvl = (meta.bookUpgradeLevels || {})[id] || 0;
+    const rarityColor = cat.rarity === 'legendary' ? '#d4a0ff' : cat.rarity === 'generic' ? '#80c8ff' : '#c8a060';
+    const rarityLabel = cat.rarity === 'legendary' ? '✦ Legendary' : cat.rarity === 'generic' ? '⚡ Generic' : (cat.element || 'Element') + ' Book';
+    const newBadge = isOwned ? '' : '<span style="font-size:.55rem;background:#1a2a0a;border:1px solid #5a8a20;color:#90c040;padding:.1rem .4rem;border-radius:3px;margin-left:.4rem;">NEW</span>';
+
+    const btn = document.createElement('button');
+    btn.className = 'prog-choice-btn';
+    btn.innerHTML = `<div class="pc-tag">${rarityLabel}</div>
+      <div class="pc-name" style="color:${rarityColor};">${cat.emoji} ${cat.name}${newBadge}</div>
+      <div class="pc-desc">${cat.levelDescs ? cat.levelDescs[lvl] : cat.desc}</div>
+      <div style="font-size:.58rem;color:#6a4a3a;margin-top:.2rem;">⚠ ${cat.negative}</div>`;
+    btn.onclick = () => {
+      // Add to permanent collection if not already owned
+      if (!isOwned) {
+        if (!meta.ownedBookIds) meta.ownedBookIds = [];
+        meta.ownedBookIds.push(id);
+        if (!meta.unseenBookIds) meta.unseenBookIds = [];
+        meta.unseenBookIds.push(id);
+        saveMeta();
+        log(`✦ New spellbook discovered: ${cat.emoji} ${cat.name}!`, 'win');
+      } else {
+        log(`📖 Picked up ${cat.emoji} ${cat.name} for this run.`, 'win');
+      }
+      // Add to current run (up to 3 books per run)
+      if ((player.spellbooks||[]).length < 3 && typeof makeBookInstance !== 'undefined') {
+        const instance = makeBookInstance(id);
+        if (instance) {
+          instance.spells.push(
+            { id:'_basic', emoji:'⚔', name:'Basic Attack', baseCooldown:1, currentCD:0, isBuiltin:true },
+            { id:'_armor', emoji:'🛡', name:'Armor', baseCooldown:0, currentCD:0, isBuiltin:true }
+          );
+          player.spellbooks.push(instance);
+          log(`📖 ${cat.name} added to your spellbooks (book ${player.spellbooks.length}).`, 'item');
+        }
+      }
+      _continueGymFlow();
+    };
+    cont.appendChild(btn);
+  });
+
+  showScreen('bookdiscovery-screen');
+}
+
+// Continue the gym flow after book discovery
+function _continueGymFlow() {
   const hasAnyUnlocked = player.unlockedElements && player.unlockedElements.length > 0;
   const allElements = Object.keys(STARTER_SPELL);
   const locked = allElements.filter(e => e !== playerElement && !player.unlockedElements.includes(e));
@@ -245,6 +378,11 @@ function _doGymRewardFlow() {
     grantRandomLegendary();
     showMap();
   }
+}
+
+function _doGymRewardFlow() {
+  // Always show book discovery first, then continue to element unlock / legendary
+  showBookDiscoveryScreen();
 }
 
 function _renderStatRewardChoices() { _renderUpgradeChoices(_currentRewardTier || 'minor'); }

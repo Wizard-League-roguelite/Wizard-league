@@ -281,6 +281,50 @@ function enemyHasPassive(id) {
   return e.passive === id || (e.extraPassives || []).includes(id);
 }
 
+// Show book selection screen at run start (if player owns catalogue books)
+function showRunBookSelectionScreen(onDone) {
+  const meta = getMeta();
+  // In sandbox, offer all catalogue books; otherwise only owned ones
+  const ownedBookIds = (sandboxMode && typeof SPELLBOOK_CATALOGUE !== 'undefined')
+    ? Object.keys(SPELLBOOK_CATALOGUE)
+    : (meta.ownedBookIds || []);
+  if (ownedBookIds.length === 0 || typeof SPELLBOOK_CATALOGUE === 'undefined') {
+    onDone(null); return;
+  }
+  const cont = document.getElementById('bs-choices');
+  if (!cont) { onDone(null); return; }
+  cont.innerHTML = '';
+
+  // Option: use default element tome (no catalogue book)
+  const defBtn = document.createElement('button');
+  defBtn.className = 'prog-choice-btn';
+  defBtn.innerHTML = `<div class="pc-tag">Default</div>
+    <div class="pc-name">📖 ${playerElement}'s Tome</div>
+    <div class="pc-desc">Your standard spellbook — no special effects, but no drawbacks either.</div>`;
+  defBtn.onclick = () => onDone(null);
+  cont.appendChild(defBtn);
+
+  // Owned catalogue books
+  const bookUpgradeLevels = meta.bookUpgradeLevels || {};
+  ownedBookIds.forEach(id => {
+    const cat = SPELLBOOK_CATALOGUE[id];
+    if (!cat) return;
+    const lvl = bookUpgradeLevels[id] || 0;
+    const rarityColor = cat.rarity === 'legendary' ? '#d4a0ff' : cat.rarity === 'generic' ? '#80c8ff' : '#c8a060';
+    const rarityLabel = cat.rarity === 'legendary' ? '✦ Legendary' : cat.rarity === 'generic' ? '⚡ Generic' : (cat.element || '') + ' Book';
+    const btn = document.createElement('button');
+    btn.className = 'prog-choice-btn';
+    btn.innerHTML = `<div class="pc-tag">${rarityLabel} · Lv ${lvl}</div>
+      <div class="pc-name" style="color:${rarityColor};">${cat.emoji} ${cat.name}</div>
+      <div class="pc-desc">${cat.levelDescs ? cat.levelDescs[lvl] : cat.desc}</div>
+      <div style="font-size:.58rem;color:#6a4a3a;margin-top:.2rem;">⚠ ${cat.negative}</div>`;
+    btn.onclick = () => onDone(id);
+    cont.appendChild(btn);
+  });
+
+  showScreen('bookselect-screen');
+}
+
 // ── RUN INIT ──────────────────────────────────────────────────────────────────
 function beginRun(){
   Object.assign(player, {
@@ -328,7 +372,29 @@ function beginRun(){
     showPassiveScreen(playerElement);
     return;
   }
-  loadBattle(ENCOUNTER_POOL[0]);
+  _offerRunBookThenBattle();
+}
+
+// Helper: show run-start book selection, then launch first battle
+function _offerRunBookThenBattle() {
+  showRunBookSelectionScreen(chosenId => {
+    if (chosenId && typeof makeBookInstance !== 'undefined' && typeof SPELLBOOK_CATALOGUE !== 'undefined') {
+      const cat = SPELLBOOK_CATALOGUE[chosenId];
+      if (cat) {
+        const newBook = makeBookInstance(chosenId);
+        if (newBook) {
+          // Transfer spells/passives from default book
+          const oldBook = player.spellbooks[0];
+          if (oldBook) { newBook.spells = [...oldBook.spells]; newBook.passives = [...oldBook.passives]; }
+          player.spellbooks[0] = newBook;
+          player.activeBookIdx = 0;
+          syncActiveBook();
+          log(`📖 Starting with ${cat.emoji} ${cat.name}.`, 'item');
+        }
+      }
+    }
+    loadBattle(ENCOUNTER_POOL[0]);
+  });
 }
 
 function confirmStartPassive(passiveId){
@@ -339,8 +405,6 @@ function confirmStartPassive(passiveId){
   } else {
     player.passives = [passiveId];
   }
-  if (passiveId === 'air_tailwind') player.attackPower += 15;
-
   if (player._extraStartSpell) {
     const owned      = new Set(player.spellbook.map(s => s.id));
     const candidates = Object.values(SPELL_CATALOGUE).filter(s =>
@@ -352,7 +416,7 @@ function confirmStartPassive(passiveId){
       log(`📚 Head Start: bonus spell — ${pick.emoji} ${pick.name}!`, 'item');
     }
   }
-  loadBattle(ENCOUNTER_POOL[0]);
+  _offerRunBookThenBattle();
 }
 
 function backToElementSelectFromPassive(){
