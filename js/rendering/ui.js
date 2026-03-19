@@ -104,6 +104,14 @@ function updateHPBars(){
   const nm = document.getElementById('player-hud-name');
   if(nm) nm.textContent = playerName;
 
+  // Mist badge
+  const mb = document.getElementById('mist-badge');
+  if(mb){
+    const mist = (typeof getTotalMist === 'function') ? getTotalMist() : 0;
+    if(mist > 0){ mb.textContent = `🌫 ${mist} Mist`; mb.style.display = ''; }
+    else mb.style.display = 'none';
+  }
+
   renderEnemyCards();   // also redraws canvas
   renderSummonsRow();
 }

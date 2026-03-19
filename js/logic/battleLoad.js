@@ -26,17 +26,31 @@ function makeEnemyObj(enc){
 
   // Scale HP and dmg by zone depth (non-gym enemies only; gym bosses and dummies have fixed stats)
   const zoneScaled = (enc.isGym || enc.isTargetDummy) ? {} : scaleEnemyForZone(enc, currentGymIdx);
-  const finalMaxHP  = zoneScaled.enemyMaxHP || enc.enemyMaxHP;
-  const finalDmg    = zoneScaled.enemyDmg   || enc.enemyDmg;
+  const mistHPMult  = player._mistEnemyHPMult  || 1.0;
+  const mistDmgMult = player._mistEnemyDmgMult || 1.0;
+  const finalMaxHP  = Math.round((zoneScaled.enemyMaxHP || enc.enemyMaxHP) * mistHPMult);
+  const finalDmg    = Math.round((zoneScaled.enemyDmg   || enc.enemyDmg)   * mistDmgMult);
 
   // Build ability list based on element + zone depth
   const abilities = (enc.isGym || enc.isTargetDummy) ? [] : buildEnemyAbilities(el, currentGymIdx, enc.difficulty||'easy');
+
+  // Mist: extra passives for non-dummy enemies
+  let extraPassives = [];
+  if (!enc.isTargetDummy && (player._mistExtraPassives || 0) > 0) {
+    const pool = (PASSIVE_CHOICES[el] || []).filter(p => !p.legendary && p.id !== passive);
+    extraPassives = pickRandom(pool, player._mistExtraPassives).map(p => p.id);
+  }
+  // Mist: boss legendaries for gym enemies
+  if (enc.isGym && (player._mistBossLegendaries || 0) > 0) {
+    const legPool = (PASSIVE_CHOICES[el] || []).filter(p => p.legendary);
+    extraPassives = [...extraPassives, ...pickRandom(legPool, player._mistBossLegendaries).map(p => p.id)];
+  }
 
   return {
     ...enc,
     enemyMaxHP: finalMaxHP, enemyDmg: finalDmg,
     hp: finalMaxHP, alive:true, basicCD:0,
-    passive, scaledPower, status:freshEnemyStatus(),
+    passive, extraPassives, scaledPower, status:freshEnemyStatus(),
     abilities,
     gymHitCounter:enc.gymHitCounter||0, gymPhase2:enc.gymPhase2||false,
   };
@@ -62,7 +76,8 @@ function loadBattle(enc){
   (player.spellbooks||[]).forEach(book => {
     book.spells.forEach(s=>{
       s.currentCD = 0;
-      const maxPP = Math.ceil(16 / Math.max(1, s.baseCooldown || 0));
+      const rawPP = Math.ceil(16 / Math.max(1, s.baseCooldown || 0));
+      const maxPP = Math.max(1, Math.floor(rawPP * (player._mistPPMult || 1.0)));
       s.maxPP = maxPP;
       s.currentPP = maxPP;
     });

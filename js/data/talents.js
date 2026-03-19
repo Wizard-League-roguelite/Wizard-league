@@ -181,11 +181,13 @@ function applyTalentBonuses() {
   player._goldBonus   = player._goldBonus   || 0; // artifacts may also set this
   player._blockStart  = player._blockStart  || 0;
 
-  // Apply each purchased node
+  // Apply each purchased node (Mist may reduce effective level)
+  const mistReduction = player._mistTalentReduction || 0;
   Object.entries(talents).forEach(([nodeId, level]) => {
-    if (!level || level <= 0) return;
+    const effectiveLevel = Math.max(0, level - mistReduction);
+    if (!effectiveLevel) return;
     const node = _findTalentNode(nodeId);
-    if (node && node.apply) node.apply(level);
+    if (node && node.apply) node.apply(effectiveLevel);
   });
 }
 

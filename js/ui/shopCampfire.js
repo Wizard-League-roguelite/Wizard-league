@@ -19,6 +19,7 @@ function leaveCampfire(){ stopCampfireScene(); showMap(); }
 function enterShop(){
   document.getElementById("shop-gold-display").textContent=player.gold;
   const c=document.getElementById("shop-items"); c.innerHTML="";
+  const _pm = player._mistShopPriceMult || 1.0;
   const addRow=(emoji,name,desc,cost,canBuy,onBuy)=>{
     const row=document.createElement("div");
     row.className="shop-item-row"+(canBuy?"":" cant-afford");
@@ -28,16 +29,17 @@ function enterShop(){
   };
   SHOP_ITEMS.forEach(id=>{
     const item=ITEM_CATALOGUE[id];
-    addRow(item.emoji,item.name,item.desc,item.shopCost,player.gold>=item.shopCost,
-      ()=>{player.gold-=item.shopCost;addItem(id);enterShop();});
+    const cost=Math.ceil(item.shopCost*_pm);
+    addRow(item.emoji,item.name,item.desc,cost,player.gold>=cost,
+      ()=>{player.gold-=cost;addItem(id);enterShop();});
   });
-  const revCost = 200;
+  const revCost = Math.ceil(200*_pm);
   const maxRevives = 6;
   addRow('❤️','Extra Life',`Gain +1 life (${player.revives} now). Revives heal to 75% HP.`,
     revCost, player.gold>=revCost && player.revives<maxRevives,
     ()=>{player.gold-=revCost; player.revives++; enterShop();});
 
-  const actionCost = 350;
+  const actionCost = Math.ceil(350*_pm);
   const maxBonusActions = 2;
   addRow('⚡','Extra Action',
     `Gain +1 permanent action per turn (${player.bonusActions}/${maxBonusActions}). Cooldowns still apply.`,
@@ -46,7 +48,7 @@ function enterShop(){
   const allPassives=Object.entries(PASSIVE_CHOICES).flatMap(([el,ps])=>ps.map(p=>({...p,element:el})));
   const forSale=allPassives.filter(p=>!p.legendary&&!player.passives.includes(p.id));
   pickRandom(forSale,2).forEach(p=>{
-    const pCost=1000;
+    const pCost=Math.ceil(1000*_pm);
     addRow(p.emoji,p.title,`[${p.element}] ${p.desc}`,pCost,player.gold>=pCost,
       ()=>{player.gold-=pCost;addPassiveToBook(p.id);enterShop();});
   });

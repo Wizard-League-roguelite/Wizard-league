@@ -277,7 +277,8 @@ function showPassiveScreen(element){
 function hasPassive(id)    { return (player.passives||[]).includes(id); }
 function enemyHasPassive(id) {
   const e = combat.enemies[combat.activeEnemyIdx];
-  return e ? e.passive === id : false;
+  if (!e) return false;
+  return e.passive === id || (e.extraPassives || []).includes(id);
 }
 
 // ── RUN INIT ──────────────────────────────────────────────────────────────────
@@ -317,6 +318,7 @@ function beginRun(){
 
   applyCharacterBuff();
   applyArtifactBonuses();
+  applyMistModifiers();  // mist before talents so _mistTalentReduction is set
   applyTalentBonuses(); // permanent talent tree upgrades
   initSpellbooksForRun();  // create starting spellbook before spells/passives are added
   giveStarterSpell();

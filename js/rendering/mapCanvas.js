@@ -162,6 +162,9 @@ function _pickZoneSpecial(){
   if(zoneBattleCount < 5) return null;
   if(zoneBattleCount === _zoneCampfireBattle){
     _zoneCampfireBattle = -1;
+    // Mist campfire reduction: suppress this campfire if reduction active
+    const campRed = (player._mistCampfireReduction || 0);
+    if(campRed >= 1) return null;
     return 'campfire';
   }
   if(zoneBattleCount === _zoneShopBattle){

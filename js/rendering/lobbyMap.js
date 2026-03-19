@@ -14,6 +14,7 @@ const LOBBY_LOCATIONS = [
   { id:'talents',  label:'Talent Tree',      desc:'Spend Phos on permanent upgrades',        x:0.74, y:0.91 },
   { id:'guild',    label:'Wizard Guild',     desc:'Unlock and choose your wizard',           x:0.17, y:0.82 },
   { id:'tailor',   label:'Customize Wizard', desc:'Change your wizard\'s look',              x:0.83, y:0.82 },
+  { id:'veil',     label:'The Veil',         desc:'Make a pact — choose your burdens',       x:0.50, y:0.96 },
 ];
 
 // Player walk state
@@ -1733,6 +1734,7 @@ function _drawLobbyBuilding(ctx, loc, W, H) {
     case 'talents': _drawBuildingTalentTree(ctx, bx, by, bs, hovered, t); break;
     case 'guild':   _drawBuildingGuild(ctx, bx, by, bs, hovered, t);    break;
     case 'tailor':  _drawBuildingTailor(ctx, bx, by, bs, hovered, t);   break;
+    case 'veil':    _drawBuildingVeil(ctx, bx, by, bs, hovered, t);     break;
   }
   // Label below
   const fs = Math.max(8, Math.round(W * 0.011));
@@ -2099,6 +2101,77 @@ function _drawBuildingTailor(ctx, bx, by, bs, hov, t) {
   if (hov) { ctx.strokeStyle='#c8a060'; ctx.lineWidth=1.5; ctx.strokeRect(Math.round(bx-bw/2),Math.round(by-bh),Math.round(bw),Math.round(bh)); }
 }
 
+// ── The Veil — misty archway with purple glow ─────────────────────────────
+function _drawBuildingVeil(ctx, bx, by, bs, hov, t) {
+  const aw = bs * 1.4, ah = bs * 1.5;
+  const ax = bx - aw / 2, ay = by - ah;
+  const pulse = 0.5 + 0.5 * Math.sin(t * 0.04);
+  const mistCfg = (typeof getMistConfig === 'function') ? getMistConfig() : { active: false };
+  const active = mistCfg.active;
+
+  // Archway glow backdrop
+  const glow = ctx.createRadialGradient(bx, by - ah * 0.5, 0, bx, by - ah * 0.5, aw * 0.8);
+  glow.addColorStop(0, `rgba(${active?'120,40,220':'60,20,110'},${0.22 + pulse * 0.12})`);
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow; ctx.fillRect(ax - aw * 0.3, ay - ah * 0.1, aw * 1.6, ah * 1.2);
+
+  // Stone pillars
+  ctx.fillStyle = '#1a1020'; ctx.strokeStyle = '#2d1a40'; ctx.lineWidth = 1;
+  const pilW = aw * 0.18, pilH = ah * 0.85;
+  ctx.fillRect(ax, by - pilH, pilW, pilH); ctx.strokeRect(ax, by - pilH, pilW, pilH);
+  ctx.fillRect(ax + aw - pilW, by - pilH, pilW, pilH); ctx.strokeRect(ax + aw - pilW, by - pilH, pilW, pilH);
+
+  // Arch top
+  ctx.beginPath();
+  ctx.arc(bx, by - pilH + aw * 0.01, aw * 0.5 - pilW * 0.5, Math.PI, 0);
+  ctx.fillStyle = '#1a1020'; ctx.fill();
+  ctx.strokeStyle = '#3a2060'; ctx.lineWidth = 1.2; ctx.stroke();
+
+  // Arch interior — misty void
+  const innerR = aw * 0.36;
+  const innerGrad = ctx.createRadialGradient(bx, by - pilH + 2, 0, bx, by - pilH, innerR);
+  innerGrad.addColorStop(0, `rgba(${active?'90,20,180':'40,10,80'},${0.7 + pulse * 0.2})`);
+  innerGrad.addColorStop(0.6, `rgba(${active?'50,10,120':'20,5,50'},0.8)`);
+  innerGrad.addColorStop(1, 'rgba(0,0,0,0.4)');
+  ctx.beginPath();
+  ctx.arc(bx, by - pilH + aw * 0.01, innerR, Math.PI, 0);
+  ctx.fillStyle = innerGrad; ctx.fill();
+
+  // Mist wisps inside arch
+  for (let i = 0; i < 3; i++) {
+    const wx = bx + Math.sin(t * 0.03 + i * 2.1) * aw * 0.18;
+    const wy = by - pilH * 0.3 - i * ah * 0.13 + Math.cos(t * 0.025 + i) * ah * 0.06;
+    const wr = bs * (0.10 + 0.05 * Math.sin(t * 0.05 + i));
+    const mg = ctx.createRadialGradient(wx, wy, 0, wx, wy, wr);
+    mg.addColorStop(0, `rgba(${active?'160,80,255':'100,40,180'},${0.25 + pulse * 0.15})`);
+    mg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = mg; ctx.fillRect(wx - wr, wy - wr, wr*2, wr*2);
+  }
+
+  // Keystone gem at arch top
+  const gemY = by - pilH - aw * 0.12;
+  ctx.beginPath(); ctx.arc(bx, gemY, bs * 0.07, 0, Math.PI * 2);
+  ctx.fillStyle = active ? `rgba(180,80,255,${0.7+pulse*0.3})` : `rgba(80,30,120,0.6)`;
+  ctx.fill();
+  ctx.strokeStyle = active ? '#e0a0ff' : '#6030a0'; ctx.lineWidth = 0.8; ctx.stroke();
+
+  // Active mist indicator dot
+  if (active) {
+    const mist = (typeof getTotalMist === 'function') ? getTotalMist() : 0;
+    ctx.fillStyle = `rgba(200,120,255,${0.6+pulse*0.4})`;
+    ctx.font = `bold ${Math.round(bs*0.22)}px Cinzel,serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(`🌫${mist}`, bx, by - ah - bs * 0.12);
+    ctx.textAlign = 'left';
+  }
+
+  // Hover outline
+  if (hov) {
+    ctx.strokeStyle = active ? '#c080ff' : '#6030a0'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(ax - 2, ay - 2, aw + 4, ah + 4);
+  }
+}
+
 function _drawLobbyPlayer(ctx, W, H) {
   // Hide wizard entirely during teeth and fade phases
   if (_lobbyCinematic === 'castle_teeth' || _lobbyCinematic === 'castle_fade') return;
@@ -2249,11 +2322,13 @@ const _PNODES = {
   tailor:    [0.830, 0.820],
   library:   [0.230, 0.910],
   talents:   [0.740, 0.910],
+  veil_mid:  [0.500, 0.938],
+  veil:      [0.500, 0.958],
 };
 
 const _PEDGES = {
   plaza:     ['ring_bot'],
-  ring_bot:  ['plaza', 'ring_bl', 'ring_br'],
+  ring_bot:  ['plaza', 'ring_bl', 'ring_br', 'veil_mid'],
   ring_bl:   ['ring_bot', 'ring_tl', 'lib_mid'],
   ring_br:   ['ring_bot', 'ring_tr', 'tal_mid'],
   ring_tl:   ['ring_bl', 'ring_top', 'left_mid'],
@@ -2276,6 +2351,8 @@ const _PEDGES = {
   tailor:    ['tlr_mid'],
   library:   ['lib_mid'],
   talents:   ['tal_mid'],
+  veil_mid:  ['ring_bot', 'veil'],
+  veil:      ['veil_mid'],
 };
 
 function _nearestPathNode(x, y) {
@@ -2428,6 +2505,9 @@ function _openLobbyLocation(id) {
   } else if (id === 'guild') {
     content.innerHTML = `<div class="lobby-panel-title">${title}</div>`;
     _renderWizardUnlockTab(content, meta);
+    panel.style.display = 'block';
+  } else if (id === 'veil') {
+    _renderVeilContent(content);
     panel.style.display = 'block';
   }
 }
