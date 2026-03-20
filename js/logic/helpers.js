@@ -54,21 +54,22 @@ function attackPowerFor(side, targetSide){
 
   // Stone: +3 AP/stack (doubled by Stone Stance)
   const sm = s.stoneStanceThisTurn ? 2 : 1;
-  pow += (s.stoneStacks||0) * 3 * sm;
+  pow += Math.floor(s.stoneStacks||0) * 3 * sm;
 
-  // Foam on self: -10% AP per stack
-  const foamPct = Math.min(0.9, (s.foamStacks||0) * 0.10);
-  pow = Math.floor(pow * (1 - foamPct));
+  // Foam on self: -1.5 flat AP per stack
+  pow -= Math.floor((s.foamStacks||0) * 1.5);
 
   // Frost on self: -1 AP/stack
-  pow -= (s.frostStacks||0);
+  pow -= Math.floor(s.frostStacks||0);
 
-  // Root bonus vs rooted targets
+  // Root bonus vs rooted targets — scales with attacker's EFX (+1 per 10 EFX)
   if(targetSide){
     const ts = (targetSide==='player') ? status.player : (combat.enemies[combat.activeEnemyIdx]||{status:{}}).status;
     const totalRoots = (ts.rootStacks||0) + (ts.overgrowthStacks||0);
     if(totalRoots > 0){
-      const bonus = hasPassive('nature_thorned_strikes') ? ROOT_POWER_PER_STACK*2 : ROOT_POWER_PER_STACK;
+      const efxBonus = Math.floor(effectPowerFor(side) / 10);
+      const baseBonus = ROOT_POWER_PER_STACK + efxBonus;
+      const bonus = hasPassive('nature_thorned_strikes') ? baseBonus * 2 : baseBonus;
       pow += bonus * totalRoots;
     }
   }
@@ -90,10 +91,13 @@ function attackPowerFor(side, targetSide){
     pow += (status.player.plasmaCharge||0);
   }
 
-  // Air Momentum: +1 AP per Momentum stack
+  // Air Momentum: +0.8 AP per Momentum stack
   if(side==='player' && playerElement==='Air'){
-    pow += (status.player.momentumStacks||0);
+    pow += Math.floor((status.player.momentumStacks||0) * 0.8);
   }
+
+  // Enemy AP reduced by player's Defense
+  if(side==='enemy') pow -= defenseFor('player');
 
   return Math.max(0, pow);
 }
@@ -104,16 +108,18 @@ function effectPowerFor(side){
   const s = (side==='player') ? status.player : (combat.enemies[combat.activeEnemyIdx]||{status:{}}).status;
 
   // Frost on self: -1 EP/stack
-  pow -= (s.frostStacks||0);
+  pow -= Math.floor(s.frostStacks||0);
 
-  // Foam on self: -10% EP per stack
-  const foamPct = Math.min(0.9, (s.foamStacks||0) * 0.10);
-  pow = Math.floor(pow * (1 - foamPct));
+  // Foam on self: -1.5 flat EFX per stack
+  pow -= Math.floor((s.foamStacks||0) * 1.5);
+
+  // Enemy EFX reduced by player's Defense
+  if(side==='enemy') pow -= defenseFor('player');
 
   return Math.max(0, pow);
 }
 
-// Defense: scales armor gained, heal amounts, dodge, flat damage reduction
+// Defense: scales armor gained, heal amounts, reduces enemy AP and EFX
 function defenseFor(side){
   let def = (side==='player') ? player.defense : enemyScaledStat();
   const s = (side==='player') ? status.player : (combat.enemies[combat.activeEnemyIdx]||{status:{}}).status;
@@ -127,12 +133,13 @@ function defenseFor(side){
 // Legacy: enemies use scaledPower as a single composite stat
 function enemyPower(){ return enemyScaledStat(); }
 
-function burnDmgPerStack(side){
+function burnDmgPerStack(side, sourceEFX){
   const legendary = (side==='player' && hasPassive('fire_roaring_heat')) ||
                     (side==='enemy'   && enemyHasPassive('fire_roaring_heat'));
   // _talentBurnDmg: flat bonus burn damage/stack when enemy is burning (player applied it)
   const talentBonus = (side === 'enemy') ? (player._talentBurnDmg || 0) : 0;
-  return (legendary ? 1.5 : 1.0) + talentBonus;
+  const base = legendary ? 1.5 : 1.0;
+  return base + (sourceEFX || 0) / 100 + talentBonus;
 }
 function totalEnemyBurnStacks(){
   return combat.enemies.reduce((s,e)=> s + (e.alive ? (e.status.burnStacks||0) : 0), 0);
@@ -143,9 +150,9 @@ function effectiveArmor(side){
   const s = status[side];
   let armor = s.block || 0;
   const sm = s.stoneStanceThisTurn ? 2 : 1;
-  armor += (s.stoneStacks||0) * 2 * sm;   // Stone: +2 block/stack
-  armor -= (s.frostStacks||0);             // Frost: -1 armor/stack
-  armor -= (s.foamStacks||0) * 5;          // Foam:  -5 armor/stack
+  armor += Math.floor(s.stoneStacks||0) * 2 * sm;   // Stone: +2 block/stack
+  armor -= Math.floor(s.frostStacks||0);   // Frost: -1 armor/stack (integer part only)
+  armor -= Math.floor(s.foamStacks||0) * 5; // Foam: -5 armor/stack (integer part only)
   return armor; // can be negative (negative = bonus dmg to attacker)
 }
 
@@ -156,21 +163,22 @@ function powerFor(side, targetSide){
 
   // Stone: +3 power/stack (doubled by Stone Stance)
   const sm = s.stoneStanceThisTurn ? 2 : 1;
-  pow += (s.stoneStacks||0) * 3 * sm;
+  pow += Math.floor(s.stoneStacks||0) * 3 * sm;
 
-  // Foam on self: -10% power per stack (own outgoing power reduced)
-  const foamPct = Math.min(0.9, (s.foamStacks||0) * 0.10);
-  pow = Math.floor(pow * (1 - foamPct));
+  // Foam on self: -1.5 flat power per stack
+  pow -= Math.floor((s.foamStacks||0) * 1.5);
 
   // Frost on self: -1 power/stack
-  pow -= (s.frostStacks||0);
+  pow -= Math.floor(s.frostStacks||0);
 
   // Root bonus vs rooted targets (Thorned Strikes or base)
   if(targetSide){
     const ts = status[targetSide];
     const totalRoots = (ts.rootStacks||0) + (ts.overgrowthStacks||0);
     if(totalRoots > 0){
-      const bonus = hasPassive('nature_thorned_strikes') ? ROOT_POWER_PER_STACK*2 : ROOT_POWER_PER_STACK;
+      const efxBonus = Math.floor(effectPowerFor(side) / 10);
+      const baseBonus = ROOT_POWER_PER_STACK + efxBonus;
+      const bonus = hasPassive('nature_thorned_strikes') ? baseBonus * 2 : baseBonus;
       pow += bonus * totalRoots;
     }
   }
@@ -194,15 +202,13 @@ function powerFor(side, targetSide){
 
 // ── Armor reduction (Hard Shell / earth_hard_shell) ──────────────────────────
 function armorReductionFor(side){
-  // Base flat reduction: floor(Defense/10) for everyone
-  const flatReduction = Math.floor(defenseFor(side)/10);
   const el = elementOfSide(side);
-  // Hard Shell (Earth passive): 10 + floor(Defense/10) — overrides base
+  // Hard Shell (Earth passive): flat 10 reduction
   if(el==='Earth' && ((side==='player' && hasPassive('earth_hard_shell')) ||
      (side==='enemy'  && enemyHasPassive('earth_hard_shell')))){
-    return 10 + Math.floor(defenseFor(side)/10);
+    return 10;
   }
-  return flatReduction;
+  return 0;
 }
 
 // ── Fissure check (Earth pierce) ─────────────────────────────────────────────
@@ -218,7 +224,7 @@ function dodgeChanceFor(side){
   if(status[side].phaseTurns > 0) return 1;
   // Air: Momentum grants +2% dodge per stack (cap 80%)
   if(side==='player' && playerElement==='Air'){
-    return Math.min(0.80, (status.player.momentumStacks||0) * 0.02);
+    return Math.min(0.80, Math.floor(status.player.momentumStacks||0) * 0.02);
   }
   // Plasma Ghost Step talent: flat base dodge chance
   if(side==='player') return Math.min(0.50, player._talentDodgeBonus || 0);
@@ -289,18 +295,34 @@ function advanceToNextGym(){
   initZoneSpecial(); // schedule the campfire/shop for new zone
 }
 // ── Status application helpers ────────────────────────────────────────────────
+function applyBurn(defenderSide, stacks, sourcePow){
+  const s = status[defenderSide];
+  s.burnStacks = (s.burnStacks||0) + stacks;
+  if(sourcePow != null) s.burnSourcePower = sourcePow;
+  log(`🔥 Burn +${stacks} (×${s.burnStacks})`, 'status');
+}
+
+function applyFoam(attackerSide, defenderSide, stacks){
+  const efx = effectPowerFor(attackerSide);
+  const scaledStacks = stacks * (1 + efx / 50);
+  const s = status[defenderSide];
+  s.foamStacks = (s.foamStacks||0) + scaledStacks;
+  log(`🫧 Foam +${scaledStacks.toFixed(1)} (×${s.foamStacks.toFixed(1)})`, 'status');
+  _plasmaChargeOnDebuff(defenderSide);
+}
+
 function applyFrost(attackerSide, defenderSide, stacks){
   if(attackerSide==='player' && hasPassive('ice_stay_frosty')) stacks++;
   if(attackerSide==='player') stacks += (player._talentFrostBonus || 0);
+  const efx = effectPowerFor(attackerSide);
+  const scaledStacks = stacks * (1 + efx / 50);
   const s = status[defenderSide];
-  s.frostStacks = (s.frostStacks||0) + stacks;
+  s.frostStacks = (s.frostStacks||0) + scaledStacks;
+  log(`❄️ Frost +${scaledStacks.toFixed(1)} (×${s.frostStacks.toFixed(1)})`, 'status');
   if(s.frostStacks >= 10 && !s.frozen){
     s.frozen = true;
-    s.frozenIceHitPending = true;
-    s.stunned = Math.max(s.stunned||0, 1);
-    log(`🧊 FROZEN! (${s.frostStacks} Frost stacks)`, 'status');
-  } else {
-    log(`❄️ Frost +${stacks} (×${s.frostStacks})`, 'status');
+    s.nextTurnActionPenalty = (s.nextTurnActionPenalty||0) + 1;
+    log(`🧊 FROZEN! −1 action next turn. Next Ice hit deals 1.5× and consumes 10 stacks.`, 'status');
   }
 }
 
@@ -314,8 +336,17 @@ function applyRoot(attackerSide, defenderSide, stacks){
 }
 
 function addStoneStacks(side, stacks){
-  status[side].stoneStacks = (status[side].stoneStacks||0) + stacks;
-  log(`🪨 Stone +${stacks} (×${status[side].stoneStacks})`, 'status');
+  const efx = effectPowerFor(side);
+  const scaled = stacks * (1 + efx / 50);
+  status[side].stoneStacks = (status[side].stoneStacks||0) + scaled;
+  log(`🪨 Stone +${scaled.toFixed(1)} (×${status[side].stoneStacks.toFixed(1)})`, 'status');
+}
+
+function addMomentumStacks(stacks){
+  const efx = effectPowerFor('player');
+  const scaled = stacks * (1 + efx / 50);
+  status.player.momentumStacks = (status.player.momentumStacks||0) + scaled;
+  log(`💨 Momentum +${scaled.toFixed(1)} (×${status.player.momentumStacks.toFixed(1)})`, 'status');
 }
 
 function gainBlock(side, amount){
@@ -369,7 +400,6 @@ function countPlayerDebuffs(){
   if(p.rootStacks > 0)     n++;
   if(p.shockStacks > 0)    n++;
   if(p.foamStacks > 0)     n++;
-  if(p.frozen)             n++;
   return n;
 }
 function clearPlayerDebuffs(){
@@ -377,7 +407,6 @@ function clearPlayerDebuffs(){
   p.burnStacks = 0;
   p.frostStacks = 0;
   p.frozen = false;
-  p.frozenIceHitPending = false;
   p.stunned = 0;
   p.rootStacks = 0;
   p.shockStacks = 0;
@@ -406,7 +435,7 @@ function resetStatusForBattle(){
   Object.assign(status.player, {
     burnStacks:0, burnSourcePower:BASE_POWER,
     stunned:0, rootStacks:0, overgrowthStacks:0,
-    foamStacks:0, shockStacks:0, shockPending:0,
+    foamStacks:0, shockStacks:0,
     frostStacks:0, frozen:false, frozenIceHitPending:false,
     block:0, stoneStacks:0, stoneStanceThisTurn:false, firewallStacks:0,
     phaseTurns:0, lightningMult:2.0,
@@ -451,8 +480,8 @@ function pickRandom(arr,n){
 }
 
 function armorBlockAmount(){
-  // Armor button: base 10 + floor(Defense/5)
-  return 10 + Math.floor(defenseFor('player') / 5);
+  // Armor button: base 10 + Defense
+  return 10 + defenseFor('player');
 }
 
 // ── Enemy elemental effects per basic attack ──────────────────────────────────
@@ -482,9 +511,7 @@ function applyEnemyElementalProc(element, enemyIdx){
       break;
     case 'Water':
       // Baseline foam: 1 stack per hit regardless of passive
-      status.player.foamStacks = (status.player.foamStacks||0) + 1;
-      log(`🫧 Foam +1 (×${status.player.foamStacks})`, 'status');
-      _plasmaChargeOnDebuff('player');
+      applyFoam('enemy', 'player', 1);
       renderStatusTags();
       break;
     case 'Earth':

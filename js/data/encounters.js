@@ -122,12 +122,12 @@ const CAMP_META = {
 // ── ZONE EFFECTS (applied by enemies in zone battles) ────────────────────────
 // Each zone element adds a status effect on every enemy basic attack.
 const ZONE_EFFECTS = {
-  Fire:      { desc:'🔥 +3 Burn per hit',      apply(defSide){ status[defSide].burnStacks=(status[defSide].burnStacks||0)+3; status[defSide].burnSourcePower=Math.floor(battleNumber*1.5); log('🔥 Zone Burn +3','status'); }},
+  Fire:      { desc:'🔥 +2 Burn per hit',      apply(defSide){ applyBurn(defSide, 2, Math.floor(battleNumber*1.5)); }},
   Ice:       { desc:'❄️ +2 Frost per hit',     apply(defSide){ applyFrost('enemy','player',2); }},
-  Lightning: { desc:'⚡ +1 Shock per hit',     apply(defSide){ status[defSide].shockPending=(status[defSide].shockPending||0)+1; log('⚡ Zone Shock +1','status'); }},
-  Earth:     { desc:'🪨 Attacker gains Stone', apply(defSide,attIdx){ const e=combat.enemies[attIdx]; if(e&&e.alive){ e.status.stoneStacks=(e.status.stoneStacks||0)+1; log('🪨 Zone Stone +1 on attacker','status'); }}},
+  Lightning: { desc:'⚡ +1 Shock per hit',     apply(defSide){ status[defSide].shockStacks=(status[defSide].shockStacks||0)+1; log('⚡ Zone Shock +1','status'); }},
+  Earth:     { desc:'🪨 Attacker gains Stone', apply(defSide,attIdx){ if(combat.enemies[attIdx]?.alive) addStoneStacks('enemy', 1); }},
   Nature:    { desc:'🌿 50% Root per hit',     apply(defSide){ if(Math.random()<0.5) applyRoot('enemy','player',1); }},
-  Water:     { desc:'🫧 +1 Foam per hit',      apply(defSide){ status[defSide].foamStacks=(status[defSide].foamStacks||0)+1; log('🫧 Zone Foam +1','status'); }},
+  Water:     { desc:'🫧 +1 Foam per hit',      apply(defSide){ applyFoam('enemy', defSide, 1); }},
   Plasma:    { desc:'🔮 +25% healing this zone', apply(defSide){ /* handled via healingMultiplier zone bonus */ }},
   Air:       { desc:'🌀 20% Stun 1t on hit',   apply(defSide){ if(Math.random()<0.20){ status[defSide].stunned=Math.max(status[defSide].stunned||0,1); log('🌀 Zone Stun!','status'); }}},
 };

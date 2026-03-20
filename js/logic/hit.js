@@ -55,7 +55,8 @@ function applyOutgoingDamageMods(attackerSide, defenderSide, baseDamage, meta){
   // _noAtk: caller already baked power in (e.g. Plasma spells) — skip adding it again
   if(!meta || !meta._noAtk){
     const pow = attackPowerFor(attackerSide, defenderSide);
-    if(dmg > 0) dmg += pow;
+    const apMult = (meta && meta.apMult != null) ? meta.apMult : 1;
+    if(dmg > 0) dmg += Math.round(pow * apMult);
     // Plasma: Effect Power also adds to damage (EFX = ATK for Plasma)
     if(dmg > 0 && elementOfSide(attackerSide) === 'Plasma'){
       dmg += effectPowerFor(attackerSide);
@@ -84,12 +85,14 @@ function applyOutgoingDamageMods(attackerSide, defenderSide, baseDamage, meta){
     }
   }
 
-  // Shock (Conduction passive): reduce attacker's outgoing damage 5%/stack
+  // Shock: baseline (3 + casterEFX/10)%/stack outgoing damage. Conduction passive adds +2%.
   const sStacks = status[attackerSide].shockStacks || 0;
-  const hasConduction = (attackerSide==='player' && hasPassive('lightning_conduction')) ||
-                        (attackerSide==='enemy'  && enemyHasPassive('lightning_conduction'));
-  if(sStacks > 0 && dmg > 0 && hasConduction){
-    const reduction = clamp(sStacks * 0.05, 0, 0.75);
+  if(sStacks > 0 && dmg > 0){
+    const hasConduction = (attackerSide==='player' && hasPassive('lightning_conduction')) ||
+                          (attackerSide==='enemy'  && enemyHasPassive('lightning_conduction'));
+    const casterEFX = effectPowerFor(defenderSide);
+    const pctPerStack = (3 + casterEFX / 10) / 100 + (hasConduction ? 0.02 : 0);
+    const reduction = clamp(sStacks * pctPerStack, 0, 0.75);
     dmg = Math.max(0, Math.round(dmg * (1 - reduction)));
   }
 
@@ -129,21 +132,7 @@ function performHit(attackerSide, defenderSide, pkg){
       }
     }
 
-    // ── Static Shock: % current HP before hit ──
-    if(pkg.abilityElement==='Lightning'){
-      const hasStatic = (attackerSide==='player' && hasPassive('lightning_static')) ||
-                        (attackerSide==='enemy'  && enemyHasPassive('lightning_static'));
-      if(hasStatic){
-        const pow = effectPowerFor(attackerSide);
-        const pct = (10 + Math.floor(pow/10)) / 100;
-        const curHP = defenderSide==='enemy'
-          ? (combat.enemies[combat.activeEnemyIdx]||{hp:0}).hp
-          : player.hp;
-        const staticDmg = Math.max(1, Math.round(curHP * pct));
-        applyDirectDamage(attackerSide, defenderSide, staticDmg, '⚡ Static Shock');
-        if(combat.over) return;
-      }
-    }
+    // ── Static Shock: passive effect TBD ──
 
     // ── Dodge / Phase ──
     const fissure = isEarthFissure(attackerSide, pkg);
@@ -168,7 +157,7 @@ function performHit(attackerSide, defenderSide, pkg){
             const lost = Math.max(0, Math.floor(cur * decayPct));
             if(lost > 0){
               status.player.momentumStacks = cur - lost;
-              log(`💨 Dodge! Momentum −${lost} (×${status.player.momentumStacks})`, 'status');
+              log(`💨 Dodge! Momentum −${lost} (×${status.player.momentumStacks.toFixed(1)})`, 'status');
             }
           }
           renderStatusTags();
@@ -178,7 +167,7 @@ function performHit(attackerSide, defenderSide, pkg){
     }
 
     // ── Base damage ──
-    let dmg = applyOutgoingDamageMods(attackerSide, defenderSide, pkg.baseDamage, {consumeLightningAmp:true, _noAtk:!!pkg._noAtk});
+    let dmg = applyOutgoingDamageMods(attackerSide, defenderSide, pkg.baseDamage, {consumeLightningAmp:true, _noAtk:!!pkg._noAtk, apMult:pkg.apMult});
 
     // Hard Shell (Earth defender): flat damage reduction per hit
     if(!fissure){
@@ -186,17 +175,23 @@ function performHit(attackerSide, defenderSide, pkg){
       if(armor > 0) dmg = Math.max(0, dmg - armor);
     }
 
-    // ── Frozen double damage: Ice hits against frozen targets deal 2× ──
+    // ── Frozen 1.5× damage on Ice hits — consumes 10 stacks and breaks freeze ──
     const defIsFrozen = status[defenderSide].frozen;
     if(defIsFrozen && pkg.abilityElement==='Ice'){
-      dmg = dmg * 2;
-      log(`🧊 Frozen target takes double Ice damage!`, 'status');
+      dmg = Math.round(dmg * 1.5);
+      status[defenderSide].frostStacks = Math.max(0, (status[defenderSide].frostStacks||0) - 10);
+      status[defenderSide].frozen = false;
+      log(`🧊 Frozen! 1.5× damage, 10 Frost consumed (${status[defenderSide].frostStacks} remaining)`, 'status');
     }
 
     // ── Block absorption (fissure bypasses) ──
     if(!fissure){
       const effBlock = effectiveArmor(defenderSide); // includes Stone/Frost/Foam modifiers
-      if(effBlock > 0 && dmg > 0){
+      if(effBlock < 0 && dmg > 0){
+        // Negative armor (foam stripped past zero): bonus damage to attacker
+        dmg -= effBlock; // effBlock is negative, so subtracting adds to dmg
+        log(`🫧 Exposed! +${-effBlock} bonus dmg (armor broken by foam)`, 'status');
+      } else if(effBlock > 0 && dmg > 0){
         const absorbed = Math.min(effBlock, dmg);
         dmg = Math.max(0, dmg - absorbed);
         // Only consume real block (Stone/Frost don't deplete)
@@ -217,7 +212,7 @@ function performHit(attackerSide, defenderSide, pkg){
           applyHeal('player', blockConsumed, '🌊 Tidal Shield');
           const eIdx = combat.activeEnemyIdx;
           if(combat.enemies[eIdx] && combat.enemies[eIdx].alive){
-            combat.enemies[eIdx].status.foamStacks = (combat.enemies[eIdx].status.foamStacks||0) + 1;
+            applyFoam('player', 'enemy', 1);
             log('🌊 Tidal Shield: +1 Foam on attacker', 'status');
           }
           status.player.tidalShieldActive = false;
@@ -229,10 +224,6 @@ function performHit(attackerSide, defenderSide, pkg){
           status.player.cryostasisActive = false;
           log('🧊 Cryostasis: 3 Frost to attacker!', 'status');
         }
-      } else if(effBlock < 0 && dmg > 0){
-        const bonus = -effBlock;
-        dmg += bonus;
-        log(`💧 Foam overflow! +${bonus} bonus damage`, 'status');
       }
     }
 
@@ -266,9 +257,8 @@ function performHit(attackerSide, defenderSide, pkg){
     // ── Air: Momentum gain per damage instance ──
     if(attackerSide==='player' && playerElement==='Air' && dmg > 0 && !pkg._isTornadoSelf){
       let momGain = 1;
-      if(hasPassive('air_gale_force')) momGain++;
-      status.player.momentumStacks = (status.player.momentumStacks||0) + momGain;
-      log(`💨 Momentum +${momGain} (×${status.player.momentumStacks})`, 'status');
+      if(hasPassive('air_gale_force') && Math.random() < 0.5) momGain++;
+      addMomentumStacks(momGain);
     }
 
     // Record for Plasma echo
@@ -315,8 +305,8 @@ function performHit(attackerSide, defenderSide, pkg){
       if(attackerSide==='player' && hasPassive('lightning_conduction')) stacksToAdd += 1;
       if(attackerSide==='player') stacksToAdd += (player._talentShockBonus || 0);
       if(attackerSide==='enemy'  && enemyHasPassive('lightning_conduction')) stacksToAdd += 1;
-      status[defenderSide].shockPending = (status[defenderSide].shockPending||0) + stacksToAdd;
-      log(`⚡ Shock +${stacksToAdd} queued`, 'status');
+      status[defenderSide].shockStacks = (status[defenderSide].shockStacks||0) + stacksToAdd;
+      log(`⚡ Shock +${stacksToAdd} (×${status[defenderSide].shockStacks})`, 'status');
       _plasmaChargeOnDebuff(defenderSide);
     }
 
@@ -326,7 +316,7 @@ function performHit(attackerSide, defenderSide, pkg){
                         (attackerSide==='enemy'  && enemyHasPassive('lightning_double'));
       if(hasDouble){
         const pow = effectPowerFor(attackerSide);
-        const chance = clamp((30 + Math.floor(pow/5))/100, 0, 10);
+        const chance = clamp((30 + Math.floor(pow/2))/100, 0, 10);
         const roll = Math.random();
         const extraHits = (chance > 1.0 && roll < chance - 1.0) ? 2 :
                           (roll < Math.min(chance, 1.0)) ? 1 : 0;
@@ -348,9 +338,9 @@ function performHit(attackerSide, defenderSide, pkg){
       if(eff.type==='burn'){
         const pow = effectPowerFor(attackerSide);
         const powerBonus = Math.floor(pow * 0.2);
-        let stacks = (eff.stacks||0) + powerBonus;
+        let stacks = Math.round(((eff.stacks||0) + powerBonus) * 0.75);
         if((attackerSide==='player' && hasPassive('fire_pyromaniac')) ||
-           (attackerSide==='enemy'  && enemyHasPassive('fire_pyromaniac'))) stacks += 5;
+           (attackerSide==='enemy'  && enemyHasPassive('fire_pyromaniac'))) stacks += 3;
         status[defenderSide].burnStacks += stacks;
         status[defenderSide].burnSourcePower = pow;
         log(`🔥 Burn +${stacks} (×${status[defenderSide].burnStacks})`, 'status');
@@ -378,8 +368,7 @@ function performHit(attackerSide, defenderSide, pkg){
       const hasFoam = (attackerSide==='player' && hasPassive('water_sea_foam')) ||
                       (attackerSide==='enemy'  && enemyHasPassive('water_sea_foam'));
       if(hasFoam){
-        status[defenderSide].foamStacks = (status[defenderSide].foamStacks||0) + 1;
-        log(`🫧 Sea Foam +1 (×${status[defenderSide].foamStacks})`, 'status');
+        applyFoam(attackerSide, defenderSide, 1);
         _plasmaChargeOnDebuff(defenderSide);
       }
     }
@@ -406,7 +395,7 @@ function performHit(attackerSide, defenderSide, pkg){
     if(defenderSide==='enemy' && attackerSide==='player' && hasPassive('ice_blast')){
       const e = combat.enemies[combat.activeEnemyIdx];
       if(e && e.alive){
-        const threshold = clamp(20 + Math.floor(effectPowerFor('player')/10) + (player._talentIceExecute||0), 0, 60);
+        const threshold = clamp(20 + Math.floor(effectPowerFor('player')/4) + (player._talentIceExecute||0), 0, 60);
         const pct = (e.hp / e.enemyMaxHP) * 100;
         if(pct <= threshold){
           log(`❄️ Ice Blast executes ${e.name} at ${Math.round(pct)}% HP!`, 'player');
@@ -418,29 +407,13 @@ function performHit(attackerSide, defenderSide, pkg){
       }
     }
 
-    // ── Frozen break: Ice hits on frozen target break the freeze ──
-    if(defIsFrozen && pkg.abilityElement==='Ice' && defenderSide==='enemy'){
-      const e = combat.enemies[combat.activeEnemyIdx];
-      if(e && e.status.frozen){
-        e.status.frozen = false;
-        e.status.frostStacks = 0;
-        log(`🧊 Freeze broken on ${e.name}!`, 'status');
-      }
-    }
-    if(defIsFrozen && pkg.abilityElement==='Ice' && defenderSide==='player'){
-      if(status.player.frozen){
-        status.player.frozen = false;
-        status.player.frostStacks = 0;
-        log(`🧊 Your freeze breaks!`, 'status');
-      }
-    }
 
     // ── Eye of the Storm: repeat strike chance per Momentum stack ──
     if(attackerSide==='player' && playerElement==='Air' && dmg > 0 &&
        hasPassive('air_eye_of_the_storm') && !pkg._isTornadoSelf){
-      const repeatChance = Math.min(0.95, (status.player.momentumStacks||0) * 0.03);
+      const repeatChance = Math.min(0.95, Math.floor(status.player.momentumStacks||0) * 0.03);
       const depth = pkg._eotDepth || 0;
-      if(depth < 10 && repeatChance > 0 && Math.random() < repeatChance){
+      if(depth < 1 && repeatChance > 0 && Math.random() < repeatChance){
         log(`👁️ Eye of the Storm repeats! (${Math.round(repeatChance*100)}% chance)`, 'status');
         performHit(attackerSide, defenderSide, {...pkg, _eotDepth: depth+1, noRecord:true});
         if(combat.over) return;

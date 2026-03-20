@@ -73,12 +73,12 @@ function renderEnemyCards(){
     if(s.stunned>0)          row.appendChild(tag(`❄${s.stunned}t`,'tag-stun',`Stunned — skips ${s.stunned} turn(s)`));
     if(s.rootStacks>0)       row.appendChild(tag(`🌿${s.rootStacks}`,'tag-root',`Root ×${s.rootStacks} — takes +${s.rootStacks*ROOT_POWER_PER_STACK} bonus damage`));
     if(s.overgrowthStacks>0) row.appendChild(tag(`🌿G${s.overgrowthStacks}`,'tag-root',`Overgrowth ×${s.overgrowthStacks} — +${s.overgrowthStacks*ROOT_POWER_PER_STACK} bonus damage`));
-    if(s.foamStacks>0)       row.appendChild(tag(`🫧${s.foamStacks}`,'tag-block',`Foam ×${s.foamStacks} — -${s.foamStacks*10}% ATK, -${s.foamStacks*5} Armor`));
+    if(s.foamStacks>0)       row.appendChild(tag(`🫧${Math.floor(s.foamStacks)}`,'tag-block',`Foam ×${Math.floor(s.foamStacks)} — -${Math.floor(s.foamStacks)} ATK/EFX flat, -${Math.floor(s.foamStacks)*5} Armor`));
     if(s.shockStacks>0)      row.appendChild(tag(`⚡${s.shockStacks}`,'tag-stun',`Shock ×${s.shockStacks} — reduces outgoing damage by ${s.shockStacks*5}%`));
     if(s.block>0)            row.appendChild(tag(`🛡${s.block}`,'tag-block',`Armor ${s.block} — absorbs ${s.block} damage`));
     if(s.phaseTurns>0)       row.appendChild(tag(`🔮`,'tag-phase',`Phase — immune to damage for ${s.phaseTurns} turn(s)`));
     if(s.frostStacks>0)      row.appendChild(tag(`❄️${s.frostStacks}`,'tag-stun',`Frost ×${s.frostStacks} — -${s.frostStacks} ATK/Armor`));
-    if(s.stoneStacks>0)      row.appendChild(tag(`🪨${s.stoneStacks}`,'tag-block',`Stone ×${s.stoneStacks} — +${s.stoneStacks*3} ATK, +${s.stoneStacks*2} Armor`));
+    if(s.stoneStacks>0)      row.appendChild(tag(`🪨${Math.floor(s.stoneStacks)}`,'tag-block',`Stone ×${Math.floor(s.stoneStacks)} — +${Math.floor(s.stoneStacks)*3} ATK, +${Math.floor(s.stoneStacks)*2} Armor`));
     // Mist HP bonus: undispellable indicator
     if(_mistHPPct > 0){ const t=tag(`🌫+${_mistHPPct}%HP`,'tag-block',`Mist — The Veil grants this enemy +${_mistHPPct}% max HP (cannot be removed)`); t.style.opacity='.7'; row.appendChild(t); }
   });
@@ -136,12 +136,12 @@ function renderStatusTags(){
     if(s.stunned>0)          pr.appendChild(tag(`❄${s.stunned}t`,'tag-stun',`Stunned — skip ${s.stunned} turn(s)`));
     if(s.rootStacks>0)       pr.appendChild(tag(`🌿${s.rootStacks}`,'tag-root',`Root ×${s.rootStacks} — you take +${s.rootStacks*ROOT_POWER_PER_STACK} bonus damage from attacks`));
     if(s.overgrowthStacks>0) pr.appendChild(tag(`🌿G${s.overgrowthStacks}`,'tag-root',`Overgrowth ×${s.overgrowthStacks} — enhanced root, +${s.overgrowthStacks*ROOT_POWER_PER_STACK} bonus damage`));
-    if(s.foamStacks>0)       pr.appendChild(tag(`🫧${s.foamStacks}`,'tag-block',`Foam ×${s.foamStacks} — -${s.foamStacks*10}% ATK & EFX, -${s.foamStacks*5} Armor`));
+    if(s.foamStacks>0)       pr.appendChild(tag(`🫧${Math.floor(s.foamStacks)}`,'tag-block',`Foam ×${Math.floor(s.foamStacks)} — -${Math.floor(s.foamStacks)} ATK/EFX flat, -${Math.floor(s.foamStacks)*5} Armor`));
     if(s.shockStacks>0)      pr.appendChild(tag(`⚡${s.shockStacks}`,'tag-stun',`Shock ×${s.shockStacks} — reduces your outgoing damage by ${s.shockStacks*5}%`));
     if(s.block>0)            pr.appendChild(tag(`🛡${s.block}`,'tag-block',`Armor ${s.block} — absorbs ${s.block} incoming damage`));
     if(s.phaseTurns>0)       pr.appendChild(tag('🔮','tag-phase',`Phase — immune to damage for ${s.phaseTurns} turn(s)`));
     if(s.frostStacks>0)      pr.appendChild(tag(`❄️${s.frostStacks}`,'tag-stun',`Frost ×${s.frostStacks} — -${s.frostStacks} ATK/EFX/Armor; at 10 stacks: Frozen (stunned)`));
-    if(s.stoneStacks>0)      pr.appendChild(tag(`🪨${s.stoneStacks}`,'tag-block',`Stone ×${s.stoneStacks} — +${s.stoneStacks*3} ATK, +${s.stoneStacks*2} Armor; decays 25%/turn`));
+    if(s.stoneStacks>0)      pr.appendChild(tag(`🪨${Math.floor(s.stoneStacks)}`,'tag-block',`Stone ×${Math.floor(s.stoneStacks)} — +${Math.floor(s.stoneStacks)*3} ATK, +${Math.floor(s.stoneStacks)*2} Armor; decays 25%/turn`));
     // Plasma
     if(playerElement==='Plasma'){
       if(s.stallActive)           pr.appendChild(tag('🫧 Stall','tag-phase','Stall — enemy action delayed, charge refunded next turn'));
@@ -151,7 +151,7 @@ function renderStatusTags(){
     }
     // Air: Momentum
     if(playerElement==='Air'){
-      if((s.momentumStacks||0)>0)   pr.appendChild(tag(`💨${s.momentumStacks}M`,'tag-phase',`Momentum ×${s.momentumStacks} — +${s.momentumStacks} ATK, +${s.momentumStacks*2}% dodge; decays each turn`));
+      if((s.momentumStacks||0)>0)   pr.appendChild(tag(`💨${Math.floor(s.momentumStacks)}M`,'tag-phase',`Momentum ×${Math.floor(s.momentumStacks)} — +${Math.floor(s.momentumStacks)} ATK, +${Math.floor(s.momentumStacks)*2}% dodge; decays each turn`));
       if(s.windWallActive)           pr.appendChild(tag('🛡️WW','tag-block','Wind Wall — blocks next instance of damage'));
       if(s.tornadoAoENext)           pr.appendChild(tag('🌪️AoE','tag-phase','Tornado AoE — next attack hits all enemies'));
     }
@@ -306,7 +306,7 @@ function _spellDmgPreview(spell) {
       return st > 0 ? `${st} Stone × 25 = ${st*25} dmg to all` : 'X Stone × 25 dmg to all';
     }
     case 'break_momentum': {
-      const m = status.player.momentumStacks||0;
+      const m = Math.floor(status.player.momentumStacks||0);
       return m > 0 ? `${m} Momentum × 5 = ${m*5} dmg` : 'X Momentum × 5 dmg';
     }
     case 'natures_wrath':   return 'X Root stacks × 20 dmg to all (consumes root)';

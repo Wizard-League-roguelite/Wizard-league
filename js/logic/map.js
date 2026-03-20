@@ -601,8 +601,8 @@ function renderRunInfo(){
   // ── Status Effects Reference
   const STATUS_DEFS = [
     { emoji:'🔥', name:'Burn',       color:'#c06030', desc:'Deals 1 damage per stack at the start of each turn. Stacks accumulate; decays over time.' },
-    { emoji:'❄️', name:'Frost',      color:'#60a0cc', desc:'-1 ATK, -1 EFX, -1 Armor per stack. At 10 stacks: Frozen (stunned for 1 turn). Decays 1/turn.' },
-    { emoji:'🧊', name:'Frozen',     color:'#a0e0ff', desc:'Stunned for 1 turn. Triggered by reaching 10 Frost stacks. Ice hits deal double damage while frozen.' },
+    { emoji:'❄️', name:'Frost',      color:'#60a0cc', desc:'-1 ATK, -1 EFX, -1 Armor per stack. Every 10 stacks triggers a Freeze. Decays 1/turn.' },
+    { emoji:'🧊', name:'Frozen',     color:'#a0e0ff', desc:'−1 action next turn. Next Ice hit deals 1.5× damage and consumes 10 Frost stacks. Triggered at 10 Frost stacks.' },
     { emoji:'🌿', name:'Root',       color:'#3a8a3a', desc:`+${ROOT_POWER_PER_STACK} bonus damage taken from attacks per stack. Enemy cannot dodge. Stacks accumulate.` },
     { emoji:'🌿G', name:'Overgrowth',color:'#50a050', desc:`Enhanced root. +${ROOT_POWER_PER_STACK} bonus damage per stack. Applied by Nature zone/abilities.` },
     { emoji:'🫧', name:'Foam',       color:'#4080a0', desc:'-10% ATK & EFX per stack. -5 Armor per stack. Applied by Water enemies.' },

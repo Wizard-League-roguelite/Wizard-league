@@ -74,7 +74,7 @@ const ENEMY_ABILITY_CATALOGUE = {
     fn(i){ const e=combat.enemies[i]; setActiveEnemy(i);
       log(`☄️ ${e.name} unleashes INFERNO!`, 'enemy');
       performHit('enemy','player',{baseDamage:30,effects:[{type:'burn',stacks:12}],abilityElement:'Fire',isEnemyAttack:true});
-      status.player.burnStacks = Math.min((status.player.burnStacks||0) + 12, 80);
+      status.player.burnStacks = Math.min((status.player.burnStacks||0) + 9, 80);
       renderStatusTags();
     }},
 
@@ -83,7 +83,7 @@ const ENEMY_ABILITY_CATALOGUE = {
     fn(i){ const e=combat.enemies[i]; setActiveEnemy(i);
       log(`🫧 ${e.name} Foam Burst! (+3 Foam on you)`, 'enemy');
       performHit('enemy','player',{baseDamage:10,effects:[],abilityElement:'Water',isEnemyAttack:true});
-      status.player.foamStacks = (status.player.foamStacks||0)+3;
+      applyFoam('enemy','player',3);
       renderStatusTags();
     }},
   water_tidal_shield: { id:'water_tidal_shield', name:'Tidal Shield', emoji:'💧', tier:0, baseCd:3,
@@ -99,7 +99,7 @@ const ENEMY_ABILITY_CATALOGUE = {
       for(let h=0;h<3;h++){
         if(combat.over) return;
         performHit('enemy','player',{baseDamage:8,effects:[],abilityElement:'Water',isEnemyAttack:true,hits:1});
-        status.player.foamStacks = (status.player.foamStacks||0)+1;
+        applyFoam('enemy','player',1);
       }
       renderStatusTags();
     }},
@@ -119,7 +119,7 @@ const ENEMY_ABILITY_CATALOGUE = {
         status.player.stunned = (status.player.stunned||0) + 1;
         log(`🌀 ${e.name} DROWNS you! (${foam} Foam consumed — Stunned 1t)`, 'enemy');
       } else {
-        status.player.foamStacks = (status.player.foamStacks||0)+2;
+        applyFoam('enemy','player',2);
         performHit('enemy','player',{baseDamage:12,effects:[],abilityElement:'Water',isEnemyAttack:true});
         log(`🌀 ${e.name} Drown — not enough Foam yet (+2 Foam)`, 'enemy');
       }
@@ -195,8 +195,8 @@ const ENEMY_ABILITY_CATALOGUE = {
   lightning_overcharge: { id:'lightning_overcharge', name:'Overcharge', emoji:'💥', tier:1, baseCd:3,
     fn(i){ const e=combat.enemies[i]; setActiveEnemy(i);
       const shock = status.player.shockStacks||0;
-      status.player.shockPending = (status.player.shockPending||0)+3;
-      log(`💥 ${e.name} Overcharge! (+3 Shock queued, ${shock} current)`, 'enemy');
+      status.player.shockStacks = (status.player.shockStacks||0)+3;
+      log(`💥 ${e.name} Overcharge! +3 Shock (×${status.player.shockStacks})`, 'enemy');
       performHit('enemy','player',{baseDamage:20,effects:[],abilityElement:'Lightning',isEnemyAttack:true});
     }},
   lightning_blitz: { id:'lightning_blitz', name:'Blitz', emoji:'💫', tier:1, baseCd:4,
@@ -405,7 +405,7 @@ const ENEMY_ABILITY_CATALOGUE = {
 const ENEMY_ABILITY_POOL = {
   Fire:      { 0:['fire_ignite','fire_flame_burst'], 1:['fire_combustion_strike','fire_wildfire','fire_magma_armor'], 2:['fire_inferno'] },
   Water:     { 0:['water_foam_burst','water_tidal_shield'], 1:['water_riptide','water_healing_surge','water_drown'], 2:['water_tsunami'] },
-  Ice:       { 0:['ice_frost_bolt','ice_glacial_armor'], 1:['ice_flash_freeze','ice_shatter_strike','ice_cryostasis'], 2:['ice_cryostasis'] },
+  Ice:       { 0:['ice_frost_bolt','ice_glacial_armor'], 1:['ice_flash_freeze','ice_shatter_strike'], 2:['ice_cryostasis'] },
   Lightning: { 0:['lightning_zap','lightning_chain'], 1:['lightning_overcharge','lightning_blitz','lightning_static_field'], 2:['lightning_charge_shot'] },
   Earth:     { 0:['earth_fortify','earth_boulder'], 1:['earth_seismic','earth_stone_stance','earth_petrify'], 2:['earth_cataclysm'] },
   Nature:    { 0:['nature_entangle','nature_thornwall'], 1:['nature_wild_growth','nature_vine_lash','nature_spore_cloud'], 2:['nature_wrath'] },

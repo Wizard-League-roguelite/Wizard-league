@@ -59,10 +59,10 @@ const PASSIVE_CHOICES = {
   Air: [
     { id:'air_tailwind',    title:'Tailwind',    emoji:'🌬️', desc:'Permanently gain +15 Power at run start.' },
     { id:'air_rapid_tempo', title:'Rapid Tempo', emoji:'⚡',  desc:'Gain +1 extra action every other turn (alternates: 3 then 2).' },
-    { id:'air_gale_force',  title:'Gale Force',  emoji:'💨',  desc:'Whenever you gain Momentum, gain +1 additional Momentum. (2 per hit instead of 1).' },
+    { id:'air_gale_force',  title:'Gale Force',  emoji:'💨',  desc:'Each hit has a 50% chance to gain +1 additional Momentum.' },
     { id:'air_slipstream',  title:'Slipstream',  emoji:'🌀',  desc:'Momentum lost when dodging is reduced to 10% instead of 25%.' },
     { id:'air_eye_of_the_storm', legendary:true, title:'Eye of the Storm', emoji:'👁️',
-      desc:'LEGENDARY: Each Momentum stack grants 3% chance per strike to repeat. Repeats can chain.' },
+      desc:'LEGENDARY: Each Momentum stack grants 3% chance per strike to repeat once.' },
   ],
 };
 

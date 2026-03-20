@@ -35,9 +35,9 @@ const SPELL_CATALOGUE = {
   grease_fire:{ id:'grease_fire', tier:'secondary', name:'Grease Fire', emoji:'🛢️', element:'Fire', requiresTag:'burn',
     desc:'Fuel the fire — Burn erupts harder this round', baseCooldown:1,
     execute(s){
-      status.enemy.burnStacks = (status.enemy.burnStacks||0) + 5;
+      status.enemy.burnStacks = (status.enemy.burnStacks||0) + 4;
       status.player.greasefirePending = true;
-      s.log('🛢️ Grease Fire! +5 Burn, double burn tick next round','player');
+      s.log('🛢️ Grease Fire! +4 Burn, double burn tick next round','player');
     }},
 
   extinguish:{ id:'extinguish', tier:'secondary', name:'Extinguish', emoji:'💧', element:'Fire', requiresTag:'burn',
@@ -46,7 +46,7 @@ const SPELL_CATALOGUE = {
       const e = combat.enemies[combat.activeEnemyIdx];
       // Trigger enemy burn tick now
       if(e && e.status.burnStacks > 0){
-        const tickDmg = Math.round(e.status.burnStacks * burnDmgPerStack('player'));
+        const tickDmg = Math.round(e.status.burnStacks * burnDmgPerStack('player', e.status.burnSourcePower||0));
         applyDirectDamage('player','enemy', tickDmg, '🔥 Burn (triggered)');
         if(combat.over) return;
       }
@@ -54,7 +54,7 @@ const SPELL_CATALOGUE = {
       const pRemoved = Math.ceil((status.player.burnStacks||0)/2);
       if(e) e.status.burnStacks = Math.max(0, (e.status.burnStacks||0) - eRemoved);
       status.player.burnStacks = Math.max(0, (status.player.burnStacks||0) - pRemoved);
-      const bonusDmg = (eRemoved + pRemoved) * 2;
+      const bonusDmg = (eRemoved + pRemoved) * 2 + s.attackPow();
       if(bonusDmg > 0) applyDirectDamage('player','enemy', bonusDmg, '💧 Extinguish bonus');
       s.log(`💧 Extinguish! −${eRemoved} enemy burn, −${pRemoved} self burn, +${bonusDmg} dmg`,'player');
     }},
@@ -101,7 +101,7 @@ const SPELL_CATALOGUE = {
   whirlpool:{ id:'whirlpool', tier:'primary', name:'Whirlpool', emoji:'🌀', element:'Water',
     desc:'Spinning vortex hits all enemies and coats them with Foam', baseCooldown:2,
     execute(s){
-      aliveEnemies().forEach((_,i)=>{ setActiveEnemy(combat.enemies.indexOf(aliveEnemies()[i])); s.hit(applyFlowToWaterPkg({baseDamage:25, effects:[], abilityElement:'Water', isAOE:true})); status.enemy.foamStacks=(status.enemy.foamStacks||0)+3; });
+      aliveEnemies().forEach((_,i)=>{ setActiveEnemy(combat.enemies.indexOf(aliveEnemies()[i])); s.hit(applyFlowToWaterPkg({baseDamage:25, effects:[], abilityElement:'Water', isAOE:true, apMult:1.25})); applyFoam('player','enemy',3); });
       s.log('🌀 Whirlpool! +3 Foam to all','player');
     }},
 
@@ -111,7 +111,7 @@ const SPELL_CATALOGUE = {
 
   riptide:{ id:'riptide', tier:'primary', name:'Riptide', emoji:'🌊', element:'Water',
     desc:'Five rapid water strikes', baseCooldown:2,
-    execute(s){ s.hit(applyFlowToWaterPkg({baseDamage:5, hits:5, effects:[], abilityElement:'Water'})); s.log('🌊 Riptide!','player'); }},
+    execute(s){ s.hit(applyFlowToWaterPkg({baseDamage:5, hits:5, effects:[], abilityElement:'Water', apMult:0.35})); s.log('🌊 Riptide!','player'); }},
 
   // Secondary
   drown:{ id:'drown', tier:'secondary', name:'Drown', emoji:'🌊💀', element:'Water',
@@ -127,15 +127,16 @@ const SPELL_CATALOGUE = {
         if(e && hasPassive('water_abyssal_pain') && foam > 0){
           const reapply = Math.floor(foam/2);
           e.status.foamStacks = reapply;
-          if(reapply > 0) applyDirectDamage('player','enemy', reapply*15, '🌊 Abyssal Pain');
-          s.log(`🌊 Drown stuns! Abyssal Pain: ${reapply} Foam reapplied, ${reapply*15} dmg`,'player');
+          const abyssalDmg = reapply*15 + s.attackPow();
+          if(reapply > 0) applyDirectDamage('player','enemy', abyssalDmg, '🌊 Abyssal Pain');
+          s.log(`🌊 Drown stuns! Abyssal Pain: ${reapply} Foam reapplied, ${abyssalDmg} dmg`,'player');
         } else {
           if(e) e.status.foamStacks = 0;
           s.log('🌊💀 Drown! Stunned + all Foam removed','player');
         }
       } else {
         if(self) self.currentCD = 1; // cheap branch stays at CD1
-        if(e) e.status.foamStacks = (e.status.foamStacks||0) + 2;
+        if(e) applyFoam('player','enemy',2);
         s.log('🌊 Drown: +2 Foam','player');
       }
     }},
@@ -174,11 +175,12 @@ const SPELL_CATALOGUE = {
           if(combat.over) return;
           applyDirectDamage('player','enemy', 10, '🌊 Tsunami');
         }
+        if(!combat.over && s.attackPow() > 0) applyDirectDamage('player','enemy', s.attackPow(), '🌊 Tsunami (Power)');
         if(!combat.over){
           if(hasPassive('water_abyssal_pain')){
             const reapply = Math.floor(foam/2);
             e.status.foamStacks = reapply;
-            if(reapply > 0) applyDirectDamage('player','enemy', reapply*15, '🌊 Abyssal Pain');
+            if(reapply > 0) applyDirectDamage('player','enemy', reapply*15 + s.attackPow(), '🌊 Abyssal Pain');
           } else {
             e.status.foamStacks = 0;
           }
@@ -215,19 +217,15 @@ const SPELL_CATALOGUE = {
     execute(s){ applyFrost('player','enemy',5); s.log('❄️❄️ Flash Freeze! +5 Frost','player'); }},
 
   shatter:{ id:'shatter', tier:'secondary', name:'Shatter', emoji:'💎', element:'Ice', requiresTag:'freeze',
-    desc:'Shatter a frozen target for massive damage — or pop Frost stacks', baseCooldown:3,
+    desc:'Consume all Frost stacks. Deal Frost×4 damage. Upgrades increase the multiplier.', baseCooldown:3,
     execute(s){
       const e = combat.enemies[combat.activeEnemyIdx];
-      if(e && e.status.frozen){
-        s.hit({baseDamage: 40 + Math.floor(s.attackPow()/5), effects:[], abilityElement:'Ice'});
-        s.log('💎 Shatter shatters the frozen target!','player');
-      } else {
-        const stacks = e ? (e.status.frostStacks||0) : 0;
-        if(e) e.status.frostStacks = 0;
-        const dmg = stacks * 4;
-        if(dmg > 0) applyDirectDamage('player','enemy', dmg, `💎 Shatter (${stacks}×4)`);
-        s.log(`💎 Shatter! ${stacks} Frost×4 = ${dmg} dmg, Frost cleared`,'player');
-      }
+      if(!e) return;
+      const stacks = Math.floor(e.status.frostStacks || 0);
+      e.status.frostStacks = 0;
+      const dmg = stacks * 4;
+      s.hit({baseDamage: dmg, effects:[], abilityElement:'Ice', _noAtk:true});
+      s.log(`💎 Shatter! ${stacks} Frost×4 = ${dmg} dmg`,'player');
     }},
 
   frozen_ground:{ id:'frozen_ground', tier:'secondary', name:'Frozen Ground', emoji:'🌍❄️', element:'Ice',
@@ -273,18 +271,32 @@ const SPELL_CATALOGUE = {
     }},
 
   chain_lightning:{ id:'chain_lightning', tier:'primary', name:'Chain Lightning', emoji:'⚡⚡', element:'Lightning',
-    desc:'Arcing lightning bounces between enemies shocking each', baseCooldown:2,
+    desc:'Arcing lightning bounces between enemies shocking each. Stops when no new targets remain — dumps remaining shock stacks on the last hit enemy.', baseCooldown:2,
     execute(s){
       const alive = aliveEnemies();
       if(!alive.length) return;
       const hitSet = new Set();
+      let lastIdx = combat.activeEnemyIdx;
       for(let i=0; i<4; i++){
         const unhit = alive.filter(e=>!hitSet.has(e));
-        const target = unhit.length ? unhit[Math.floor(Math.random()*unhit.length)] : alive[Math.floor(Math.random()*alive.length)];
-        const isNew = !hitSet.has(target);
+        if(!unhit.length){
+          const remaining = 4 - i;
+          let stacksPerBounce = 1;
+          if(hasPassive('lightning_conduction')) stacksPerBounce += 1;
+          stacksPerBounce += (player._talentShockBonus || 0);
+          const shockToApply = remaining * stacksPerBounce;
+          const e = combat.enemies[lastIdx];
+          if(e && e.alive){
+            e.status.shockStacks = (e.status.shockStacks||0) + shockToApply;
+            log(`⚡ Chain fizzles — +${shockToApply} Shock to ${e.name}!`, 'status');
+          }
+          break;
+        }
+        const target = unhit[Math.floor(Math.random()*unhit.length)];
         hitSet.add(target);
-        setActiveEnemy(combat.enemies.indexOf(target));
-        s.hit({baseDamage:5+(isNew?1:0), effects:[], abilityElement:'Lightning'});
+        lastIdx = combat.enemies.indexOf(target);
+        setActiveEnemy(lastIdx);
+        s.hit({baseDamage:11, effects:[], abilityElement:'Lightning', apMult:1.25});
         if(combat.over) return;
       }
       s.log('⚡⚡ Chain Lightning bounces!','player');
@@ -293,7 +305,7 @@ const SPELL_CATALOGUE = {
   overcharge:{ id:'overcharge', tier:'primary', name:'Overcharge', emoji:'⚡💪', element:'Lightning',
     desc:'Load the target with Shock and charge yourself up', baseCooldown:2,
     execute(s){
-      status.enemy.shockPending = (status.enemy.shockPending||0) + 3;
+      status.enemy.shockStacks = (status.enemy.shockStacks||0) + 3;
       status.player.overchargePowerPending = (status.player.overchargePowerPending||0) + 30;
       s.log('⚡💪 Overcharge! +3 Shock, +30 Power next turn','player');
     }},
@@ -305,7 +317,7 @@ const SPELL_CATALOGUE = {
       const e = combat.enemies[combat.activeEnemyIdx];
       const stacks = e ? (e.status.shockStacks||0) : 0;
       if(stacks > 0){
-        const dmg = stacks * Math.max(1, Math.floor(s.attackPow()/2));
+        const dmg = stacks * Math.max(1, Math.ceil(s.attackPow()/3));
         if(e) e.status.shockStacks = 0;
         applyDirectDamage('player','enemy', dmg, `💥 Blitz (${stacks} Shock)`);
         s.log(`💥⚡ Blitz! ${stacks}×${Math.floor(s.attackPow()/2)} = ${dmg} dmg`,'player');
@@ -329,7 +341,7 @@ const SPELL_CATALOGUE = {
   feedback:{ id:'feedback', tier:'secondary', name:'Feedback', emoji:'🔄⚡', element:'Lightning',
     desc:'Surge of power — Shock the target and charge for next turn', baseCooldown:2,
     execute(s){
-      status.enemy.shockPending = (status.enemy.shockPending||0) + 2;
+      status.enemy.shockStacks = (status.enemy.shockStacks||0) + 2;
       applySelfDamage(5, '🔄 Feedback');
       status.player.overchargePowerPending = (status.player.overchargePowerPending||0) + 15;
       s.log('🔄⚡ Feedback! +2 Shock, 5 self dmg, +15 Power next turn','player');
@@ -369,7 +381,7 @@ const SPELL_CATALOGUE = {
         s.log(`💡 Short Circuit! ${target.name}'s debuff reflects — they are stunned!`,'player');
       }
       // Also apply 1 Shock to target regardless
-      target.status.shockPending = (target.status.shockPending||0) + 1;
+      target.status.shockStacks = (target.status.shockStacks||0) + 1;
       renderEnemyCards();
       if(aliveEnemies().length === 0 && !combat.over) endBattle(true);
     }},
@@ -381,7 +393,7 @@ const SPELL_CATALOGUE = {
       clearPlayerDebuffs();
       clearPlayerBuffs();
       if(n > 0){
-        status.enemy.shockPending = (status.enemy.shockPending||0) + n*2;
+        status.enemy.shockStacks = (status.enemy.shockStacks||0) + n*2;
         s.log(`🧹⚡ Static Cleanse! ${n} effects cleared → +${n*2} Shock`,'player');
       } else {
         s.log('🧹 Static Cleanse — nothing to clear','player');
@@ -456,7 +468,7 @@ const SPELL_CATALOGUE = {
     execute(s){
       const stacks = status.player.stoneStacks||0;
       status.player.stoneStacks = 0;
-      const dmg = stacks * 25;
+      const dmg = stacks * 25 + s.attackPow();
       if(dmg > 0){
         aliveEnemies().forEach((_,i)=>{ setActiveEnemy(combat.enemies.indexOf(aliveEnemies()[i])); applyDirectDamage('player','enemy', dmg, `💥 Cataclysm (${stacks} Stone)`); });
       }
@@ -469,7 +481,7 @@ const SPELL_CATALOGUE = {
     execute(s){
       for(let i=0; i<3; i++){
         if(combat.over) return;
-        s.hit({baseDamage:5, effects:[], abilityElement:'Nature'});
+        s.hit({baseDamage:5, effects:[], abilityElement:'Nature', apMult:0.75});
         if(!combat.over && Math.random()<0.5) applyRoot('player','enemy',1);
       }
       s.log('🌿 Vine Strike!','player');
@@ -556,7 +568,7 @@ const SPELL_CATALOGUE = {
         const stacks = (e.status.rootStacks||0) + (e.status.overgrowthStacks||0);
         e.status.rootStacks = 0;
         e.status.overgrowthStacks = 0;
-        const dmg = stacks * 20;
+        const dmg = stacks * 20 + s.attackPow();
         if(dmg > 0) applyDirectDamage('player','enemy', dmg, `🌿 Nature's Wrath (${stacks}×20)`);
         if(combat.over) return;
       });
@@ -674,17 +686,17 @@ const SPELL_CATALOGUE = {
     desc:'Strike 5 times for 3 damage each. Each hit generates Momentum.', baseCooldown:0, isStarter:true,
     execute(s){
       if(status.player.tornadoAoENext){ status.player.tornadoAoENext=false; log('🌪️ Tornado boost — AoE!','status');
-        aliveEnemies().forEach((_,i)=>{ setActiveEnemy(combat.enemies.indexOf(aliveEnemies()[i])); s.hit({baseDamage:3, effects:[], hits:5, abilityElement:'Air'}); });
+        aliveEnemies().forEach((_,i)=>{ setActiveEnemy(combat.enemies.indexOf(aliveEnemies()[i])); s.hit({baseDamage:3, effects:[], hits:5, abilityElement:'Air', apMult:0.75}); });
         if(combat.enemies[combat.targetIdx]) setActiveEnemy(combat.targetIdx);
-      } else { s.hit({baseDamage:3, effects:[], hits:5, abilityElement:'Air'}); }
+      } else { s.hit({baseDamage:3, effects:[], hits:5, abilityElement:'Air', apMult:0.75}); }
       s.log('💨 Quintuple Hit!','player');
     }},
   become_wind:{ id:'become_wind', tier:'primary', name:'Become Wind', emoji:'🌬️', element:'Air',
     desc:'Gain 10 Momentum. Your next successful dodge does not cause Momentum decay.', baseCooldown:2,
     execute(s){
-      status.player.momentumStacks = (status.player.momentumStacks||0) + 10;
+      addMomentumStacks(10);
       status.player.momentumNoDecayNext = true;
-      s.log(`🌬️ Become Wind! +10 Momentum (×${status.player.momentumStacks}). Next dodge: no decay.`,'player');
+      s.log(`🌬️ Become Wind! +10 Momentum (×${status.player.momentumStacks.toFixed(1)}). Next dodge: no decay.`,'player');
       if(typeof renderStatusTags==='function') renderStatusTags();
     }},
   wind_wall:{ id:'wind_wall', tier:'primary', name:'Wind Wall', emoji:'🛡️', element:'Air',
@@ -719,18 +731,18 @@ const SPELL_CATALOGUE = {
     desc:'Deal 25 damage. No cooldown — use multiple times per turn.', baseCooldown:0, multiUse:true,
     execute(s){
       if(status.player.tornadoAoENext){ status.player.tornadoAoENext=false; log('🌪️ Tornado boost — AoE!','status');
-        aliveEnemies().forEach((_,i)=>{ setActiveEnemy(combat.enemies.indexOf(aliveEnemies()[i])); s.hit({baseDamage:25, effects:[], abilityElement:'Air'}); });
+        aliveEnemies().forEach((_,i)=>{ setActiveEnemy(combat.enemies.indexOf(aliveEnemies()[i])); s.hit({baseDamage:25, effects:[], abilityElement:'Air', apMult:0.75}); });
         if(combat.enemies[combat.targetIdx]) setActiveEnemy(combat.targetIdx);
-      } else { s.hit({baseDamage:25, effects:[], abilityElement:'Air'}); }
+      } else { s.hit({baseDamage:25, effects:[], abilityElement:'Air', apMult:0.75}); }
       s.log('💥 Windy Takedown!','player');
     }},
   sleeper_gust:{ id:'sleeper_gust', tier:'secondary', name:'Sleeper Gust', emoji:'😴', element:'Air',
     desc:'Hit twice for 1 damage each. Gain +1 action next turn per hit.', baseCooldown:2,
     execute(s){
       if(status.player.tornadoAoENext){ status.player.tornadoAoENext=false; log('🌪️ Tornado boost — AoE!','status');
-        aliveEnemies().forEach((_,i)=>{ setActiveEnemy(combat.enemies.indexOf(aliveEnemies()[i])); s.hit({baseDamage:1, effects:[], hits:2, abilityElement:'Air'}); });
+        aliveEnemies().forEach((_,i)=>{ setActiveEnemy(combat.enemies.indexOf(aliveEnemies()[i])); s.hit({baseDamage:1, effects:[], hits:2, abilityElement:'Air', apMult:1.5}); });
         if(combat.enemies[combat.targetIdx]) setActiveEnemy(combat.targetIdx);
-      } else { s.hit({baseDamage:1, effects:[], hits:2, abilityElement:'Air'}); }
+      } else { s.hit({baseDamage:1, effects:[], hits:2, abilityElement:'Air', apMult:1.5}); }
       if(!combat.over){
         status.player.nextTurnBonusActions = (status.player.nextTurnBonusActions||0) + 2;
         s.log(`😴 Sleeper Gust! +2 actions next turn (${status.player.nextTurnBonusActions} pending).`,'player');
@@ -739,9 +751,9 @@ const SPELL_CATALOGUE = {
   break_momentum:{ id:'break_momentum', tier:'secondary', name:'Break Momentum', emoji:'💫', element:'Air',
     desc:'Consume all Momentum. Deal 5 damage per Momentum stack.', baseCooldown:3,
     execute(s){
-      const stacks = status.player.momentumStacks||0;
+      const stacks = Math.floor(status.player.momentumStacks||0);
       if(stacks===0){ s.log('💫 No Momentum to consume!','status'); return; }
-      const dmg = stacks * 5;
+      const dmg = stacks * 5 + s.attackPow();
       status.player.momentumStacks = 0;
       applyDirectDamage('player','enemy', dmg, `💫 Break Momentum (${stacks}×5)`);
       s.log(`💫 Break Momentum! ${stacks} stacks → ${dmg} damage!`,'player');
@@ -760,28 +772,25 @@ const SPELL_CATALOGUE = {
       if(typeof updateActionUI==='function') updateActionUI();
     },
     execute(s){
-      status.player.momentumStacks = (status.player.momentumStacks||0) + 5;
+      addMomentumStacks(5);
       player.spellbook.forEach(sp=>{ if((sp.currentCD||0)>0) sp.currentCD = Math.max(0,sp.currentCD-1); });
-      s.log(`⚡ Storm Rush! +5 Momentum (×${status.player.momentumStacks}). All CDs −1.`,'player');
+      s.log(`⚡ Storm Rush! +5 Momentum (×${status.player.momentumStacks.toFixed(1)}). All CDs −1.`,'player');
       if(typeof renderStatusTags==='function') renderStatusTags();
     }},
 
   // ════════════════════════════════ NEUTRAL ════════════════════════════════════
   power_strike:{ id:'power_strike', tier:'secondary', name:'Power Strike', emoji:'⚔️', element:'Neutral',
     desc:'Raw powerful strike', baseCooldown:2,
-    execute(s){ s.hit({baseDamage:40, effects:[]}); s.log('⚔️ Power Strike!','player'); }},
+    execute(s){ s.hit({baseDamage:30, effects:[], apMult:2}); s.log('⚔️ Power Strike!','player'); }},
   double_tap:{ id:'double_tap', tier:'secondary', name:'Double Tap', emoji:'👊', element:'Neutral',
     desc:'Two rapid strikes in quick succession', baseCooldown:2,
-    execute(s){ s.hit({baseDamage:22, effects:[], hits:2}); s.log('👊 Double Tap!','player'); }},
+    execute(s){ s.hit({baseDamage:15, effects:[], hits:2, apMult:0.75}); s.log('👊 Double Tap!','player'); }},
   shield_bash:{ id:'shield_bash', tier:'secondary', name:'Shield Bash', emoji:'🛡️', element:'Neutral',
     desc:'Stunning bash that also gives cover', baseCooldown:2,
     execute(s){ s.hit({baseDamage:20, effects:[{type:'stun',turns:1}]}); gainBlock('player',15); s.log('🛡️ Shield Bash!','player'); }},
   vampiric_strike:{ id:'vampiric_strike', tier:'secondary', name:'Vampiric Strike', emoji:'🩸', element:'Neutral',
     desc:'Life-stealing strike — drain health from the target', baseCooldown:2,
     execute(s){ s.hit({baseDamage:30, effects:[]}); s.healSelf(Math.round((30+s.attackPow())*0.4)); s.log('🩸 Vampiric Strike!','player'); }},
-  focus_strike:{ id:'focus_strike', tier:'secondary', name:'Focus Strike', emoji:'🎯', element:'Neutral',
-    desc:'Devastating charged strike', baseCooldown:3,
-    execute(s){ s.hit({baseDamage:60, effects:[]}); s.log('🎯 Focus Strike!','player'); }},
   war_cry:{ id:'war_cry', tier:'secondary', name:'War Cry', emoji:'📯', element:'Neutral',
     desc:'Battle cry — surge of Power for this fight', baseCooldown:3,
     execute(s){
@@ -791,7 +800,7 @@ const SPELL_CATALOGUE = {
     }},
 };
 
-const NEUTRAL_SPELL_IDS = ['power_strike','double_tap','shield_bash','vampiric_strike','focus_strike','war_cry'];
+const NEUTRAL_SPELL_IDS = ['power_strike','double_tap','shield_bash','vampiric_strike','war_cry'];
 
 // ── Plasma Charge Helpers ─────────────────────────────────────────────────────
 function _plasmaSpend(){

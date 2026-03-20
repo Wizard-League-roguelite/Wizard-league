@@ -187,8 +187,8 @@ function applyGymEntryEffect(effect, enc){
       log(`❄️ ${enc.name} casts Frozen Ground! You are afflicted with 6 Frost!`,'enemy');
       renderStatusTags(); break;
     case 'chain_shock':
-      status.player.shockPending=(status.player.shockPending||0)+3;
-      log(`⚡ ${enc.name} opens with Chain Shock! +3 Shock incoming!`,'enemy'); break;
+      status.player.shockStacks=(status.player.shockStacks||0)+3;
+      log(`⚡ ${enc.name} opens with Chain Shock! +3 Shock!`,'enemy'); break;
     case 'fortify':
       gym.status.block=(gym.status.block||0)+30;
       gym.status.stoneStacks=(gym.status.stoneStacks||0)+3;

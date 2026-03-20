@@ -102,9 +102,8 @@ function startRound(){
       }
     }
 
-    // Shock: promote pending
-    e.status.shockStacks = e.status.shockPending||0;
-    e.status.shockPending = 0;
+    // Shock: decay 25% each round
+    e.status.shockStacks = Math.floor((e.status.shockStacks||0) * 0.75);
 
     // Foam expires
     if(e.status.foamStacks>0) e.status.foamStacks--;
@@ -130,7 +129,7 @@ function startRound(){
       const grease = status.player.greasefirePending;
       const mult = grease ? 2 : 1;
       if(grease){ status.player.greasefirePending = false; log('🛢️ Grease Fire: burn tick doubled!','status'); }
-      const bdmg = Math.ceil(e.status.burnStacks * burnDmgPerStack('player') * mult);
+      const bdmg = Math.ceil(e.status.burnStacks * burnDmgPerStack('player', e.status.burnSourcePower||0) * mult);
       if(bdmg>0) applyEffectDamage('player','enemy', bdmg, '🔥 Burn');
       if(combat.over) return;
     }
@@ -138,8 +137,8 @@ function startRound(){
     // Frost tick (1 or 3 per stack; skip while frozen)
     if(e.status.frostStacks>0 && !e.status.frozen){
       const frostPer = hasPassive('ice_permafrost_core') ? 3 : 1;
-      const fdmg = e.status.frostStacks * frostPer;
-      if(fdmg>0) applyEffectDamage('player','enemy', fdmg, `❄️ Frost (×${e.status.frostStacks})`);
+      const fdmg = Math.floor(e.status.frostStacks) * frostPer;
+      if(fdmg>0) applyEffectDamage('player','enemy', fdmg, `❄️ Frost (×${e.status.frostStacks.toFixed(1)})`);
       if(combat.over) return;
     }
 
@@ -168,8 +167,8 @@ function startRound(){
   }
 
   // ── Player per-round ticks ──
-  status.player.shockStacks = status.player.shockPending||0;
-  status.player.shockPending = 0;
+  // Shock: decay 25% each round
+  status.player.shockStacks = Math.floor((status.player.shockStacks||0) * 0.75);
   if(status.player.foamStacks>0) status.player.foamStacks--;
   if(status.player.rootStacks>0) status.player.rootStacks--;
   status.player.stoneStanceThisTurn = false;
@@ -197,15 +196,15 @@ function startRound(){
   if(status.player.burnStacks>0){
     const anyEnemy = combat.enemies.find(e=>e.alive);
     if(anyEnemy) setActiveEnemy(combat.enemies.indexOf(anyEnemy));
-    const bdmg = Math.ceil(status.player.burnStacks * burnDmgPerStack('enemy'));
+    const bdmg = Math.ceil(status.player.burnStacks * burnDmgPerStack('enemy', status.player.burnSourcePower||0));
     if(bdmg>0){ applyEffectDamage('enemy','player', bdmg, '🔥 Burn'); if(combat.over) return; }
   }
 
   // Player frost tick
   if(status.player.frostStacks>0 && !status.player.frozen){
     const frostPer = enemyHasPassive('ice_permafrost_core') ? 3 : 1;
-    const fdmg = status.player.frostStacks * frostPer;
-    if(fdmg>0){ applyEffectDamage('enemy','player', fdmg, `❄️ Frost (×${status.player.frostStacks})`); if(combat.over) return; }
+    const fdmg = Math.floor(status.player.frostStacks) * frostPer;
+    if(fdmg>0){ applyEffectDamage('enemy','player', fdmg, `❄️ Frost (×${status.player.frostStacks.toFixed(1)})`); if(combat.over) return; }
   }
 
   // Restore target reference
@@ -258,6 +257,12 @@ function startRound(){
     combat.actionsLeft += bonus;
     log(`💨 +${bonus} bonus action${bonus>1?'s':''} from Sleeper Gust!`, 'status');
     status.player.nextTurnBonusActions = 0;
+  }
+  if((status.player.nextTurnActionPenalty||0) > 0){
+    const penalty = status.player.nextTurnActionPenalty;
+    combat.actionsLeft = Math.max(0, combat.actionsLeft - penalty);
+    log(`🧊 Freeze! −${penalty} action${penalty>1?'s':''} this turn.`, 'status');
+    status.player.nextTurnActionPenalty = 0;
   }
   combat.plasmaChargeReserved = 0; // reset reserved charge each new round
 
@@ -484,10 +489,16 @@ function commitEndTurn(){
   const plasmaPlayerActions = allPlayerActions.filter(a => a.isPlasma);
 
   // Each enemy builds its own independent queue (same count as normal player actions)
-  const enemyActionCount = actionsPerTurnFor('enemy');
   const allEnemyQueues = combat.enemies.map((e,i) => {
     if(!e.alive) return [];
-    return buildEnemyQueueFor(i, enemyActionCount);
+    let actions = actionsPerTurnFor('enemy');
+    const penalty = e.status.nextTurnActionPenalty || 0;
+    if(penalty > 0){
+      actions = Math.max(0, actions - penalty);
+      e.status.nextTurnActionPenalty = 0;
+      log(`🧊 ${e.name} frozen! −${penalty} action${penalty>1?'s':''} this turn.`, 'status');
+    }
+    return buildEnemyQueueFor(i, actions);
   });
 
   // Priority sort among non-Plasma participants
@@ -842,7 +853,7 @@ function applyZoneTick(){
       break;
     case 'Lightning':
       // +1 shock on player from static in the air
-      status.player.shockPending = (status.player.shockPending||0) + 1;
+      status.player.shockStacks = (status.player.shockStacks||0) + 1;
       log('⚡ Zone: static charge applies +1 Shock.','status');
       break;
     case 'Earth':
@@ -861,7 +872,7 @@ function applyZoneTick(){
       break;
     case 'Water':
       // +1 foam on player — drenched environment blunts defences
-      status.player.foamStacks = (status.player.foamStacks||0) + 1;
+      applyFoam('enemy','player',1);
       log('🫧 Zone: sea spray applies +1 Foam (reduces your Block).','status');
       break;
     case 'Plasma':
