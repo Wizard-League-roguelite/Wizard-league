@@ -166,11 +166,11 @@ func spawnP(x = null, y = null, o = null):
 	_particles.append({
 		"x": x,
 		"y": y,
-		"vx": (o.get("vx") if o.get("vx") != null else (JS.random() - 0.5) * 2),
-		"vy": (o.get("vy") if o.get("vy") != null else (-JS.random()) * 1.5),
+		"vx": (o.get("vx") if o.get("vx") != null else (JS.vrandom() - 0.5) * 2),
+		"vy": (o.get("vy") if o.get("vy") != null else (-JS.vrandom()) * 1.5),
 		"life": 1,
 		"decay": JS.or_(o.get("decay"), 0.011),
-		"size": (o.get("size") if JS.t(o.get("size")) else (JS.random() * 2) + 1),
+		"size": (o.get("size") if JS.t(o.get("size")) else (JS.vrandom() * 2) + 1),
 		"r": JS.or_(o.get("r"), 160),
 		"g": JS.or_(o.get("g"), 80),
 		"b": JS.or_(o.get("b"), 255),
@@ -192,14 +192,14 @@ func tickP():
 
 # ── Shooting stars ───────────────────────────────────────────────────────────
 func maybeSpawnStar(sec = null):
-	if (len(_shootingStars) < 3 and JS.random() < 0.004):
+	if (len(_shootingStars) < 3 and JS.vrandom() < 0.004):
 		_shootingStars.append({
-			"x": JS.random() * W(),
-			"y": (JS.random() * H()) * 0.35,
-			"vx": lerp_(-6, -2, JS.random()),
-			"vy": lerp_(1, 3, JS.random()),
+			"x": JS.vrandom() * W(),
+			"y": (JS.vrandom() * H()) * 0.35,
+			"vx": lerp_(-6, -2, JS.vrandom()),
+			"vy": lerp_(1, 3, JS.vrandom()),
 			"life": 1,
-			"len": lerp_(60, 140, JS.random()),
+			"len": lerp_(60, 140, JS.vrandom()),
 		})
 	_shootingStars = JS.arr(_shootingStars).filter(func(s = null): return s.get("life") > 0)
 	for s in JS.iter(_shootingStars):
@@ -560,8 +560,8 @@ func sceneWoods(t = null, sec = null):
 	var bob = (sin(sec * 3.8) * 3) * max(0, 1 - (t * 2))
 	drawWizard(charX, (gY + (H() * 0.055)) + bob, H() / 640.0, false, false)
 	# Dust motes
-	if JS.random() < 0.22:
-		spawnP(JS.random() * W(), gY - ((JS.random() * H()) * 0.25), {"vx": (JS.random() - 0.5) * 0.4, "vy": -0.2, "decay": 0.004, "size": 1.4, "r": 130, "g": 90, "b": 200})
+	if JS.vrandom() < 0.22:
+		spawnP(JS.vrandom() * W(), gY - ((JS.vrandom() * H()) * 0.25), {"vx": (JS.vrandom() - 0.5) * 0.4, "vy": -0.2, "decay": 0.004, "size": 1.4, "r": 130, "g": 90, "b": 200})
 	tickP()
 	drawBars(1)
 	drawNarration(NAR.get("woods"), t)
@@ -681,9 +681,9 @@ func sceneFall(t = null, sec = null):
 		_ctx.globalAlpha = 1 - (ft * 0.85)
 		drawWizard(0, 0, lerp_(H() / 640.0, H() / 1200.0, ft), false, false)
 		_ctx.restore()
-	if (t < 0.45 and JS.random() < 0.55):
-		var a = (JS.random() * PI) * 2
-		var sp = 3 + (JS.random() * 5)
+	if (t < 0.45 and JS.vrandom() < 0.55):
+		var a = (JS.vrandom() * PI) * 2
+		var sp = 3 + (JS.vrandom() * 5)
 		spawnP(W() * 0.5, H() * 0.5, {"vx": cos(a) * sp, "vy": sin(a) * sp, "decay": 0.022, "size": 2.8, "r": 215, "g": 145, "b": 255})
 	tickP()
 	drawBars(1)
@@ -711,9 +711,9 @@ func sceneLobby(t = null, sec = null):
 	_ctx.restore()
 	if (t > 0.6 and t < 0.76):
 		for i in range(2):
-			spawnP((W() * 0.5) + ((JS.random() - 0.5) * 28), charY, {
-				"vx": (JS.random() - 0.5) * 3.8,
-				"vy": (-JS.random()) * 2.8,
+			spawnP((W() * 0.5) + ((JS.vrandom() - 0.5) * 28), charY, {
+				"vx": (JS.vrandom() - 0.5) * 3.8,
+				"vy": (-JS.vrandom()) * 2.8,
 				"decay": 0.025,
 				"size": 2.8,
 				"r": 130,
@@ -740,10 +740,10 @@ func sceneStaff(t = null, sec = null):
 	var charY = lerp_((H() * 0.74) + (wS * 55), (H() * 0.715) + (wS * 55), riseT)
 	var staffOn = t > 0.42
 	drawWizard(W() * 0.5, charY, wS, staffOn, false)
-	if (staffOn and JS.random() < 0.32):
+	if (staffOn and JS.vrandom() < 0.32):
 		spawnP((W() * 0.5) - (22 * wS), charY - (102 * wS), {
-			"vx": (JS.random() - 0.5) * 1.8,
-			"vy": (-JS.random()) * 2.4,
+			"vx": (JS.vrandom() - 0.5) * 1.8,
+			"vy": (-JS.vrandom()) * 2.4,
 			"decay": 0.022,
 			"size": 2.1,
 			"r": 205,
@@ -808,10 +808,10 @@ func scenePanDown(t = null, sec = null):
 	# Wizard standing with staff at world position
 	var wS = H() / 640.0
 	drawWizard(W() * 0.5, (H() * 0.715) + (wS * 55), wS, true, false)
-	if JS.random() < 0.18:
+	if JS.vrandom() < 0.18:
 		spawnP((W() * 0.5) - (22 * wS), ((H() * 0.715) + (wS * 55)) - (102 * wS), {
-			"vx": (JS.random() - 0.5) * 1.5,
-			"vy": (-JS.random()) * 2,
+			"vx": (JS.vrandom() - 0.5) * 1.5,
+			"vy": (-JS.vrandom()) * 2,
 			"decay": 0.02,
 			"size": 2,
 			"r": 200,

@@ -372,7 +372,9 @@ func reduce(a, fn: Callable, init = _NOINIT):
 		i += 1
 	return acc
 
-# stable in-place sort (JavaScript's sort is stable)
+# In-place stable sort. For arrays under 64 elements this follows V8's algorithm exactly
+# (initial run detection + binary insertion), so comparator-driven shuffles such as
+# `arr.sort(() => Math.random() - 0.5)` produce the same order as in Chrome.
 func sort(a: Array, fn = null) -> Array:
 	var n = a.size()
 	if n < 2: return a
@@ -382,32 +384,71 @@ func sort(a: Array, fn = null) -> Array:
 	else:
 		cmp = fn
 	var argc = cmp.get_argument_count()
+	if n < 64:
+		# CountAndMakeRun
+		var run = 2
+		var desc = _order(cmp, argc, a[1], a[0]) < 0
+		var prev = a[1]
+		var i = 2
+		while i < n:
+			var o = _order(cmp, argc, a[i], prev)
+			if desc:
+				if o >= 0: break
+			elif o < 0: break
+			prev = a[i]
+			run += 1
+			i += 1
+		if desc:
+			var lo = 0; var hi = run - 1
+			while lo < hi:
+				var tmp = a[lo]; a[lo] = a[hi]; a[hi] = tmp
+				lo += 1; hi -= 1
+		# BinaryInsertionSort
+		var start = run
+		while start < n:
+			var left = 0; var right = start
+			var pivot = a[right]
+			while left < right:
+				var mid = left + ((right - left) >> 1)
+				if _order(cmp, argc, pivot, a[mid]) < 0: right = mid
+				else: left = mid + 1
+			var p = start
+			while p > left:
+				a[p] = a[p - 1]
+				p -= 1
+			a[left] = pivot
+			start += 1
+		return a
 	var src = a.duplicate()
 	var buf = a.duplicate()
 	var width = 1
 	while width < n:
-		var lo = 0
-		while lo < n:
-			var mid = mini(lo + width, n); var hi = mini(lo + 2 * width, n)
-			var i = lo; var j = mid; var k = lo
-			while i < mid and j < hi:
-				var c = cmp.call(src[i], src[j]) if argc >= 2 else (cmp.call(src[i]) if argc == 1 else cmp.call())
-				if typeof(c) == TYPE_BOOL: c = 1 if c else -1
-				if c == null or (typeof(c) == TYPE_FLOAT and is_nan(c)): c = 0
-				if c <= 0:
-					buf[k] = src[i]; i += 1
-				else:
+		var lo2 = 0
+		while lo2 < n:
+			var mid2 = mini(lo2 + width, n); var hi2 = mini(lo2 + 2 * width, n)
+			var i2 = lo2; var j = mid2; var k = lo2
+			while i2 < mid2 and j < hi2:
+				if _order(cmp, argc, src[j], src[i2]) < 0:
 					buf[k] = src[j]; j += 1
+				else:
+					buf[k] = src[i2]; i2 += 1
 				k += 1
-			while i < mid:
-				buf[k] = src[i]; i += 1; k += 1
-			while j < hi:
+			while i2 < mid2:
+				buf[k] = src[i2]; i2 += 1; k += 1
+			while j < hi2:
 				buf[k] = src[j]; j += 1; k += 1
-			lo += 2 * width
-		var tmp = src; src = buf; buf = tmp
+			lo2 += 2 * width
+		var t2 = src; src = buf; buf = t2
 		width *= 2
-	for i in range(n): a[i] = src[i]
+	for i3 in range(n): a[i3] = src[i3]
 	return a
+
+func _order(cmp: Callable, argc: int, x, y) -> float:
+	var c = cmp.call(x, y) if argc >= 2 else (cmp.call(x) if argc == 1 else cmp.call())
+	if typeof(c) == TYPE_BOOL: return 1.0 if c else 0.0
+	if c == null: return 0.0
+	var f = float(c)
+	return 0.0 if is_nan(f) else f
 
 func reverse(a: Array) -> Array:
 	a.reverse()
@@ -672,6 +713,11 @@ var _rng_seeded := false
 var _rng_logic := 0
 var _rng_visual := 0
 var _in_raf := false
+var _rng_count := 0
+var rng_trace = null     # tests: Array collecting "index caller value" for every logic draw
+
+func rngCount() -> int:
+	return _rng_count
 
 func seedRandom(seed_) -> void:
 	_rng_seeded = true
@@ -683,10 +729,19 @@ func _mul32(a: int, b: int) -> int:
 
 func random() -> float:
 	if not _rng_seeded: return randf()
-	var st := _rng_visual if _in_raf else _rng_logic
-	st = (st + 0x6D2B79F5) & 0xFFFFFFFF
-	if _in_raf: _rng_visual = st
-	else: _rng_logic = st
+	_rng_logic = (_rng_logic + 0x6D2B79F5) & 0xFFFFFFFF
+	_rng_count += 1
+	var v := _mulberry(_rng_logic)
+	if rng_trace != null: rng_trace.append("%d %.6f" % [_rng_count, v])
+	return v
+
+# cosmetic randomness (particles, twinkling stars, …)
+func vrandom() -> float:
+	if not _rng_seeded: return randf()
+	_rng_visual = (_rng_visual + 0x6D2B79F5) & 0xFFFFFFFF
+	return _mulberry(_rng_visual)
+
+func _mulberry(st: int) -> float:
 	var t := _mul32(st ^ (st >> 15), 1 | st)
 	t = ((t + _mul32(t ^ (t >> 7), 61 | t)) & 0xFFFFFFFF) ^ t
 	return float((t ^ (t >> 14)) & 0xFFFFFFFF) / 4294967296.0

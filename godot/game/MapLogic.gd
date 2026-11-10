@@ -356,10 +356,10 @@ func _startVictoryCanvas():
 	var _fn9 = func(_u = null, i = null):
 		return {
 			"x": JS.mod(i * 7.5, 160),
-			"y": JS.random() * 90,
-			"vy": 0.4 + (JS.random() * 0.5),
+			"y": JS.vrandom() * 90,
+			"vy": 0.4 + (JS.vrandom() * 0.5),
 			"col": JS.idx(["#ffdd44", "#44ffaa", "#ff88cc", "#88ccff", "#ffaa44"], JS.mod(i, 5)),
-			"phase": (JS.random() * PI) * 2,
+			"phase": (JS.vrandom() * PI) * 2,
 		}
 	var confetti = JS.arrayFrom({"length": 22}, _fn9)
 	var _fn14 = func():
@@ -489,13 +489,13 @@ func startShopCanvas():
 	var _fn16 = func(_u = null, i = null):
 		return {
 			"angle": ((i / 28.0) * PI) * 2,
-			"r": (18 + ((JS.mod(i, 5)) * 14)) + (JS.random() * 10),
+			"r": (18 + ((JS.mod(i, 5)) * 14)) + (JS.vrandom() * 10),
 			"cx": W * 0.52,
 			"cy": H * 0.38,
 			"size": (2 if (JS.mod(i, 3)) == 0 else 1),
 			"speed": 0.0008 + ((JS.mod(i, 4)) * 0.0003),
-			"brightness": 0.5 + (JS.random() * 0.5),
-			"phase": (JS.random() * PI) * 2,
+			"brightness": 0.5 + (JS.vrandom() * 0.5),
+			"phase": (JS.vrandom() * PI) * 2,
 		}
 	var STARS = JS.arrayFrom({"length": 28}, _fn16)
 	# Shopkeeper sprite (pixel art, ~7×11)
@@ -530,9 +530,9 @@ func startShopCanvas():
 		return {
 			"x": LANTERN_X,
 			"y": LANTERN_Y,
-			"life": JS.random(),
-			"speed": 0.3 + (JS.random() * 0.4),
-			"vx": (JS.random() - 0.5) * 0.4,
+			"life": JS.vrandom(),
+			"speed": 0.3 + (JS.vrandom() * 0.4),
+			"vx": (JS.vrandom() - 0.5) * 0.4,
 		}
 	var particles = JS.arrayFrom({"length": 8}, _fn17)
 	var _fn23 = func():
@@ -682,9 +682,9 @@ func startShopCanvas():
 			p.life += p.get("speed") * 0.04
 			if p.get("life") >= 1:
 				p.life = 0
-				p.x = lx + ((JS.random() - 0.5) * 3)
+				p.x = lx + ((JS.vrandom() - 0.5) * 3)
 				p.y = ly
-				p.vx = (JS.random() - 0.5) * 0.4
+				p.vx = (JS.vrandom() - 0.5) * 0.4
 			p.x += p.get("vx")
 			p.y = ly - (p.get("life") * 9)
 			var a = (1 - p.get("life")) * 0.8
@@ -834,28 +834,28 @@ func renderRunInfo(target = null):
 func mkStars(n = null, rMin = null, rMax = null, sMin = null, sMax = null, bMin = null, bMax = null, col = null):
 	var _fn25 = func(_u = null, i = null):
 		return {
-			"cx": W * (0.2 + (JS.random() * 0.6)),
-			"cy": H * (0.08 + (JS.random() * 0.35)),
-			"r": rMin + (JS.random() * (rMax - rMin)),
-			"angle": (JS.random() * PI) * 2,
-			"speed": sMin + (JS.random() * (sMax - sMin)),
-			"phase": (JS.random() * PI) * 2,
-			"bright": bMin + (JS.random() * (bMax - bMin)),
-			"size": (2 if JS.random() < 0.15 else 1),
+			"cx": W * (0.2 + (JS.vrandom() * 0.6)),
+			"cy": H * (0.08 + (JS.vrandom() * 0.35)),
+			"r": rMin + (JS.vrandom() * (rMax - rMin)),
+			"angle": (JS.vrandom() * PI) * 2,
+			"speed": sMin + (JS.vrandom() * (sMax - sMin)),
+			"phase": (JS.vrandom() * PI) * 2,
+			"bright": bMin + (JS.vrandom() * (bMax - bMin)),
+			"size": (2 if JS.vrandom() < 0.15 else 1),
 			"col": JS.or_(col, "#c8c0f0"),
 		}
 	return JS.arrayFrom({"length": n}, _fn25)
 
 func spawnShoot():
-	if (len(shoots) >= 2 or JS.random() > 0.004):
+	if (len(shoots) >= 2 or JS.vrandom() > 0.004):
 		return
 	shoots.append({
-		"x": (JS.random() * W) * 0.7,
-		"y": (JS.random() * H) * 0.4,
-		"vx": 1.2 + (JS.random() * 1.6),
-		"vy": 0.4 + (JS.random() * 0.8),
+		"x": (JS.vrandom() * W) * 0.7,
+		"y": (JS.vrandom() * H) * 0.4,
+		"vx": 1.2 + (JS.vrandom() * 1.6),
+		"vy": 0.4 + (JS.vrandom() * 0.8),
 		"life": 0,
-		"maxLife": 28 + (JS.random() * 20),
+		"maxLife": 28 + (JS.vrandom() * 20),
 	})
 
 func hillY(x = null):

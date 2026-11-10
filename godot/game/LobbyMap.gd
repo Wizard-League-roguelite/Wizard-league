@@ -148,7 +148,7 @@ func _initLobbyBgZones():
 	var all = ["Fire", "Water", "Ice", "Lightning", "Earth", "Nature", "Plasma", "Air", "Camp"]
 	# Fisher-Yates shuffle for unbiased ordering
 	for i in range(len(all) - 1, 0, -1):
-		var j = floori(JS.random() * (i + 1))
+		var j = floori(JS.vrandom() * (i + 1))
 		var _t1 = JS.idx(all, j)
 		var _t2 = all[i]
 		all[i] = _t1
@@ -156,7 +156,7 @@ func _initLobbyBgZones():
 	_lobbyBgZones = JS.slice(all, 0, 3)
 	# Camp must never appear in the middle panel (index 1)
 	if JS.idx(_lobbyBgZones, 1) == "Camp":
-		var swap = (0 if JS.random() < 0.5 else 2)
+		var swap = (0 if JS.vrandom() < 0.5 else 2)
 		var _t3 = JS.idx(_lobbyBgZones, swap)
 		var _t4 = JS.idx(_lobbyBgZones, 1)
 		_lobbyBgZones[1] = _t3
@@ -980,18 +980,18 @@ func _lobbyDraw():
 
 func _drawShootingStars(ctx = null, W = null, H = null):
 	# Spawn a new shooting star occasionally
-	if (JS.random() < 0.012 and len(_lobbyShootingStars) < 5):
-		var angle = (PI / 6.0) + (JS.random() * (PI / 6.0))
+	if (JS.vrandom() < 0.012 and len(_lobbyShootingStars) < 5):
+		var angle = (PI / 6.0) + (JS.vrandom() * (PI / 6.0))
 		# 30–60° downward diagonal
-		var spd = W * (0.006 + (JS.random() * 0.008))
+		var spd = W * (0.006 + (JS.vrandom() * 0.008))
 		_lobbyShootingStars.append({
-			"x": JS.random() * W,
-			"y": (JS.random() * H) * 0.3,
+			"x": JS.vrandom() * W,
+			"y": (JS.vrandom() * H) * 0.3,
 			"vx": cos(angle) * spd,
 			"vy": sin(angle) * spd,
 			"life": 0,
-			"maxLife": 35 + floori(JS.random() * 30),
-			"len": W * (0.06 + (JS.random() * 0.08)),
+			"maxLife": 35 + floori(JS.vrandom() * 30),
+			"len": W * (0.06 + (JS.vrandom() * 0.08)),
 		})
 	ctx.save()
 	var _fn10 = func(s = null):
@@ -1116,7 +1116,7 @@ func _drawLobbyMap(ctx = null, W = null, H = null):
 	ctx.save()
 	if ((_lobbyCinematic == "castle_teeth" and _lobbyCinematicTick >= 97) and _lobbyCinematicTick < 110):
 		var intensity = (1 - ((_lobbyCinematicTick - 97) / 13.0)) * 3
-		ctx.translate(((JS.random() - 0.5) * intensity) * 2, (JS.random() - 0.5) * intensity)
+		ctx.translate(((JS.vrandom() - 0.5) * intensity) * 2, (JS.vrandom() - 0.5) * intensity)
 	ctx.filter = "brightness(1.10) contrast(1.06)"
 	ctx.drawImage(_lobbySceneCanvas, 0, 0)
 	ctx.filter = "none"

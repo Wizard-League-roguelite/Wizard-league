@@ -158,11 +158,11 @@ func spawnP(x = null, y = null, o = null):
 	_particles.append({
 		"x": x,
 		"y": y,
-		"vx": (o.get("vx") if o.get("vx") != null else (JS.random() - 0.5) * 2),
-		"vy": (o.get("vy") if o.get("vy") != null else (-JS.random()) * 1.4),
+		"vx": (o.get("vx") if o.get("vx") != null else (JS.vrandom() - 0.5) * 2),
+		"vy": (o.get("vy") if o.get("vy") != null else (-JS.vrandom()) * 1.4),
 		"life": 1,
 		"decay": JS.or_(o.get("decay"), 0.013),
-		"size": (o.get("size") if JS.t(o.get("size")) else (JS.random() * 2) + 1),
+		"size": (o.get("size") if JS.t(o.get("size")) else (JS.vrandom() * 2) + 1),
 		"r": JS.or_(o.get("r"), 220),
 		"g": JS.or_(o.get("g"), 90),
 		"b": JS.or_(o.get("b"), 20),
@@ -352,10 +352,10 @@ func drawHall(sec = null):
 		var tx = JS.idx(_e6, 0)
 		var ty = JS.idx(_e6, 1)
 		drawTorch(tx, ty, sec, i)
-		if JS.random() < 0.04:
+		if JS.vrandom() < 0.04:
 			spawnP(tx, ty - 8, {
-				"vx": (JS.random() - 0.5) * 0.6,
-				"vy": (-JS.random()) * 0.8,
+				"vx": (JS.vrandom() - 0.5) * 0.6,
+				"vy": (-JS.vrandom()) * 0.8,
 				"decay": 0.03,
 				"size": 1.2,
 				"r": 240,
@@ -846,10 +846,10 @@ func sceneEject(t = null, sec = null):
 	drawOurWizard(charX, charY, wS)
 	_ctx.restore()
 	# Dust puff on landing
-	if ((t > 0.44 and t < 0.52) and JS.random() < 0.35):
+	if ((t > 0.44 and t < 0.52) and JS.vrandom() < 0.35):
 		spawnP(charX, charY, {
-			"vx": (JS.random() - 0.5) * 3.5,
-			"vy": (-JS.random()) * 1.8,
+			"vx": (JS.vrandom() - 0.5) * 3.5,
+			"vy": (-JS.vrandom()) * 1.8,
 			"decay": 0.025,
 			"size": 2.2,
 			"r": 60,

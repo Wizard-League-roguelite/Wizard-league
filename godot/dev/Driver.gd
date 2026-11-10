@@ -45,11 +45,14 @@ func _process(_dt: float) -> void:
 		return
 	if _bot_out != "":
 		var bot := get_node("/root/Bot")
-		if not bot._botDone and Engine.get_process_frames() % 120 != 0: return
+		if not bot._botDone and Engine.get_process_frames() % 20 != 0: return
 		var f := FileAccess.open(_bot_out, FileAccess.WRITE)
 		f.store_string("\n".join(PackedStringArray(bot._botLog)) + "\n")
 		f.close()
 		if not bot._botDone: return
+		var tf := FileAccess.open(_bot_out + ".trace", FileAccess.WRITE)
+		tf.store_string("\n".join(PackedStringArray(JS.rng_trace)) + "\n")
+		tf.close()
 		print("DRIVER: bot finished, ", bot._botLog.size(), " lines -> ", _bot_out)
 		_bot_out = ""
 	if monkey_until > 0.0:
@@ -90,6 +93,7 @@ func _process(_dt: float) -> void:
 			shot_dir = s.get("shots", "")
 			return
 		if s.has("bot"):
+			JS.rng_trace = []
 			get_node("/root/Bot").botStart(int(s.bot), int(s.get("battles", 3)))
 			_bot_out = s.get("out", "")
 			return

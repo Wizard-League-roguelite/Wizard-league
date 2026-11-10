@@ -37,7 +37,7 @@ func _botVisible(el = null):
 	return ((not (not JS.t(el)) and el.offsetWidth > 0) and not JS.t(el.get("disabled")))
 
 func _botRecord(s = null):
-	_botLog.append(s)
+	_botLog.append(JS.s(s) + "  @rng" + JS.s(JS.rngCount()))
 
 func botStart(seed_ = null, maxBattles = null):
 	JS.seedRandom(seed_)
@@ -48,7 +48,7 @@ func botStart(seed_ = null, maxBattles = null):
 	_botStarted = false
 	_botLastScreen = ""
 	_botSteps = 0
-	JS.setTimeout(_botStep, 300)
+	JS.setTimeout(_botStep, 437)
 
 func _botStep():
 	if JS.t(_botDone):
@@ -60,7 +60,7 @@ func _botStep():
 		return
 	_botAct()
 	if not JS.t(_botDone):
-		JS.setTimeout(_botStep, 300)
+		JS.setTimeout(_botStep, 437)
 
 func _botAvoided(el = null):
 	var t = JS.or_(el.get("textContent"), "")
@@ -125,10 +125,14 @@ func _botAct():
 				_botTried += 1
 			return
 		_botTried = 0
+		var _ll = JS.arr(JS.arr(document.querySelectorAll("#battle-log .log-line"))).map(func(l = null): return l.textContent)
+		_botRecord("TURNLOG " + JS.join(JS.slice(_ll, max(0, len(_ll) - 25)), " | "))
+		var _e0 = JS.idx(State.combat.get("enemies"), 0)
+		_botRecord("DBG zone=" + JS.s(State.combat.get("activeZoneElement")) + " el=" + JS.s(_e0.get("element")) + " pow=" + JS.s(_e0.get("statPow")) + " efx=" + JS.s(_e0.get("statEfx")) + " def=" + JS.s(_e0.get("statDef")) + " eshock=" + JS.s(JS.or_(_e0.get("status").get("shockStacks"), 0)) + " pshock=" + JS.s(JS.or_(State.status.get("player").get("shockStacks"), 0)) + " ap=" + JS.s(Helpers.attackPowerFor("enemy", "player")) + " pdef=" + JS.s(Helpers.defenseFor("player")) + " pefx=" + JS.s(Helpers.effectPowerFor("player")) + " passive=" + JS.s(_e0.get("passive")) + " block=" + JS.s(JS.or_(State.status.get("player").get("block"), 0)))
 		_botRecord("END hp=" + JS.s(State.player.get("hp")) + " enemy=" + JS.join(JS.arr(State.combat.get("enemies")).map(func(e = null): return e.get("hp")), "/"))
 		Combat.commitEndTurn()
 		return
-	var cands = JS.arr(JS.arr(scope.querySelectorAll("*"))).filter(func(el = null): return ((not (not JS.t(el.get("onclick"))) and _botVisible(el)) and not _botAvoided(el)))
+	var cands = JS.arr(JS.arr(scope.querySelectorAll("*"))).filter(func(el = null): return (((not (not JS.t(el.get("onclick"))) or el.get("tagName") == "BUTTON") and _botVisible(el)) and not _botAvoided(el)))
 	if not JS.t(len(cands)):
 		return
 	# walk through the clickable elements in turn until the screen changes
