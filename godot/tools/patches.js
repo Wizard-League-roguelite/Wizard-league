@@ -38,7 +38,28 @@ module.exports = {
     [`(isDeck ? '⚡ Generic Deck' : '⚡ Generic')`, `'⚡ Generic Deck'`],
     [`(cat.element || '') + (isDeck ? ' Deck' : ' Book')`, `(cat.element || '') + ' Deck'`],
   ],
+  'js/rendering/sprites.js': [
+    // per-pixel sprite loop → cached texture (same pixels, far fewer script calls per frame)
+    [`for (let row = 0; row < rows.length; row++) {
+        for (let col = 0; col < 24; col++) {
+          const c = (rows[row] || '')[col] || '.';
+          const color = colorMap[c];
+          if (!color) continue;
+          ctx.fillStyle = color;
+          ctx.fillRect(Math.floor(px + col * P_SCALE), Math.floor(py + row * P_SCALE), P_SCALE, P_SCALE);
+        }
+      }`, `JS_drawPixelRows(ctx, rows, px, py, P_SCALE, colorMap, 24);`],
+  ],
   'js/rendering/lobbyMap.js': [
+    [`for (let row = 0; row < rows.length; row++) {
+      for (let col = 0; col < 24; col++) {
+        const c = (rows[row] || '')[col] || '.';
+        const color = colorMap[c];
+        if (!color) continue;
+        ctx.fillStyle = color;
+        ctx.fillRect(Math.floor(sx + col * scale), Math.floor(sy + row * scale), scale, scale);
+      }
+    }`, `JS_drawPixelRows(ctx, rows, sx, sy, scale, colorMap, 24);`],
     // BUG FIX: clicking a location whose path node is the one the wizard already stands on
     // produced an empty route and a TypeError; walk straight to the destination instead.
     [`const first = route.shift();

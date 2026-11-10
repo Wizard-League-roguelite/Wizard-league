@@ -4,6 +4,7 @@ const { chromium } = require('playwright');
 const path = require('path'), fs = require('fs');
 (async () => {
   const [seed, battles, out] = [Number(process.argv[2] || 1), Number(process.argv[3] || 3), process.argv[4] || '/tmp/bot_ref.txt'];
+  const god = process.argv[5] === 'god';
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   page.on('pageerror', e => console.log('PAGE ERROR:', e.message));
@@ -33,14 +34,14 @@ const path = require('path'), fs = require('fs');
   await page.goto('file://' + path.resolve(__dirname, '../../index.html'));
   await page.addScriptTag({ path: path.resolve(__dirname, '../dev/bot.js') });
   await page.waitForTimeout(500);
-  await page.evaluate(([seed, battles]) => {
+  await page.evaluate(([seed, battles, god]) => {
     localStorage.clear();
     activeSaveSlot = 0; patchActiveSlot({ playerName: 'Bot' }); playerName = 'Bot'; sandboxMode = false;
     showBetweenRuns();
-    botStart(seed, battles);
-  }, [seed, battles]);
+    botStart(seed, battles, god);
+  }, [seed, battles, god]);
   const t0 = Date.now();
-  while (Date.now() - t0 < 20 * 60 * 1000) {
+  while (Date.now() - t0 < 50 * 60 * 1000) {
     if (await page.evaluate(() => _botDone)) break;
     await page.waitForTimeout(1000);
   }

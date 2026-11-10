@@ -158,8 +158,10 @@ func _release_render() -> void:
 	for c in childNodes: c._release_render()
 
 func _tree_changed() -> void:
-	style_dirty = true
-	if doc != null: doc.mark_style(self)
+	if doc != null:
+		doc.mark_style(self)
+		doc.mark_layout(self)
+	else: style_dirty = true
 
 func appendChild(child: DomNode) -> DomNode:
 	if child == null: return null
@@ -445,8 +447,8 @@ func _svg_changed() -> void:
 		if doc != null: doc.mark_paint(p)
 
 func _restyle() -> void:
-	style_dirty = true
 	if doc != null: doc.mark_style(self)
+	else: style_dirty = true
 
 func _layout_changed() -> void:
 	if doc != null: doc.mark_layout(self)

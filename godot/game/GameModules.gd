@@ -932,6 +932,7 @@ const GLOBALS := {
 	"_botLastScreen": ["Bot", "v", "_botLastScreen"],
 	"_botStarted": ["Bot", "v", "_botStarted"],
 	"_botSteps": ["Bot", "v", "_botSteps"],
+	"_botGod": ["Bot", "v", "_botGod"],
 	"_BOT_AVOID": ["Bot", "v", "_BOT_AVOID"],
 	"_botVisible": ["Bot", "f", "_botVisible"],
 	"_botRecord": ["Bot", "f", "_botRecord"],

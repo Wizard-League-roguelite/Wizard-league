@@ -10,12 +10,14 @@ var _botTried = 0;
 var _botLastScreen = '';
 var _botStarted = false;
 var _botSteps = 0;
+var _botGod = false;
 const _BOT_AVOID = ['Quit', 'Abandon', 'Files', 'Back', 'Library', 'Log', 'Stats', 'Decks', 'Reroll', 'Sandbox', 'Rarity', 'Skip', 'Map'];
 
 function _botVisible(el) { return !!el && el.offsetWidth > 0 && !el.disabled; }
 function _botRecord(s) { _botLog.push(s + '  @rng' + JS_rngCount()); }
 
-function botStart(seed, maxBattles) {
+function botStart(seed, maxBattles, god) {
+  _botGod = !!god;
   JS_seedRandom(seed);
   _botMax = maxBattles || 3;
   _botLog = []; _botDone = false; _botBattles = 0; _botStarted = false; _botLastScreen = ''; _botSteps = 0;
@@ -65,6 +67,7 @@ function _botAct() {
 
   if (id === 'combat-screen' && scope === scr) {
     if (combat.over || !combat.playerTurn) return;
+    if (_botGod) player.hp = maxHPFor('player');   // keep the bot alive so long runs can be compared
     const cards = [...document.querySelectorAll('#card-hand .spell-card')].filter(_botVisible);
     if ((combat.actionsLeft || 0) > 0 && _botTried < cards.length) {
       const before = combat.actionQueue.length;

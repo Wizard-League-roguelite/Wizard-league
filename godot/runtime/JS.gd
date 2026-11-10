@@ -845,6 +845,9 @@ func _process(_dt: float) -> void:
 			virtual_time += 1000.0 / 60.0
 			pump()
 	elif virtual_time < 0.0: pump()
+	else:
+		virtual_time += _dt * 1000.0   # back to real-time pacing after a fast-forward
+		pump()
 	perf_pump_usec = Time.get_ticks_usec() - t0
 
 # Runs due animation-frame callbacks and timers once.
@@ -876,6 +879,9 @@ func next_timer_due() -> float:
 	var m = INF
 	for id in _timers.keys(): m = minf(m, _timers[id].due)
 	return m
+
+func drawPixelRows(ctx, rows, x, y, scale_, colors, cols) -> void:
+	ctx.drawPixelRows(rows, x, y, scale_, colors, cols, false)
 
 # ───────────────────────── misc browser bits ─────────────────────────
 func confirm(_msg = null) -> bool:

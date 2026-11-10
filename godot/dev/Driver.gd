@@ -41,6 +41,10 @@ func _process(_dt: float) -> void:
 		perf_left -= 1
 		if perf_left == 0:
 			var n: float = perf_acc[3]
+			print("  canvas draw ops per frame: %.0f" % (Ctx2D.stat_ops / perf_acc[3]))
+			var pf: Array = document.perf
+			print("  dom split: style %.1fms x%d, layout %.1fms x%d, paint %.1fms x%d (totals over the sample)" % [pf[0] / 1000.0, pf[3], pf[1] / 1000.0, pf[4], pf[2] / 1000.0, pf[5]])
+			document.perf = [0, 0, 0, 0, 0, 0]
 			print("PERF frame=%.1fms (%.1f fps)  game=%.1fms  dom=%.1fms" % [perf_acc[0] / n / 1000.0, 1e6 * n / perf_acc[0], perf_acc[1] / n / 1000.0, perf_acc[2] / n / 1000.0])
 		return
 	if _bot_out != "":
@@ -82,9 +86,21 @@ func _process(_dt: float) -> void:
 		if s.has("wait"):
 			wait = int(s.wait)
 			return
+		if s.has("marks"):
+			if s.marks:
+				document.debug_marks = {}
+			else:
+				var d: Dictionary = document.debug_marks
+				var ks := d.keys()
+				ks.sort_custom(func(a, b): return d[a] > d[b])
+				for k in ks.slice(0, 14): print("MARK %5d  %s" % [d[k], k])
+				document.debug_marks = null
+			continue
 		if s.has("perf"):
 			perf_left = int(s.perf)
 			perf_acc = [0, 0, 0, float(s.perf)]
+			Ctx2D.stat_ops = 0
+			document.perf = [0, 0, 0, 0, 0, 0]
 			_t_last = Time.get_ticks_usec()
 			return
 		if s.has("monkey"):
@@ -94,7 +110,7 @@ func _process(_dt: float) -> void:
 			return
 		if s.has("bot"):
 			JS.rng_trace = []
-			get_node("/root/Bot").botStart(int(s.bot), int(s.get("battles", 3)))
+			get_node("/root/Bot").botStart(int(s.bot), int(s.get("battles", 3)), s.get("god", false))
 			_bot_out = s.get("out", "")
 			return
 		if s.has("speed"):
@@ -129,6 +145,11 @@ func _process(_dt: float) -> void:
 			var f = InlineJS.global(s.call)
 			if f is Callable: f.callv(s.get("args", []))
 			else: print("DRIVER: no function ", s.call)
+		elif s.has("bench"):
+			var n := int(s.get("n", 30))
+			var t0 := Time.get_ticks_usec()
+			for i in range(n): InlineJS.eval_expr(s.bench)
+			print("BENCH %.2fms  %s" % [(Time.get_ticks_usec() - t0) / 1000.0 / n, s.bench])
 		elif s.has("print"):
 			print("PRINT ", s.print, " => ", JSON.stringify(JS._plain(InlineJS.eval_expr(s.print))))
 		elif s.has("js"):

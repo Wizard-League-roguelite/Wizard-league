@@ -61,17 +61,19 @@ func charToColor(c = null, pal = null):
 			# staff glow — matches element highlight
 			return null
 
+# Hand-optimised: sprites are cached as textures instead of being drawn pixel by pixel each frame.
 func drawSprite(ctx = null, rows = null, x = null, y = null, scale_ = null, pal = null, cols = null, flipH = null):
 	cols = JS.or_(cols, 12)
-	for row in range(len(rows)):
-		for col in range(ceili(cols)):
-			var c = JS.or_(JS.idx(JS.or_(JS.idx(rows, row), ""), col), ".")
-			var color = charToColor(c, pal)
-			if not JS.t(color):
-				continue
-			ctx.fillStyle = color
-			var drawCol = ((cols - 1) - col if JS.t(flipH) else col)
-			ctx.fillRect(floori(x + (drawCol * scale_)), floori(y + (row * scale_)), scale_, scale_)
+	var key = hash(pal)
+	var colors = _sprite_pal_cache.get(key)
+	if colors == null:
+		colors = {}
+		for ch in ["1", "2", "3", "4", "h", "s", "e", "b", "w", "f", "g"]:
+			var c = charToColor(ch, pal)
+			if JS.t(c): colors[ch] = c
+		if _sprite_pal_cache.size() > 200: _sprite_pal_cache.clear()
+		_sprite_pal_cache[key] = colors
+	ctx.drawPixelRows(rows, x, y, scale_, colors, cols, JS.t(flipH))
 
 # ═══ BACKGROUND ══════════════════════════════════════════════════════════════
 # ═══ ZONE BATTLE BACKGROUNDS ═════════════════════════════════════════════════
@@ -1282,14 +1284,7 @@ func renderBattlefield():
 	ctx.restore()
 	var rows = getPlayerCharSprite()
 	var colorMap = Characters.getWizColorMap()
-	for row in range(len(rows)):
-		for col in range(24):
-			var c = JS.or_(JS.idx(JS.or_(JS.idx(rows, row), ""), col), ".")
-			var color = JS.idx(colorMap, c)
-			if not JS.t(color):
-				continue
-			ctx.fillStyle = color
-			ctx.fillRect(floori(px + (col * P_SCALE)), floori(py + (row * P_SCALE)), P_SCALE, P_SCALE)
+	JS.drawPixelRows(ctx, rows, px, py, P_SCALE, colorMap, 24)
 	# ── Enemies ──
 	var _arr17 = JS.iter(allE)
 	for i in range(len(_arr17)):
@@ -1390,3 +1385,5 @@ func initBattleCanvas():
 				UI.renderEnemyCards()
 		arena._battleResizeObserver = JSResizeObserver.new(_fn20)
 		arena.get("_battleResizeObserver").observe(arena)
+
+var _sprite_pal_cache := {}

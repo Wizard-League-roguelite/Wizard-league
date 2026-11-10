@@ -2769,14 +2769,7 @@ func _drawLobbyPlayer(ctx = null, W = null, H = null):
 	# Draw sprite with full custom color map matching wizard build
 	var colorMap = _lobbyBuildColorMap()
 	if JS.t(colorMap):
-		for row in range(len(rows)):
-			for col in range(24):
-				var c = JS.or_(JS.idx(JS.or_(JS.idx(rows, row), ""), col), ".")
-				var color = JS.idx(colorMap, c)
-				if not JS.t(color):
-					continue
-				ctx.fillStyle = color
-				ctx.fillRect(floori(sx + (col * scale_)), floori(sy + (row * scale_)), scale_, scale_)
+		JS.drawPixelRows(ctx, rows, sx, sy, scale_, colorMap, 24)
 	else:
 		var pal = _lobbyGetPlayerPal()
 		Sprites.drawSprite(ctx, rows, sx, sy, scale_, pal, 24)

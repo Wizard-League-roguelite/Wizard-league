@@ -196,12 +196,38 @@ func removeEventListener(type_, fn, _opts = null) -> void:
 			return
 
 # ───────────────────────── invalidation ─────────────────────────
+var _dirty_nodes: Array = []      # nodes whose style must be recomputed
+var _abs_dirty: Dictionary = {}   # out-of-flow boxes that need a local re-layout (instance id -> node)
+var _full_restyle := true
+
+var debug_marks = null    # tests: Dictionary counting which elements are re-styled / re-laid out
+
+func _dbg(kind: String, n: DomNode) -> void:
+	var p: DomNode = n.parentElement
+	var key := "%s %s#%s.%s < %s#%s" % [kind, n.tag, n._id, ".".join(PackedStringArray(n.classes)), p.tag if p != null else "", p._id if p != null else ""]
+	debug_marks[key] = debug_marks.get(key, 0) + 1
+
 func mark_style(n: DomNode) -> void:
+	if debug_marks != null: _dbg("style", n)
+	if not n.style_dirty or not _style_dirty:
+		_dirty_nodes.append(n)
 	n.style_dirty = true
 	_style_dirty = true
 	if n == head: _scan_styles(head)
 
-func mark_layout(_n: DomNode) -> void:
+# Something inside `n` changed size or content. Absolutely / fixed positioned boxes never
+# influence the layout around them, so a change inside one only re-lays out that box.
+func mark_layout(n: DomNode) -> void:
+	if debug_marks != null: _dbg("layout", n)
+	if _layout_dirty: return
+	var a: DomNode = n
+	while a != null and a != root:
+		var pos = a.st.get("position")
+		if pos == null: break
+		if (pos == "absolute" or pos == "fixed") and a.in_flow_display != "" and a.st.get("display", "none") != "none" and a.st.has("_xf"):
+			_abs_dirty[a.get_instance_id()] = a
+			return
+		a = a.parentElement
 	_layout_dirty = true
 
 func mark_paint(n: DomNode) -> void:
@@ -236,9 +262,21 @@ func _process(_dt: float) -> void:
 	flush()
 	perf_flush_usec = Time.get_ticks_usec() - t0
 
+var perf := [0, 0, 0, 0, 0, 0]   # usec: style, layout, paint; counts
+
 func ensure_layout() -> void:
-	if _style_dirty or css.generation != _css_generation: _restyle_pass()
-	if _layout_dirty: _layout_pass()
+	if _style_dirty or css.generation != _css_generation:
+		var t0 := Time.get_ticks_usec()
+		_restyle_pass()
+		perf[0] += Time.get_ticks_usec() - t0; perf[3] += 1
+	if not _layout_dirty and not _abs_dirty.is_empty():
+		var t3 := Time.get_ticks_usec()
+		_abs_pass()
+		perf[1] += Time.get_ticks_usec() - t3
+	if _layout_dirty:
+		var t1 := Time.get_ticks_usec()
+		_layout_pass()
+		perf[1] += Time.get_ticks_usec() - t1; perf[4] += 1
 
 func flush() -> void:
 	var animating := anims.tick()
@@ -248,7 +286,9 @@ func flush() -> void:
 		_scroll_dirty = false
 		painter.seq = 0
 		_apply_page_scroll()
+		var t2 := Time.get_ticks_usec()
 		painter.paint_tree(root, host_rid, 0, false, 0)
+		perf[2] += Time.get_ticks_usec() - t2; perf[5] += 1
 
 func _apply_page_scroll() -> void:
 	var maxs := maxf(0.0, root.lh + root.mar[0] + root.mar[2] - viewport_size.y)
@@ -259,10 +299,54 @@ func _restyle_pass() -> void:
 	var force := css.generation != _css_generation
 	_css_generation = css.generation
 	_style_dirty = false
-	_restyle(root, {}, force)
+	var list := _dirty_nodes
+	_dirty_nodes = []
+	if force or _full_restyle or root.style_dirty or root.cs.is_empty():
+		_full_restyle = false
+		_restyle(root, {}, force)
+		return
+	for n in list:
+		if not n.style_dirty: continue       # already handled as part of an ancestor
+		var p: DomNode = n.parentElement
+		if p == null:
+			if n.pseudo == "" and n != root: continue   # detached
+			continue
+		# only style nodes whose whole ancestor chain is rendered and up to date
+		var ok = n.is_connected_to_doc()
+		var a: DomNode = p
+		while ok and a != null:
+			if a.cs.is_empty() or a.st.get("display", "none") == "none" or a.style_dirty: ok = false
+			a = a.parentElement
+		if not ok: continue                   # will be styled when the ancestor is (shown / restyled)
+		_restyle(n, p.cs, false)
+
+# re-place out-of-flow boxes whose contents changed, without touching the rest of the page
+func _abs_pass() -> void:
+	var list := _abs_dirty.values()
+	_abs_dirty = {}
+	layout.pass_id += 1
+	layout.vp = viewport_size
+	for n in list:
+		if not n.is_connected_to_doc() or n.st.get("display", "none") == "none": continue
+		if n.st.position == "fixed": layout.place_abs(n, null, viewport_size.x, viewport_size.y)
+		else:
+			var cb: DomNode = n.abs_cb
+			if cb == null or not cb.is_connected_to_doc():
+				_layout_dirty = true
+				return
+			layout.place_abs(n, cb, cb.lw - cb.bor[1] - cb.bor[3], cb.lh - cb.bor[0] - cb.bor[2])
+		# fixed boxes nested inside were queued by the layout engine
+		var i := 0
+		while i < layout.fixed_nodes.size():
+			layout.place_abs(layout.fixed_nodes[i], null, viewport_size.x, viewport_size.y)
+			i += 1
+		layout.fixed_nodes.clear()
+		_repaint_all(n)
+	_paint_dirty = true
 
 func _layout_pass() -> void:
 	_layout_dirty = false
+	_abs_dirty = {}
 	layout.run(root, viewport_size)
 	JSResizeObserver.check_all.call_deferred()
 	_repaint_all(root)
@@ -295,7 +379,11 @@ func _restyle(n: DomNode, parent_cs: Dictionary, force: bool) -> void:
 				if old.get(k) != n.cs[k]:
 					changed = true
 					if not DomStyle.PAINT_ONLY.has(k): layout_change = true
-		if layout_change or old_display != n.st.display: _layout_dirty = true
+		if old_display != n.st.display:
+			var par: DomNode = n.parentElement
+			if par != null and n.pseudo == "": mark_layout(par)
+			else: _layout_dirty = true
+		elif layout_change: mark_layout(n)
 		if changed:
 			n.paint_dirty = true
 			_paint_dirty = true
@@ -358,7 +446,7 @@ func _pseudo(n: DomNode) -> void:
 func _resolve(n: DomNode) -> void:
 	var cs := n.cs
 	var keep := {}
-	for k in ["_shown", "_parent_rid", "_sb_rid", "_xf", "_hid", "abs_children"]:
+	for k in ["_shown", "_parent_rid", "_sb_rid", "_xf", "_hid", "abs_children", "static_x", "static_y", "static_flex"]:
 		if n.st.has(k): keep[k] = n.st[k]
 	var st := keep
 	var disp: String = cs.get("display", "inline")

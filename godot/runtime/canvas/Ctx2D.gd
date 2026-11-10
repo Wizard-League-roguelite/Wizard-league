@@ -5,7 +5,8 @@
 class_name Ctx2D
 extends RefCounted
 
-static var frame_id := 0        # advanced once per process frame by Boot
+static var frame_id := 0        # advanced once per process frame
+static var stat_ops := 0        # draw operations issued (profiling)
 
 var _owner: WeakRef
 var canvas: DomNode:
@@ -45,6 +46,7 @@ var _font_src := "10px sans-serif"
 var _font: Font
 var _font_px := 10.0
 var _clip_active := false
+var smooth_edges := true
 
 # current path (device space)
 var _subs: Array = []           # Array[PackedVector2Array]
@@ -105,6 +107,7 @@ func _reset_commands() -> void:
 
 # called before every draw: discards commands that were already rendered
 func _begin() -> void:
+	stat_ops += 1
 	if _frame != frame_id:
 		_frame = frame_id
 		_reset_commands()
@@ -241,6 +244,11 @@ func _fill_poly(pts: PackedVector2Array, paint, t: Transform2D, user_from_pts: T
 		var c := _col(paint)
 		if c.a <= 0.0: return
 		_poly(pts, PackedColorArray([c]), PackedVector2Array(), RID())
+		# soften the outline of curved shapes (the renderer does not anti-alias polygon fills)
+		if pts.size() > 6 and smooth_edges:
+			var ring := pts.duplicate()
+			ring.append(pts[0])
+			RenderingServer.canvas_item_add_polyline(_ci, ring, PackedColorArray([Color(c.r, c.g, c.b, c.a * 0.55)]), 1.0, true)
 	elif paint is JSGradient:
 		var g: JSGradient = paint
 		var uvs := PackedVector2Array()
@@ -642,3 +650,43 @@ func drawImage(src, a = 0, b = 0, c = null, d = null, e = null, f = null, g = nu
 	else: dst = Rect2(a, b, sw, sh)
 	_use_xf(_xf)
 	RenderingServer.canvas_item_add_texture_rect_region(_ci, dst, ctx.texture_rid(), src_rect, Color(1, 1, 1, _alpha))
+
+# ───────────────────────── pixel-art sprites ─────────────────────────
+static var _sprite_cache: Dictionary = {}
+
+# Draws rows of characters as square pixels (colour looked up per character in `colors`).
+# Equivalent to one fillRect per pixel, but rendered once into a cached texture.
+func drawPixelRows(rows, x, y, scale_, colors, cols = 12, flip = false) -> void:
+	_begin()
+	var sc := float(scale_)
+	var n_cols := int(ceil(float(cols)))
+	if sc != floor(sc) or sc < 1.0 or sc > 24.0 or not (rows is Array) or not (colors is Dictionary):
+		# unusual scale: plain per-pixel path
+		for row in range(len(rows)):
+			var line = rows[row] if rows[row] != null else ""
+			for col in range(n_cols):
+				var ch = line[col] if col < len(line) else "."
+				var cs = colors.get(ch)
+				if cs == null or (cs is String and cs == ""): continue
+				fillStyle = cs
+				var dc = (n_cols - 1 - col) if flip else col
+				fillRect(floor(x + dc * sc), floor(y + row * sc), sc, sc)
+		return
+	var isc := int(sc)
+	var key := hash([rows, colors, n_cols, flip, isc])
+	var tex = _sprite_cache.get(key)
+	if tex == null:
+		var img := Image.create(maxi(1, n_cols * isc), maxi(1, len(rows) * isc), false, Image.FORMAT_RGBA8)
+		img.fill(Color(0, 0, 0, 0))
+		for row in range(len(rows)):
+			var line = rows[row] if rows[row] != null else ""
+			for col in range(mini(n_cols, len(line))):
+				var cs = colors.get(line[col])
+				if cs == null or (cs is String and cs == ""): continue
+				var dc = (n_cols - 1 - col) if flip else col
+				img.fill_rect(Rect2i(dc * isc, row * isc, isc, isc), CssValue.color(cs, Color(0, 0, 0, 0)))
+		tex = ImageTexture.create_from_image(img)
+		if _sprite_cache.size() > 400: _sprite_cache.clear()
+		_sprite_cache[key] = tex
+	_use_xf(_xf)
+	RenderingServer.canvas_item_add_texture_rect(_ci, Rect2(floor(float(x)), floor(float(y)), n_cols * isc, len(rows) * isc), tex.get_rid(), false, Color(1, 1, 1, _alpha))

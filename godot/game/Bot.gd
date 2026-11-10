@@ -11,6 +11,7 @@ var _botTried = 0
 var _botLastScreen = ""
 var _botStarted = false
 var _botSteps = 0
+var _botGod = false
 var _BOT_AVOID = null
 
 func _boot():
@@ -39,7 +40,8 @@ func _botVisible(el = null):
 func _botRecord(s = null):
 	_botLog.append(JS.s(s) + "  @rng" + JS.s(JS.rngCount()))
 
-func botStart(seed_ = null, maxBattles = null):
+func botStart(seed_ = null, maxBattles = null, god = null):
+	_botGod = (not (not JS.t(god)))
 	JS.seedRandom(seed_)
 	_botMax = JS.or_(maxBattles, 3)
 	_botLog = []
@@ -114,6 +116,9 @@ func _botAct():
 	if (id == "combat-screen" and JS.eq(scope, scr)):
 		if (JS.t(State.combat.get("over")) or not JS.t(State.combat.get("playerTurn"))):
 			return
+		if JS.t(_botGod):
+			State.player.hp = Helpers.maxHPFor("player")
+		# keep the bot alive so long runs can be compared
 		var cards = JS.filter(JS.arr(document.querySelectorAll("#card-hand .spell-card")), _botVisible)
 		if ((JS.or_(State.combat.get("actionsLeft"), 0)) > 0 and _botTried < len(cards)):
 			var before = len(State.combat.get("actionQueue"))
