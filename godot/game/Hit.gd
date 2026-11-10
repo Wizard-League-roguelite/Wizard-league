@@ -159,7 +159,7 @@ func performHit(attackerSide = null, defenderSide = null, pkg = null):
 				UI.renderStatusTags()
 				continue
 			var dodgeChance = Helpers.dodgeChanceFor(defenderSide)
-			if (dodgeChance > 0 and randf() < dodgeChance):
+			if (dodgeChance > 0 and JS.random() < dodgeChance):
 				UI.log_("💨 " + JS.s(("You" if defenderSide == "player" else State.combat.get("enemy").get("name"))) + " dodge!", "status")
 				# Air: Momentum decay on dodge
 				if (defenderSide == "player" and State.playerElement == "Air"):
@@ -263,9 +263,9 @@ func performHit(attackerSide = null, defenderSide = null, pkg = null):
 		applyDirectDamage(attackerSide, defenderSide, dmg, (pkg.get("label") if JS.t(pkg.get("label")) else ((JS.or_(JS.g(_atkEnemy, "emoji"), "")) + " " + (JS.or_(JS.g(_atkEnemy, "name"), "Enemy")) if JS.t(pkg.get("isEnemyAttack")) else "Hit")))
 		# ── Air: Momentum gain per damage instance ──
 		if (((attackerSide == "player" and State.playerElement == "Air") and dmg > 0) and not JS.t(pkg.get("_isTornadoSelf"))):
-			if randf() < (pkg.get("momentumChance") if pkg.get("momentumChance") != null else 0.5):
+			if JS.random() < (pkg.get("momentumChance") if pkg.get("momentumChance") != null else 0.5):
 				var momGain = 1
-				if (Main.hasPassive("air_gale_force") and randf() < 0.5):
+				if (Main.hasPassive("air_gale_force") and JS.random() < 0.5):
 					momGain += 1
 				Helpers.addMomentumStacks(momGain)
 		# Record for Plasma echo
@@ -308,7 +308,7 @@ func performHit(attackerSide = null, defenderSide = null, pkg = null):
 				# Velocity Arc (Air+Lightning duo): +1% double strike chance per Momentum stack
 				var momBonus = ((JS.or_(State.status.get("player").get("momentumStacks"), 0)) * 0.01 if (attackerSide == "player" and Main.hasPassive("duo_velocity_arc")) else 0)
 				var chance = Helpers.clamp_(((30 + floori(pow_ / 2.0)) / 100.0) + momBonus, 0, 10)
-				var roll = randf()
+				var roll = JS.random()
 				var extraHits = (2 if (chance > 1.0 and roll < (chance - 1.0)) else (1 if roll < min(chance, 1.0) else 0))
 				for h in range(ceili(extraHits)):
 					UI.log_("💥 " + ("Double" if h == 0 else "Triple") + " Strike!", "status")
@@ -355,7 +355,7 @@ func performHit(attackerSide = null, defenderSide = null, pkg = null):
 				_plasmaChargeOnDebuff(defenderSide)
 		# ── Nature Root proc on all Nature hits ──
 		if (Helpers.elementOfSide(attackerSide) == "Nature" and not JS.t(pkg.get("_isReflect"))):
-			if randf() < Constants.ROOT_PROC_CHANCE:
+			if JS.random() < Constants.ROOT_PROC_CHANCE:
 				Helpers.applyRoot(attackerSide, defenderSide, 1)
 		# ── Thorned Strikes: bonus damage per Root/Overgrowth stack ──
 		var hasThorns = ((attackerSide == "player" and Main.hasPassive("nature_thorned_strikes")) or (attackerSide == "enemy" and Main.enemyHasPassive("nature_thorned_strikes")))
@@ -384,7 +384,7 @@ func performHit(attackerSide = null, defenderSide = null, pkg = null):
 		if ((((attackerSide == "player" and State.playerElement == "Air") and dmg > 0) and Main.hasPassive("air_eye_of_the_storm")) and not JS.t(pkg.get("_isTornadoSelf"))):
 			var repeatChance = min(0.95, floori(JS.or_(State.status.get("player").get("momentumStacks"), 0)) * 0.03)
 			var depth = JS.or_(pkg.get("_eotDepth"), 0)
-			if ((depth < 1 and repeatChance > 0) and randf() < repeatChance):
+			if ((depth < 1 and repeatChance > 0) and JS.random() < repeatChance):
 				UI.log_("👁️ Eye of the Storm repeats! (" + JS.s(JS.round(repeatChance * 100)) + "% chance)", "status")
 				performHit(attackerSide, defenderSide, JS.merge([pkg, {"_eotDepth": depth + 1, "noRecord": true}]))
 				if JS.t(State.combat.get("over")):

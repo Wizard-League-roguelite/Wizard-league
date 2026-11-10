@@ -391,7 +391,7 @@ func addMomentumStacks(stacks = null):
 		if (JS.t(e) and JS.t(e.get("alive"))):
 			var rootApplied = 0
 			for i in range(ceili(stacks)):
-				if randf() < 0.2:
+				if JS.random() < 0.2:
 					rootApplied += 1
 			if rootApplied > 0:
 				applyRoot("player", "enemy", rootApplied)
@@ -409,7 +409,7 @@ func addMomentumStacks(stacks = null):
 			for s in JS.iter(JS.or_(State.status.get("player").get("seeds"), [])):
 				allSeeds.append(s)
 			if len(allSeeds) > 0:
-				var pick = JS.idx(allSeeds, floori(randf() * len(allSeeds)))
+				var pick = JS.idx(allSeeds, floori(JS.random() * len(allSeeds)))
 				pick.timer = max(1, pick.get("timer") - 1)
 				UI.log_("🌱💨 Rushing Growth: Seed timer −1 (" + JS.s(pick.get("timer")) + " remaining).", "status")
 
@@ -581,7 +581,7 @@ func pickRandom__superseded_Helpers(arr = null, n = null):
 	var copy = JS.arr(arr)
 	var result = []
 	while (len(result) < n and len(copy) > 0):
-		var i = floori(randf() * len(copy))
+		var i = floori(JS.random() * len(copy))
 		result.append(JS.idx(JS.splice(copy, i, 1), 0))
 	return result
 

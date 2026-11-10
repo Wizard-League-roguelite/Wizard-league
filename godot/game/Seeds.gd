@@ -110,8 +110,8 @@ func _bloomSeed(targetSide = null, seed_ = null, enemyIdx = null, opts = null):
 				if i != activeIdx:
 					for sp in JS.iter(JS.or_(b.get("spells"), [])):
 						otherSpells.append(sp)
-			var shuffActive = JS.sort(JS.arr(activeSpells), func(): return randf() - 0.5)
-			var shuffOther = JS.sort(JS.arr(otherSpells), func(): return randf() - 0.5)
+			var shuffActive = JS.sort(JS.arr(activeSpells), func(): return JS.random() - 0.5)
+			var shuffOther = JS.sort(JS.arr(otherSpells), func(): return JS.random() - 0.5)
 			var targets = []
 			while (len(targets) < count and len(shuffActive) > 0):
 				targets.append(shuffActive.pop_front())

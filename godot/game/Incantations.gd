@@ -244,7 +244,7 @@ func _incantationBonus(level = null, baseScale = null, decay = null):
 # Radiant checked first, then Blazing, then Kindled, else Dim.
 # Chances stored on player by talent apply() functions.
 func rollSpellRarity():
-	var r = randf()
+	var r = JS.random()
 	# Base chance per tier even without any talent investment
 	# Kindled: 8% base → up to 48% at max talent
 	# Blazing: 4% base → up to 24% at max talent

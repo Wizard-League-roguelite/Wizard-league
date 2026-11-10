@@ -529,7 +529,7 @@ func SPELLBOOK_CATALOGUE__gale_sketchbook__onSpellExecute(spell = null, lvl = nu
 	if JS.t(spell.get("isBuiltin")):
 		return
 	var chance = JS.or_(JS.idx([0.2, 0.25, 0.3, 0.35, 0.4], lvl), 0.2)
-	if randf() < chance:
+	if JS.random() < chance:
 		State.status.get("player").nextTurnBonusActions = (JS.or_(State.status.get("player").get("nextTurnBonusActions"), 0)) + 1
 		UI.log_("📑 Gale Sketchbook: +1 action next turn!", "status")
 

@@ -158,11 +158,11 @@ func spawnP(x = null, y = null, o = null):
 	_particles.append({
 		"x": x,
 		"y": y,
-		"vx": (o.get("vx") if o.get("vx") != null else (randf() - 0.5) * 2),
-		"vy": (o.get("vy") if o.get("vy") != null else (-randf()) * 1.4),
+		"vx": (o.get("vx") if o.get("vx") != null else (JS.random() - 0.5) * 2),
+		"vy": (o.get("vy") if o.get("vy") != null else (-JS.random()) * 1.4),
 		"life": 1,
 		"decay": JS.or_(o.get("decay"), 0.013),
-		"size": (o.get("size") if JS.t(o.get("size")) else (randf() * 2) + 1),
+		"size": (o.get("size") if JS.t(o.get("size")) else (JS.random() * 2) + 1),
 		"r": JS.or_(o.get("r"), 220),
 		"g": JS.or_(o.get("g"), 90),
 		"b": JS.or_(o.get("b"), 20),
@@ -352,8 +352,16 @@ func drawHall(sec = null):
 		var tx = JS.idx(_e6, 0)
 		var ty = JS.idx(_e6, 1)
 		drawTorch(tx, ty, sec, i)
-		if randf() < 0.04:
-			spawnP(tx, ty - 8, {"vx": (randf() - 0.5) * 0.6, "vy": (-randf()) * 0.8, "decay": 0.03, "size": 1.2, "r": 240, "g": 140, "b": 30})
+		if JS.random() < 0.04:
+			spawnP(tx, ty - 8, {
+				"vx": (JS.random() - 0.5) * 0.6,
+				"vy": (-JS.random()) * 0.8,
+				"decay": 0.03,
+				"size": 1.2,
+				"r": 240,
+				"g": 140,
+				"b": 30,
+			})
 	# Raised dais at back
 	var daisW = W() * 0.24
 	var daisH = H() * 0.055
@@ -838,8 +846,16 @@ func sceneEject(t = null, sec = null):
 	drawOurWizard(charX, charY, wS)
 	_ctx.restore()
 	# Dust puff on landing
-	if ((t > 0.44 and t < 0.52) and randf() < 0.35):
-		spawnP(charX, charY, {"vx": (randf() - 0.5) * 3.5, "vy": (-randf()) * 1.8, "decay": 0.025, "size": 2.2, "r": 60, "g": 45, "b": 80})
+	if ((t > 0.44 and t < 0.52) and JS.random() < 0.35):
+		spawnP(charX, charY, {
+			"vx": (JS.random() - 0.5) * 3.5,
+			"vy": (-JS.random()) * 1.8,
+			"decay": 0.025,
+			"size": 2.2,
+			"r": 60,
+			"g": 45,
+			"b": 80,
+		})
 	# Wizard looks back at castle (t > .55) — we add a small head-turn glow
 	if t > 0.58:
 		var lookA = min(1, (t - 0.58) / 0.15) * 0.35

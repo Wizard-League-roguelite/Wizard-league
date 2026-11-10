@@ -84,7 +84,7 @@ func buildStatRewardPool():
 		{"label": "Heal 40%", "emoji": "💚", "tag": "Heal", "desc": "Restore 40% of your max HP.", "apply": _fn6},
 	]
 	# Run rewards — rarer, appear occasionally
-	var roll = randf()
+	var roll = JS.random()
 	if roll < 0.18:
 		var _fn7 = func():
 			State.player.bonusActions = (JS.or_(State.player.get("bonusActions"), 0)) + 1
@@ -183,7 +183,7 @@ func grantRandomLegendary():
 	if not JS.t(len(combined)):
 		UI.log_("✦ Gym reward: nothing new to grant (all legendaries owned).", "win")
 		return
-	var pick = JS.idx(combined, floori(randf() * len(combined)))
+	var pick = JS.idx(combined, floori(JS.random() * len(combined)))
 	if pick.get("type") == "spell":
 		var gymRarity = Incantations.rollSpellRarity()
 		Spells.addSpellById(pick.get("def").id, false, gymRarity)
@@ -401,7 +401,7 @@ func showBattleRewardScreen(isGym = null, isSpellBattle = null, isRival = null):
 
 func initZoneRewardSequence():
 	var isZone1 = JS.eq(State.currentGymIdx, 0)
-	_zoneRivalSlot = (6 + floori(randf() * 4) if isZone1 else 5 + floori(randf() * 4))
+	_zoneRivalSlot = (6 + floori(JS.random() * 4) if isZone1 else 5 + floori(JS.random() * 4))
 	# Weighted random reward type picker (20% spell, 30% incant, 30% minor, 20% major)
 	var _rewardTypes = ["spell", "incantation", "minor", "major"]
 	var _rewardWeights = [20, 30, 30, 20]
@@ -411,7 +411,7 @@ func initZoneRewardSequence():
 		var types = JS.arr(_rewardTypes).filter(func(t = null): return not JS.eq(t, exclude))
 		var weights = JS.filter(_rewardWeights, func(_u = null, i = null): return not JS.eq(JS.idx(_rewardTypes, i), exclude))
 		var total = JS.reduce(weights, func(s = null, w = null): return s + w, 0)
-		var r = randf() * total
+		var r = JS.random() * total
 		for i in range(len(types)):
 			r -= weights[i]
 			if r <= 0:
@@ -600,7 +600,7 @@ func buildMajorUpgradePool():
 	var target = min(3, len(remaining))
 	while (len(chosen) < target and len(remaining) > 0):
 		var total = JS.reduce(remaining, func(s = null, c = null): return s + c.get("w"), 0)
-		var r = randf() * total
+		var r = JS.random() * total
 		var i = 0
 		while i < len(remaining):
 			r -= remaining[i].get("w")
@@ -701,7 +701,7 @@ func _buildBookDiscoveryChoices(n = null):
 	# Shuffle and pick n unique
 	var seen = JSSet.new()
 	var result = []
-	var shuffled = JS.sort(pool, func(): return randf() - 0.5)
+	var shuffled = JS.sort(pool, func(): return JS.random() - 0.5)
 	for id in JS.iter(shuffled):
 		if not seen.has(id):
 			seen.add(id)
@@ -937,9 +937,9 @@ func showSpellChoiceScreen(level = null, tier = null, forElement = null):
 	duoSpell[0] = null
 	if tier == "secondary":
 		var eligible = JS.arr(Duos._eligibleDuoSpells()).filter(func(s = null): return not JS.t(JS.find(chosen, func(c = null): return JS.eq(c.id, s.id))))
-		var winners = JS.arr(eligible).filter(func(): return randf() < 0.1)
+		var winners = JS.arr(eligible).filter(func(): return JS.random() < 0.1)
 		if len(winners) > 0:
-			duoSpell[0] = JS.idx(winners, floori(randf() * len(winners)))
+			duoSpell[0] = JS.idx(winners, floori(JS.random() * len(winners)))
 			Library.markSpellSeen(duoSpell[0].id)
 	# Inject shared rarity animation keyframes once
 	if not JS.t(document.getElementById("inc-preview-styles")):
@@ -1237,6 +1237,6 @@ func pickRandom(arr = null, n = null):
 	var copy = JS.arr(arr)
 	var result = []
 	while (len(result) < n and len(copy) > 0):
-		var i = floori(randf() * len(copy))
+		var i = floori(JS.random() * len(copy))
 		result.append(JS.idx(JS.splice(copy, i, 1), 0))
 	return result

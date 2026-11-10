@@ -213,12 +213,12 @@ func onGymDefeated(gymIdx = null):
 	# Find all artifact IDs not yet discovered
 	var discovered = JSSet.new(JS.arr(meta.get("artifacts")).map(func(a = null): return a.id))
 	var undiscovered = JS.arr(ARTIFACT_ORDER).filter(func(id = null): return not discovered.has(id))
-	if (not JS.t(len(undiscovered)) or randf() > 0.65):
+	if (not JS.t(len(undiscovered)) or JS.random() > 0.65):
 		saveMeta()
 		return null
 	# no discovery this time
 	# Pick a random undiscovered artifact
-	var chosenId = JS.idx(undiscovered, floori(randf() * len(undiscovered)))
+	var chosenId = JS.idx(undiscovered, floori(JS.random() * len(undiscovered)))
 	var target = {"id": chosenId, "star": 0, "roomsUsed": 0}
 	meta.get("artifacts").append(target)
 	meta.get("unseenArtifacts").append(chosenId)

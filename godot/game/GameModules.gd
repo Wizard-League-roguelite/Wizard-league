@@ -3,7 +3,7 @@
 class_name GameModules
 extends RefCounted
 
-const ORDER := ["Constants","Characters","Spells","Incantations","Items","Artifacts","Spellbooks","DeckIcons","Talents","KnowledgeTree","Encounters","Passives","Music","Mp3Audio","Cutscene","CastleCutscene","DarkOneIntro","Animations","SpriteData","Sprites","State","Helpers","Seeds","Surge","Duos","EnemyAbilities","Mist","Hit","Combat","SpellIcons","PassiveIcons","UI","MapLogic","MapCanvas","GymRival","ShopCampfire","BattleLoad","Progression","Veil","LobbyMap","BattleReward","BetweenRuns","Sandbox","BookEditor","Library","Analytics","Main","Version"]
+const ORDER := ["Constants","Characters","Spells","Incantations","Items","Artifacts","Spellbooks","DeckIcons","Talents","KnowledgeTree","Encounters","Passives","Music","Mp3Audio","Cutscene","CastleCutscene","DarkOneIntro","Animations","SpriteData","Sprites","State","Helpers","Seeds","Surge","Duos","EnemyAbilities","Mist","Hit","Combat","SpellIcons","PassiveIcons","UI","MapLogic","MapCanvas","GymRival","ShopCampfire","BattleLoad","Progression","Veil","LobbyMap","BattleReward","BetweenRuns","Sandbox","BookEditor","Library","Analytics","Main","Version","Bot"]
 
 const GLOBALS := {
 	"BASE_MAX_HP": ["Constants", "v", "BASE_MAX_HP"],
@@ -922,4 +922,21 @@ const GLOBALS := {
 	"_offerRunBookThenBattle": ["Main", "f", "_offerRunBookThenBattle"],
 	"confirmStartPassive": ["Main", "f", "confirmStartPassive"],
 	"GAME_VERSION": ["Version", "v", "GAME_VERSION"],
+	"_botLog": ["Bot", "v", "_botLog"],
+	"_botDone": ["Bot", "v", "_botDone"],
+	"_botBattles": ["Bot", "v", "_botBattles"],
+	"_botMax": ["Bot", "v", "_botMax"],
+	"_botIdx": ["Bot", "v", "_botIdx"],
+	"_botSig": ["Bot", "v", "_botSig"],
+	"_botTried": ["Bot", "v", "_botTried"],
+	"_botLastScreen": ["Bot", "v", "_botLastScreen"],
+	"_botStarted": ["Bot", "v", "_botStarted"],
+	"_botSteps": ["Bot", "v", "_botSteps"],
+	"_BOT_AVOID": ["Bot", "v", "_BOT_AVOID"],
+	"_botVisible": ["Bot", "f", "_botVisible"],
+	"_botRecord": ["Bot", "f", "_botRecord"],
+	"botStart": ["Bot", "f", "botStart"],
+	"_botStep": ["Bot", "f", "_botStep"],
+	"_botAvoided": ["Bot", "f", "_botAvoided"],
+	"_botAct": ["Bot", "f", "_botAct"],
 }

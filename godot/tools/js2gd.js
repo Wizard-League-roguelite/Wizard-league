@@ -41,6 +41,7 @@ if (fs.existsSync(ovDir)) for (const f of fs.readdirSync(ovDir)) {
 // ───────────────────────────── load sources ─────────────────────────────
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const FILES = [...html.matchAll(/<script src="([^"]+)"/g)].map(m => m[1]);
+FILES.push('godot/dev/bot.js');   // development autoplayer (see dev/bot.js)
 const mods = [];
 const GLOBALS = new Map(); // name -> {mod, kind, node}
 const REASSIGNED = new Set();
@@ -1178,7 +1179,7 @@ class Emitter {
       case 'ceil': return `ceili(${a(0)})`;
       case 'round': return `JS.round(${a(0)})`;
       case 'trunc': return `int(${a(0)})`;
-      case 'random': return 'randf()';
+      case 'random': return 'JS.random()';
       case 'max': case 'min':
         if (spread) return `JS.arr${m === 'max' ? 'Max' : 'Min'}(${this.expr(A[0].argument)})`;
         if (A.length === 1) return a(0);

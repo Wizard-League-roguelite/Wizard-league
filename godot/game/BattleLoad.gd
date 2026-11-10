@@ -16,11 +16,11 @@ func makeEnemyObj(enc = null):
 		passive[0] = enc.get("gymPassive")
 	else:
 		var pool = JS.arr(JS.or_(JS.idx(Passives.PASSIVE_CHOICES, el), [])).filter(func(p = null): return not JS.t(p.get("legendary")))
-		passive[0] = (JS.idx(pool, floori(randf() * len(pool))).id if JS.t(len(pool)) else null)
+		passive[0] = (JS.idx(pool, floori(JS.random() * len(pool))).id if JS.t(len(pool)) else null)
 	# Per-enemy stat variation: each stat averages battleNumber, ±50% range
 	# At B30: avg=30, could be 20 EFX / 40 DEF / 20 POW etc.
 	var _statAvg = max(1, State.battleNumber)
-	var _vary = func(): return (0 if JS.t(enc.get("isTargetDummy")) else JS.round(_statAvg * (0.5 + randf())))
+	var _vary = func(): return (0 if JS.t(enc.get("isTargetDummy")) else JS.round(_statAvg * (0.5 + JS.random())))
 	var statPow = _vary.call()
 	var statEfx = _vary.call()
 	var statDef = _vary.call()
@@ -43,7 +43,7 @@ func makeEnemyObj(enc = null):
 	var incantLvl = 0
 	if (not JS.t(enc.get("isTargetDummy")) and not JS.t(enc.get("isGym"))):
 		for threshold in range(9, floori(State.battleNumber) + 1, 7):
-			if randf() < 0.75:
+			if JS.random() < 0.75:
 				bonusActions += 1
 			else:
 				incantLvl += 1

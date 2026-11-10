@@ -254,7 +254,7 @@ func rollCharacterBuff(charId = null):
 	var pool = JS.arr(ch.get("buffPool")).filter(func(id = null): return JS.t(JS.idx(CHARACTER_BUFFS, id)))
 	if not JS.t(len(pool)):
 		return null
-	var id = JS.idx(pool, floori(randf() * len(pool)))
+	var id = JS.idx(pool, floori(JS.random() * len(pool)))
 	var def = JS.idx(CHARACTER_BUFFS, id)
 	return JS.merge([{"id": id}, def])
 

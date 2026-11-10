@@ -1164,7 +1164,7 @@ func _terrainLightning(ctx = null, W = null, H = null, horizY = null, tick = nul
 		ctx.beginPath()
 		ctx.moveTo(ax, ay1)
 		for seg in range(6):
-			ctx.lineTo(ax + ((randf() - 0.5) * 20), ay1 + (seg * 14))
+			ctx.lineTo(ax + ((JS.random() - 0.5) * 20), ay1 + (seg * 14))
 		ctx.stroke()
 		ctx.strokeStyle = "rgba(220,200,255,0.3)"
 		ctx.lineWidth = 6
@@ -2455,12 +2455,12 @@ func _drawWorldCampfire(ctx = null, cx = null, cy = null, hovered = null, tick =
 	if len(_cfSparks) < 18:
 		for i in range(3):
 			_cfSparks.append({
-				"x": cx + ((randf() - 0.5) * 8),
+				"x": cx + ((JS.random() - 0.5) * 8),
 				"y": cy - (ps * 4),
-				"vx": (randf() - 0.5) * 0.6,
-				"vy": -(0.5 + (randf() * 1.0)),
+				"vx": (JS.random() - 0.5) * 0.6,
+				"vy": -(0.5 + (JS.random() * 1.0)),
 				"life": 1.0,
-				"col": ("#FF8800" if randf() > 0.5 else "#FFCC00"),
+				"col": ("#FF8800" if JS.random() > 0.5 else "#FFCC00"),
 			})
 	for i in range(len(_cfSparks) - 1, 0 - 1, -1):
 		var sp = _cfSparks[i]
@@ -2618,12 +2618,12 @@ func _cfSparks2(ctx = null, cx = null, cy = null, tick = null, cols = null, key 
 	if len(pool) < 14:
 		for i in range(2):
 			pool.append({
-				"x": cx + ((randf() - 0.5) * 7),
+				"x": cx + ((JS.random() - 0.5) * 7),
 				"y": cy - 9,
-				"vx": (randf() - 0.5) * 0.7,
-				"vy": -(0.6 + (randf() * 1.1)),
+				"vx": (JS.random() - 0.5) * 0.7,
+				"vy": -(0.6 + (JS.random() * 1.1)),
 				"life": 1,
-				"col": JS.idx(cols, floori(randf() * len(cols))),
+				"col": JS.idx(cols, floori(JS.random() * len(cols))),
 			})
 	for i in range(len(pool) - 1, 0 - 1, -1):
 		var s = pool[i]

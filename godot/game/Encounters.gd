@@ -826,7 +826,7 @@ func ZONE_EFFECTS__Earth__apply(defSide = null, attIdx = null):
 		Helpers.addStoneStacks("enemy", 1)
 
 func ZONE_EFFECTS__Nature__apply(defSide = null):
-	if randf() < 0.5:
+	if JS.random() < 0.5:
 		Helpers.applyRoot("enemy", "player", 1)
 
 func ZONE_EFFECTS__Water__apply(defSide = null):
@@ -837,6 +837,6 @@ func ZONE_EFFECTS__Plasma__apply(defSide = null):
 
 func ZONE_EFFECTS__Air__apply(defSide = null):
 	# handled via healingMultiplier zone bonus
-	if randf() < 0.2:
+	if JS.random() < 0.2:
 		JS.idx(State.status, defSide).stunned = max(JS.or_(JS.idx(State.status, defSide).get("stunned"), 0), 1)
 		UI.log_("🌀 Zone Stun!", "status")

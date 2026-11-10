@@ -21,6 +21,7 @@ var _screens := {}
 var shot_dir := ""
 var _shot_at := 0.0
 var _shot_name := ""
+var _bot_out := ""
 
 func _ready() -> void:
 	var f := FileAccess.open(script_path, FileAccess.READ)
@@ -42,6 +43,15 @@ func _process(_dt: float) -> void:
 			var n: float = perf_acc[3]
 			print("PERF frame=%.1fms (%.1f fps)  game=%.1fms  dom=%.1fms" % [perf_acc[0] / n / 1000.0, 1e6 * n / perf_acc[0], perf_acc[1] / n / 1000.0, perf_acc[2] / n / 1000.0])
 		return
+	if _bot_out != "":
+		var bot := get_node("/root/Bot")
+		if not bot._botDone and Engine.get_process_frames() % 120 != 0: return
+		var f := FileAccess.open(_bot_out, FileAccess.WRITE)
+		f.store_string("\n".join(PackedStringArray(bot._botLog)) + "\n")
+		f.close()
+		if not bot._botDone: return
+		print("DRIVER: bot finished, ", bot._botLog.size(), " lines -> ", _bot_out)
+		_bot_out = ""
 	if monkey_until > 0.0:
 		if JS.now() >= monkey_until:
 			monkey_until = 0.0
@@ -78,6 +88,10 @@ func _process(_dt: float) -> void:
 			monkey_until = JS.now() + float(s.monkey) * 1000.0
 			monkey_gap = float(s.get("gap", 250))
 			shot_dir = s.get("shots", "")
+			return
+		if s.has("bot"):
+			get_node("/root/Bot").botStart(int(s.bot), int(s.get("battles", 3)))
+			_bot_out = s.get("out", "")
 			return
 		if s.has("speed"):
 			JS.sim_speed = int(s.speed)

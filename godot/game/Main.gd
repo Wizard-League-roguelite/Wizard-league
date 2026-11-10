@@ -352,7 +352,7 @@ func showRunBookSelectionScreen(onDone = null):
 		return (cat.get("rarity") != "legendary" if JS.t(cat) else cat)
 	var regularIds = JS.arr(ownedBookIds).filter(_fn5)
 	for i in range(len(regularIds) - 1, 0, -1):
-		var j = floori(randf() * (i + 1))
+		var j = floori(JS.random() * (i + 1))
 		var _t6 = JS.idx(regularIds, j)
 		var _t7 = regularIds[i]
 		regularIds[i] = _t6
@@ -548,7 +548,7 @@ func confirmStartPassive(passiveId = null):
 		var owned = JSSet.new(JS.arr(State.player.get("spellbook")).map(func(s = null): return s.id))
 		var candidates = JS.arr(JS.values(Spells.SPELL_CATALOGUE)).filter(func(s = null): return ((JS.eq(s.get("element"), State.playerElement) and not owned.has(s.id)) and not JS.t(s.get("legendary"))))
 		if JS.t(len(candidates)):
-			var pick = JS.idx(candidates, floori(randf() * len(candidates)))
+			var pick = JS.idx(candidates, floori(JS.random() * len(candidates)))
 			Spells.addSpellById(pick.id)
 			UI.log_("📚 Head Start: bonus spell — " + JS.s(pick.get("emoji")) + " " + JS.s(pick.get("name")) + "!", "item")
 	_offerRunBookThenBattle()

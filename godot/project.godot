@@ -61,6 +61,7 @@ Library="*res://game/Library.gd"
 Analytics="*res://game/Analytics.gd"
 Main="*res://game/Main.gd"
 Version="*res://game/Version.gd"
+Bot="*res://game/Bot.gd"
 
 [display]
 

@@ -666,6 +666,31 @@ func imul(a, b) -> int:
 func ushr(a, b) -> int:
 	return (int(a) & 0xFFFFFFFF) >> (int(b) & 31)
 
+# Math.random(). Normally Godot's generator; tests can seed two deterministic streams
+# (game logic, and visuals drawn from animation-frame callbacks) to compare against the browser.
+var _rng_seeded := false
+var _rng_logic := 0
+var _rng_visual := 0
+var _in_raf := false
+
+func seedRandom(seed_) -> void:
+	_rng_seeded = true
+	_rng_logic = int(seed_) & 0xFFFFFFFF
+	_rng_visual = (int(seed_) ^ 0x9E3779B9) & 0xFFFFFFFF
+
+func _mul32(a: int, b: int) -> int:
+	return (((a & 0xFFFF) * b) + ((((a >> 16) & 0xFFFF) * b) << 16)) & 0xFFFFFFFF
+
+func random() -> float:
+	if not _rng_seeded: return randf()
+	var st := _rng_visual if _in_raf else _rng_logic
+	st = (st + 0x6D2B79F5) & 0xFFFFFFFF
+	if _in_raf: _rng_visual = st
+	else: _rng_logic = st
+	var t := _mul32(st ^ (st >> 15), 1 | st)
+	t = ((t + _mul32(t ^ (t >> 7), 61 | t)) & 0xFFFFFFFF) ^ t
+	return float((t ^ (t >> 14)) & 0xFFFFFFFF) / 4294967296.0
+
 # ───────────────────────── JSON ─────────────────────────
 func jsonParse(text):
 	if text == null: return null
@@ -773,8 +798,10 @@ func pump() -> void:
 	if not _rafs.is_empty():
 		var batch = _rafs
 		_rafs = {}
+		_in_raf = true
 		for id in batch.keys():
 			invoke(batch[id], [ts])
+		_in_raf = false
 	if not _timers.is_empty():
 		var due = []
 		for id in _timers.keys():

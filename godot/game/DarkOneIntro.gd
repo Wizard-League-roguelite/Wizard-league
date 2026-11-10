@@ -179,11 +179,11 @@ func sceneVoid(t = null, sec = null):
 	aura.addColorStop(1, "rgba(0,0,0,0)")
 	_ctx.fillStyle = aura
 	_ctx.fillRect(0, 0, W(), H())
-	if randf() < 0.25:
-		var px = (W() * 0.5) + (((randf() - 0.5) * W()) * 0.4)
+	if JS.random() < 0.25:
+		var px = (W() * 0.5) + (((JS.random() - 0.5) * W()) * 0.4)
 		spawnP(px, H() * 0.65, {
-			"vx": (randf() - 0.5) * 1.2,
-			"vy": ((-randf()) * 1.5) - 0.5,
+			"vx": (JS.random() - 0.5) * 1.2,
+			"vy": ((-JS.random()) * 1.5) - 0.5,
 			"decay": 0.012,
 			"size": 1.5,
 			"r": 200,
@@ -252,10 +252,10 @@ func sceneRise(t = null, sec = null):
 			_ctx.moveTo(cx + ((cos(angle) * H()) * 0.04), (cy - (50 * ws)) + ((sin(angle) * H()) * 0.04))
 			_ctx.lineTo(cx + (cos(angle) * len_), (cy - (50 * ws)) + (sin(angle) * len_))
 			_ctx.stroke()
-	if randf() < 0.3:
-		spawnP(cx + (((randf() - 0.5) * W()) * 0.5), H() * 0.75, {
-			"vx": (randf() - 0.5) * 1.5,
-			"vy": ((-randf()) * 2) - 0.5,
+	if JS.random() < 0.3:
+		spawnP(cx + (((JS.random() - 0.5) * W()) * 0.5), H() * 0.75, {
+			"vx": (JS.random() - 0.5) * 1.5,
+			"vy": ((-JS.random()) * 2) - 0.5,
 			"decay": 0.014,
 			"size": 1.8,
 			"r": 200,
@@ -292,8 +292,16 @@ func sceneEyes(t = null, sec = null):
 	midAura.addColorStop(1, "rgba(0,0,0,0)")
 	_ctx.fillStyle = midAura
 	_ctx.fillRect(0, 0, W(), H())
-	if randf() < 0.22:
-		spawnP((W() * 0.5) + (((randf() - 0.5) * W()) * 0.55), H() * 0.82, {"vx": (randf() - 0.5) * 1, "vy": (-randf()) * 1.8, "decay": 0.016, "size": 1.4, "r": 220, "g": 20, "b": 0})
+	if JS.random() < 0.22:
+		spawnP((W() * 0.5) + (((JS.random() - 0.5) * W()) * 0.55), H() * 0.82, {
+			"vx": (JS.random() - 0.5) * 1,
+			"vy": (-JS.random()) * 1.8,
+			"decay": 0.016,
+			"size": 1.4,
+			"r": 220,
+			"g": 20,
+			"b": 0,
+		})
 	tickP()
 	drawNarLine("He has been waiting.", narAlpha(t, 0.1, 0.28, 0.62, 0.82))
 	# Fade out to black at end

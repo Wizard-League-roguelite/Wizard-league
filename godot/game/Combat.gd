@@ -137,7 +137,7 @@ func startRound():
 			var decay = max(1, floori(e.get("status").get("stoneStacks") * 0.25))
 			e.get("status").stoneStacks = max(0, e.get("status").get("stoneStacks") - decay)
 		# Wildfire: 33% chance to double enemy burn
-		if ((Main.hasPassive("fire_wildfire") and e.get("status").get("burnStacks") > 0) and randf() < 0.33):
+		if ((Main.hasPassive("fire_wildfire") and e.get("status").get("burnStacks") > 0) and JS.random() < 0.33):
 			e.get("status").burnStacks *= 2
 			UI.log_("🌪️ Wildfire! " + JS.s(e.get("name")) + " burn ×2 (×" + JS.s(e.get("status").get("burnStacks")) + ")", "status")
 		# Burn tick (1 or 1.5 per stack; Grease Fire doubles once)
@@ -904,7 +904,7 @@ func _intentHidden():
 	if not JS.t(tier):
 		return false
 	var chance = JS.idx([0.25, 0.5, 0.75, 1.0], tier - 1)
-	return randf() < chance
+	return JS.random() < chance
 
 func _liveAttackHint(idx = null, baseDmg = null, el = null):
 	if JS.t(State.player.get("_mistBlindDamage")):
@@ -1164,12 +1164,12 @@ func resolveSummonAttacks():
 		if s.get("cd") > 0:
 			s.cd -= 1
 			continue
-		var target = JS.idx(alive, floori(randf() * len(alive)))
+		var target = JS.idx(alive, floori(JS.random() * len(alive)))
 		var tIdx = JS.indexOf(State.combat.get("enemies"), target)
 		State.setActiveEnemy(tIdx)
 		UI.log_("🌳 " + JS.s(s.get("name")) + " strikes " + JS.s(target.get("name")) + "!", "player")
 		Hit.performHit("player", "enemy", {"baseDamage": s.get("dmg"), "effects": [], "isBasic": false, "abilityElement": "Nature", "isSummon": true})
-		if (not JS.t(State.combat.get("over")) and randf() < (JS.or_(s.get("rootChance"), 0.5))):
+		if (not JS.t(State.combat.get("over")) and JS.random() < (JS.or_(s.get("rootChance"), 0.5))):
 			Helpers.applyRoot("player", "enemy", 1)
 	# Remove dead summons
 	State.combat.summons = JS.arr(State.combat.get("summons")).filter(func(s = null): return s.get("hp") > 0)
@@ -1237,8 +1237,8 @@ func endBattle(won = null):
 		if gold > 0:
 			UI.log_("✦ Gained " + JS.s(gold) + " gold" + (" (" + JS.s(JS.round(State.player.get("_goldBonus") * 100)) + "% bonus)" if State.player.get("_goldBonus") > 0 else "") + ".", "item")
 		_lootItemId[0] = null
-		if randf() < Constants.ITEM_DROP_CHANCE:
-			_lootItemId[0] = JS.idx(Items.ITEM_DROP_POOL, floori(randf() * len(Items.ITEM_DROP_POOL)))
+		if JS.random() < Constants.ITEM_DROP_CHANCE:
+			_lootItemId[0] = JS.idx(Items.ITEM_DROP_POOL, floori(JS.random() * len(Items.ITEM_DROP_POOL)))
 			Spells.addItem(_lootItemId[0])
 			UI.log_("✦ Item dropped: " + JS.s(JS.idx(Items.ITEM_CATALOGUE, _lootItemId[0]).get("emoji")) + " " + JS.s(JS.idx(Items.ITEM_CATALOGUE, _lootItemId[0]).get("name")) + "!", "item")
 		UI.updateHPBars()
@@ -1364,7 +1364,7 @@ func applyZoneTick():
 			UI.log_("🪨 Zone: earthen power grants enemies +1 Stone.", "status")
 		"Nature":
 			# 40% chance to root player — vines creep in
-			if randf() < 0.4:
+			if JS.random() < 0.4:
 				Helpers.applyRoot("enemy", "player", 1)
 				UI.log_("🌿 Zone: creeping vines apply 1 Root.", "status")
 		"Water":
@@ -1378,7 +1378,7 @@ func applyZoneTick():
 			UI.log_("🔮 Zone: reality flickers — enemies +3% dodge.", "status")
 		"Air":
 			# 25% chance to stun player 1t from battering winds
-			if randf() < 0.25:
+			if JS.random() < 0.25:
 				State.status.get("player").stunned = max(JS.or_(State.status.get("player").get("stunned"), 0), 1)
 				UI.log_("🌀 Zone: battering winds stun you for 1 turn!", "status")
 	UI.renderStatusTags()

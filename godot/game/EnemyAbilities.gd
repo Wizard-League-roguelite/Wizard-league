@@ -681,11 +681,11 @@ func buildEnemyAbilities(element = null, gymIdx = null, difficulty = null, bonus
 			candidates.append({"id": id, "tier": t})
 	# Pick `count` spells, biased toward higher tiers in later zones
 	var chosen = []
-	var shuffled = JS.sort(JS.arr(candidates), func(): return randf() - 0.5)
+	var shuffled = JS.sort(JS.arr(candidates), func(): return JS.random() - 0.5)
 	# Always include at least one tier-0 to anchor
 	var tier0 = JS.arr(shuffled).filter(func(c = null): return JS.eq(c.get("tier"), 0))
 	if JS.t(len(tier0)):
-		chosen.append(JS.idx(tier0, floori(randf() * len(tier0))))
+		chosen.append(JS.idx(tier0, floori(JS.random() * len(tier0))))
 	# Fill remainder preferring higher tiers
 	var remaining = JS.arr(shuffled).filter(func(c = null): return not JS.t(JS.find(chosen, func(x = null): return JS.eq(x.id, c.id))))
 	JS.sort(remaining, func(a = null, b = null): return JS.un(b.get("tier")) - JS.un(a.get("tier")))
@@ -730,20 +730,20 @@ func pickEnemyAbility(e = null, gymIdx = null):
 	var brace = JS.find(ready, func(a = null): return a.get("id") == "brace")
 	if JS.t(brace):
 		var braceChance = (0.65 if (hpPct < 0.5 and hasNoBlock) else (0.35 if hasNoBlock else 0.15))
-		if randf() < braceChance:
+		if JS.random() < braceChance:
 			return brace
 	# Below 40% HP: strongly prefer any defensive / healing ability
 	if hpPct < 0.4:
 		var defensive = JS.find(ready, func(a = null): return (a.get("id") == "brace" or (JS.t(JS.idx(ENEMY_SPELL_VALUES, a.id)) and ((JS.or_(JS.idx(ENEMY_SPELL_VALUES, a.id).get("heal"), 0)) > 0 or (JS.or_(JS.idx(ENEMY_SPELL_VALUES, a.id).get("armor"), 0)) > 0))))
-		if (JS.t(defensive) and randf() < 0.65):
+		if (JS.t(defensive) and JS.random() < 0.65):
 			return defensive
 	# Use high-tier abilities when available
-	if (JS.t(JS.find(ready, func(a = null): return JS.un(a.get("tier")) >= 1)) and randf() < 0.55):
+	if (JS.t(JS.find(ready, func(a = null): return JS.un(a.get("tier")) >= 1)) and JS.random() < 0.55):
 		var powerful = JS.arr(ready).filter(func(a = null): return JS.un(a.get("tier")) >= 1)
-		return JS.idx(powerful, floori(randf() * len(powerful)))
+		return JS.idx(powerful, floori(JS.random() * len(powerful)))
 	# Random ability with 50% overall chance
-	if randf() < 0.5:
-		return JS.idx(ready, floori(randf() * len(ready)))
+	if JS.random() < 0.5:
+		return JS.idx(ready, floori(JS.random() * len(ready)))
 	return null
 
 # Pick an item for the enemy to use (returns item or null)
@@ -752,10 +752,10 @@ func pickEnemyItem(e = null):
 		return null
 	var hpPct = e.get("hp") / float(e.get("enemyMaxHP"))
 	var heal = JS.find(e.get("items"), func(it = null): return it.get("id") == "enemy_healing_draught")
-	if ((JS.t(heal) and hpPct < 0.4) and randf() < 0.75):
+	if ((JS.t(heal) and hpPct < 0.4) and JS.random() < 0.75):
 		return heal
 	var flask = JS.find(e.get("items"), func(it = null): return it.get("id") == "enemy_iron_flask")
-	if ((JS.t(flask) and (JS.or_(e.get("status").get("block"), 0)) == 0) and randf() < 0.59):
+	if ((JS.t(flask) and (JS.or_(e.get("status").get("block"), 0)) == 0) and JS.random() < 0.59):
 		return flask
 	return null
 

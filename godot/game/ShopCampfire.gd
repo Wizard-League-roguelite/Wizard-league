@@ -325,7 +325,7 @@ func _generateShopStock():
 	var item1 = JS.idx(BattleReward.pickRandom(itemPool, 1), 0)
 	var stat1 = JS.idx(BattleReward.pickRandom(statPool, 1), 0)
 	# 50/50: another item (different from item1) or another stat (different from stat1)
-	var mix = (JS.idx(BattleReward.pickRandom(JS.arr(itemPool).filter(func(i = null): return not JS.eq(i.id, item1.id)), 1), 0) if randf() < 0.5 else JS.idx(BattleReward.pickRandom(JS.arr(statPool).filter(func(s = null): return not JS.eq(s.id, stat1.id)), 1), 0))
+	var mix = (JS.idx(BattleReward.pickRandom(JS.arr(itemPool).filter(func(i = null): return not JS.eq(i.id, item1.id)), 1), 0) if JS.random() < 0.5 else JS.idx(BattleReward.pickRandom(JS.arr(statPool).filter(func(s = null): return not JS.eq(s.id, stat1.id)), 1), 0))
 	var reward = JS.idx(BattleReward.pickRandom(rewardPool, 1), 0)
 	var power = JS.idx(BattleReward.pickRandom(powerPool, 1), 0)
 	return JS.arr(JS.sort(JS.filter([item1, stat1, mix, reward, power], JS.t), func(a = null, b = null): return a.get("cost") - b.get("cost"))).map(func(item = null): return JS.merge([item, {"bought": false}]))

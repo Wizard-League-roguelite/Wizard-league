@@ -199,23 +199,23 @@ func initZoneSpecial():
 	# Generate the dynamic reward sequence and rival slot for this zone
 	BattleReward.initZoneRewardSequence()
 	# Mid pair: two consecutive-ish slots in range 7-10
-	var midFirst = 7 + floori(randf() * 3)
+	var midFirst = 7 + floori(JS.random() * 3)
 	# 7, 8, or 9
-	var midSecond = min((midFirst + 1) + floori(randf() * 2), 10)
+	var midSecond = min((midFirst + 1) + floori(JS.random() * 2), 10)
 	# +1 or +2, cap 10
 	# End pair: slots 11-12 or 12-13 (always in the gym-open window)
-	var endFirst = 11 + floori(randf() * 2)
+	var endFirst = 11 + floori(JS.random() * 2)
 	# 11 or 12
 	var endSecond = endFirst + 1
 	# always +1
 	# Randomly assign shop/campfire within each pair
-	if randf() < 0.5:
+	if JS.random() < 0.5:
 		_zoneCampfireMid = midFirst
 		_zoneShopMid = midSecond
 	else:
 		_zoneShopMid = midFirst
 		_zoneCampfireMid = midSecond
-	if randf() < 0.5:
+	if JS.random() < 0.5:
 		_zoneCampfireEnd = endFirst
 		_zoneShopEnd = endSecond
 	else:
@@ -419,7 +419,7 @@ func generateZoneGraph():
 	# Shop spacing: track placed shops {tier, col} — no shop within 3 tiers on same/adjacent col
 	var shopPlacements = []
 	# Zone 2+: pre-shuffle all 4 reward types across the starting nodes so each shows a different reward
-	var _startRewards = (JS.sort(["spell", "incantation", "minor", "major"], func(): return randf() - 0.5) if State.currentGymIdx > 0 else null)
+	var _startRewards = (JS.sort(["spell", "incantation", "minor", "major"], func(): return JS.random() - 0.5) if State.currentGymIdx > 0 else null)
 	# Build per-tier column lists (wider branching — 20/35/45 split toward 4 cols)
 	var tierColsList = []
 	for t in range(1, floori(ZN_TIERS) + 1):
@@ -445,7 +445,7 @@ func generateZoneGraph():
 			# funnel toward middle before rival
 			# rival col1 (middle), battle col3
 			# 20% 2-wide, 35% 3-wide, 45% 4-wide
-			var r = randf()
+			var r = JS.random()
 			if r < 0.2:
 				cols = [0, 3]
 			elif r < 0.55:
@@ -471,7 +471,7 @@ func generateZoneGraph():
 				type_ = "rival"
 			elif not noRollTiers.has(t):
 				# Independent per-node roll for campfire/shop
-				var roll = randf()
+				var roll = JS.random()
 				if (cfCount < MAX_CF and roll < 0.14):
 					if (JS.or_(State.player.get("_mistCampfireReduction"), 0)) < 1:
 						type_ = "campfire"
@@ -530,9 +530,9 @@ func generateZoneGraph():
 				addEdge.call(best.id, tn.id)
 				toHit.add(tn.id)
 		# Optional diagonal: only adjacent columns (diff ≤ 1) to avoid wild crossings
-		if ((len(froms) > 1 and len(tos) > 1) and randf() < 0.35):
-			var fi = floori(randf() * len(froms))
-			var ti = floori(randf() * len(tos))
+		if ((len(froms) > 1 and len(tos) > 1) and JS.random() < 0.35):
+			var fi = floori(JS.random() * len(froms))
+			var ti = floori(JS.random() * len(tos))
 			if abs(JS.idx(froms, fi).get("col") - JS.idx(tos, ti).get("col")) <= 1:
 				addEdge.call(JS.idx(froms, fi).id, JS.idx(tos, ti).id)
 	State._zoneGraph = {"nodes": nodes, "edges": edges}
@@ -554,11 +554,11 @@ func _pickZoneGraphEnc(zoneEl = null):
 	var crossSingles = JS.arr(Encounters.ENCOUNTER_POOL).filter(func(e = null): return (not JS.eq(e.get("campType"), zoneEl) and JS.t(_rel.call(e))))
 	var zonePacks = JS.arr(Encounters.PACK_POOL).filter(func(p = null): return (JS.eq(p.get("element"), zoneEl) and JS.t(_rel.call(p))))
 	var pool = (zoneSingles if JS.t(len(zoneSingles)) else JS.filter(Encounters.ENCOUNTER_POOL, _rel))
-	if (JS.t(len(zonePacks)) and randf() < 0.2):
-		return JS.merge([JS.idx(zonePacks, floori(randf() * len(zonePacks)))])
-	if (JS.t(len(crossSingles)) and randf() < 0.35):
-		return JS.merge([JS.idx(crossSingles, floori(randf() * len(crossSingles)))])
-	return JS.merge([JS.idx(pool, floori(randf() * len(pool)))])
+	if (JS.t(len(zonePacks)) and JS.random() < 0.2):
+		return JS.merge([JS.idx(zonePacks, floori(JS.random() * len(zonePacks)))])
+	if (JS.t(len(crossSingles)) and JS.random() < 0.35):
+		return JS.merge([JS.idx(crossSingles, floori(JS.random() * len(crossSingles)))])
+	return JS.merge([JS.idx(pool, floori(JS.random() * len(pool)))])
 
 # ── Zone map rendering ────────────────────────────────────────────────────────
 # Draw a full-height zone background + cobblestone paths onto the scrollable stage canvas.

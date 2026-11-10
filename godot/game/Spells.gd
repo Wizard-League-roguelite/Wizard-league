@@ -2050,7 +2050,7 @@ func SPELL_CATALOGUE__chain_lightning__execute(s = null):
 				e.get("status").shockStacks = (JS.or_(e.get("status").get("shockStacks"), 0)) + shockToApply
 				UI.log_("⚡ Chain fizzles — +" + JS.s(shockToApply) + " Shock to " + JS.s(e.get("name")) + "!", "status")
 			break
-		var target = JS.idx(unhit, floori(randf() * len(unhit)))
+		var target = JS.idx(unhit, floori(JS.random() * len(unhit)))
 		hitSet.add(target)
 		lastIdx = JS.indexOf(State.combat.get("enemies"), target)
 		State.setActiveEnemy(lastIdx)
@@ -2107,11 +2107,11 @@ func SPELL_CATALOGUE__short_circuit__execute(s = null):
 	var alive = Helpers.aliveEnemies()
 	if not JS.t(len(alive)):
 		return
-	var target = JS.idx(alive, floori(randf() * len(alive)))
+	var target = JS.idx(alive, floori(JS.random() * len(alive)))
 	var tIdx = JS.indexOf(State.combat.get("enemies"), target)
 	State.setActiveEnemy(tIdx)
 	# Randomly determine what action was "cancelled"
-	var roll = randf()
+	var roll = JS.random()
 	if roll < 0.33:
 		# Buff action cancelled → player gains it (simulate as a power boost)
 		var pow_ = floori(10 + (JS.callm(s, "effectPow", []) * 0.1))
@@ -2379,7 +2379,7 @@ func SPELL_CATALOGUE__vine_strike__execute(s = null):
 		if JS.t(State.combat.get("over")):
 			return
 		JS.callm(s, "hit", [{"baseDamage": 5, "effects": [], "abilityElement": "Nature", "apMult": 0.75}])
-		if (not JS.t(State.combat.get("over")) and randf() < 0.5):
+		if (not JS.t(State.combat.get("over")) and JS.random() < 0.5):
 			Helpers.applyRoot("player", "enemy", 1)
 	JS.callm(s, "log", ["🌿 Vine Strike!", "player"])
 
@@ -2410,7 +2410,7 @@ func SPELL_CATALOGUE__natures_call__execute(s = null):
 		"dmg": dmg,
 		"cd": 0,
 		"rootChance": (1.0 if isLegendary else 0.5),
-		"id": JS.dateNow() + randf(),
+		"id": JS.dateNow() + JS.random(),
 	})
 	JS.callm(s, "log", ["🌳 A Treant rises! (" + JS.s(hp) + " HP, " + JS.s(dmg) + " dmg)", "player"])
 	UI.renderSummonsRow()
@@ -2422,7 +2422,7 @@ func SPELL_CATALOGUE__bramble_burst__execute(s = null):
 	for i in range(len(_arr9)):
 		State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
 		JS.callm(s, "hit", [{"baseDamage": dmg, "effects": [], "abilityElement": "Nature", "isAOE": true}])
-		if (not JS.t(State.combat.get("over")) and randf() < 0.5):
+		if (not JS.t(State.combat.get("over")) and JS.random() < 0.5):
 			Helpers.applyRoot("player", "enemy", 1)
 	JS.callm(s, "log", ["🌵💥 Bramble Burst!", "player"])
 
@@ -2443,11 +2443,11 @@ func SPELL_CATALOGUE__living_forest__execute(s = null):
 		if t.get("hp") <= 0:
 			continue
 		for i in range(ceili(attacks)):
-			var target = JS.idx(alive, floori(randf() * len(alive)))
+			var target = JS.idx(alive, floori(JS.random() * len(alive)))
 			var idx = JS.indexOf(State.combat.get("enemies"), target)
 			State.setActiveEnemy(idx)
 			Hit.applyDirectDamage("player", "enemy", t.get("dmg"), "🌲 " + JS.s(t.get("name")))
-			if (not JS.t(State.combat.get("over")) and randf() < t.get("rootChance")):
+			if (not JS.t(State.combat.get("over")) and JS.random() < t.get("rootChance")):
 				Helpers.applyRoot("player", "enemy", 1)
 			if JS.t(State.combat.get("over")):
 				continue

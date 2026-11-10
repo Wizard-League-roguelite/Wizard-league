@@ -356,10 +356,10 @@ func _startVictoryCanvas():
 	var _fn9 = func(_u = null, i = null):
 		return {
 			"x": JS.mod(i * 7.5, 160),
-			"y": randf() * 90,
-			"vy": 0.4 + (randf() * 0.5),
+			"y": JS.random() * 90,
+			"vy": 0.4 + (JS.random() * 0.5),
 			"col": JS.idx(["#ffdd44", "#44ffaa", "#ff88cc", "#88ccff", "#ffaa44"], JS.mod(i, 5)),
-			"phase": (randf() * PI) * 2,
+			"phase": (JS.random() * PI) * 2,
 		}
 	var confetti = JS.arrayFrom({"length": 22}, _fn9)
 	var _fn14 = func():
@@ -489,13 +489,13 @@ func startShopCanvas():
 	var _fn16 = func(_u = null, i = null):
 		return {
 			"angle": ((i / 28.0) * PI) * 2,
-			"r": (18 + ((JS.mod(i, 5)) * 14)) + (randf() * 10),
+			"r": (18 + ((JS.mod(i, 5)) * 14)) + (JS.random() * 10),
 			"cx": W * 0.52,
 			"cy": H * 0.38,
 			"size": (2 if (JS.mod(i, 3)) == 0 else 1),
 			"speed": 0.0008 + ((JS.mod(i, 4)) * 0.0003),
-			"brightness": 0.5 + (randf() * 0.5),
-			"phase": (randf() * PI) * 2,
+			"brightness": 0.5 + (JS.random() * 0.5),
+			"phase": (JS.random() * PI) * 2,
 		}
 	var STARS = JS.arrayFrom({"length": 28}, _fn16)
 	# Shopkeeper sprite (pixel art, ~7×11)
@@ -526,8 +526,16 @@ func startShopCanvas():
 	# Lantern flicker particles
 	var LANTERN_X = 118
 	var LANTERN_Y = 60
-	var particles = JS.arrayFrom({"length": 8}, func(_u = null, i = null): return {"x": LANTERN_X, "y": LANTERN_Y, "life": randf(), "speed": 0.3 + (randf() * 0.4), "vx": (randf() - 0.5) * 0.4})
-	var _fn22 = func():
+	var _fn17 = func(_u = null, i = null):
+		return {
+			"x": LANTERN_X,
+			"y": LANTERN_Y,
+			"life": JS.random(),
+			"speed": 0.3 + (JS.random() * 0.4),
+			"vx": (JS.random() - 0.5) * 0.4,
+		}
+	var particles = JS.arrayFrom({"length": 8}, _fn17)
+	var _fn23 = func():
 		if stopped[0]:
 			return
 		# Night sky gradient
@@ -547,11 +555,11 @@ func startShopCanvas():
 			ctx.fillStyle = "#e8e0ff"
 			ctx.fillRect(JS.round(sx), JS.round(sy), s.size, s.size)
 		# A few brighter fixed stars
-		var _arr18 = JS.iter([[10, 8], [150, 12], [75, 6], [130, 25], [20, 30]])
-		for i in range(len(_arr18)):
-			var _e17 = _arr18[i]
-			var sx = JS.idx(_e17, 0)
-			var sy = JS.idx(_e17, 1)
+		var _arr19 = JS.iter([[10, 8], [150, 12], [75, 6], [130, 25], [20, 30]])
+		for i in range(len(_arr19)):
+			var _e18 = _arr19[i]
+			var sx = JS.idx(_e18, 0)
+			var sy = JS.idx(_e18, 1)
 			ctx.globalAlpha = 0.6 + (sin((frame[0] * 0.05) + i) * 0.3)
 			ctx.fillStyle = "#ffffff"
 			ctx.fillRect(sx, sy, 1, 1)
@@ -563,11 +571,11 @@ func startShopCanvas():
 		ctx.fillRect(0, H - 22, W, 2)
 		# Ground texture
 		ctx.fillStyle = "#1a1428"
-		for _e19 in JS.iter([[5, H - 16, 18, 1], [40, H - 14, 12, 1], [80, H - 17, 22, 1], [120, H - 15, 15, 1]]):
-			var x = JS.idx(_e19, 0)
-			var y = JS.idx(_e19, 1)
-			var w = JS.idx(_e19, 2)
-			var h = JS.idx(_e19, 3)
+		for _e20 in JS.iter([[5, H - 16, 18, 1], [40, H - 14, 12, 1], [80, H - 17, 22, 1], [120, H - 15, 15, 1]]):
+			var x = JS.idx(_e20, 0)
+			var y = JS.idx(_e20, 1)
+			var w = JS.idx(_e20, 2)
+			var h = JS.idx(_e20, 3)
 			ctx.fillRect(x, y, w, h)
 		# ── Tent ──
 		# Triangle body
@@ -636,12 +644,12 @@ func startShopCanvas():
 		var ky = H - 46
 		var bobY = sin(frame[0] * 0.04) * 1
 		var S = 3
-		var _arr20 = JS.iter(KEEPER)
-		for ry in range(len(_arr20)):
-			var row = _arr20[ry]
-			var _arr21 = JS.iter(row)
-			for cx in range(len(_arr21)):
-				var col = _arr21[cx]
+		var _arr21 = JS.iter(KEEPER)
+		for ry in range(len(_arr21)):
+			var row = _arr21[ry]
+			var _arr22 = JS.iter(row)
+			for cx in range(len(_arr22)):
+				var col = _arr22[cx]
 				if not JS.t(col):
 					continue
 				ctx.fillStyle = col
@@ -674,9 +682,9 @@ func startShopCanvas():
 			p.life += p.get("speed") * 0.04
 			if p.get("life") >= 1:
 				p.life = 0
-				p.x = lx + ((randf() - 0.5) * 3)
+				p.x = lx + ((JS.random() - 0.5) * 3)
 				p.y = ly
-				p.vx = (randf() - 0.5) * 0.4
+				p.vx = (JS.random() - 0.5) * 0.4
 			p.x += p.get("vx")
 			p.y = ly - (p.get("life") * 9)
 			var a = (1 - p.get("life")) * 0.8
@@ -699,7 +707,7 @@ func startShopCanvas():
 		ctx.globalAlpha = 1
 		frame[0] += 1
 		JS.requestAnimationFrame(drawScene[0])
-	drawScene[0] = _fn22
+	drawScene[0] = _fn23
 	drawScene[0].call()
 
 func switchCombatTab(tab = null):
@@ -774,12 +782,12 @@ func renderRunInfo(target = null):
 		return
 	panel.innerHTML = ""
 	# Helper
-	var _fn23 = func(title = null, html = null):
+	var _fn24 = func(title = null, html = null):
 		var s = document.createElement("div")
 		s.className = "ri-section"
 		s.innerHTML = "<div class=\"ri-title\">" + JS.s(title) + "</div>" + JS.s(html)
 		panel.appendChild(s)
-	var section = _fn23
+	var section = _fn24
 	var row = func(name_ = null, val = null): return "<div class=\"ri-row\"><span class=\"ri-name\">" + JS.s(name_) + "</span><span class=\"ri-val\">" + JS.s(val) + "</span></div>"
 	# ── Stats
 	var maxHP = Helpers.maxHPFor("player")
@@ -824,30 +832,30 @@ func renderRunInfo(target = null):
 
 # ── Stars (shared) ──
 func mkStars(n = null, rMin = null, rMax = null, sMin = null, sMax = null, bMin = null, bMax = null, col = null):
-	var _fn24 = func(_u = null, i = null):
+	var _fn25 = func(_u = null, i = null):
 		return {
-			"cx": W * (0.2 + (randf() * 0.6)),
-			"cy": H * (0.08 + (randf() * 0.35)),
-			"r": rMin + (randf() * (rMax - rMin)),
-			"angle": (randf() * PI) * 2,
-			"speed": sMin + (randf() * (sMax - sMin)),
-			"phase": (randf() * PI) * 2,
-			"bright": bMin + (randf() * (bMax - bMin)),
-			"size": (2 if randf() < 0.15 else 1),
+			"cx": W * (0.2 + (JS.random() * 0.6)),
+			"cy": H * (0.08 + (JS.random() * 0.35)),
+			"r": rMin + (JS.random() * (rMax - rMin)),
+			"angle": (JS.random() * PI) * 2,
+			"speed": sMin + (JS.random() * (sMax - sMin)),
+			"phase": (JS.random() * PI) * 2,
+			"bright": bMin + (JS.random() * (bMax - bMin)),
+			"size": (2 if JS.random() < 0.15 else 1),
 			"col": JS.or_(col, "#c8c0f0"),
 		}
-	return JS.arrayFrom({"length": n}, _fn24)
+	return JS.arrayFrom({"length": n}, _fn25)
 
 func spawnShoot():
-	if (len(shoots) >= 2 or randf() > 0.004):
+	if (len(shoots) >= 2 or JS.random() > 0.004):
 		return
 	shoots.append({
-		"x": (randf() * W) * 0.7,
-		"y": (randf() * H) * 0.4,
-		"vx": 1.2 + (randf() * 1.6),
-		"vy": 0.4 + (randf() * 0.8),
+		"x": (JS.random() * W) * 0.7,
+		"y": (JS.random() * H) * 0.4,
+		"vx": 1.2 + (JS.random() * 1.6),
+		"vy": 0.4 + (JS.random() * 0.8),
 		"life": 0,
-		"maxLife": 28 + (randf() * 20),
+		"maxLife": 28 + (JS.random() * 20),
 	})
 
 func hillY(x = null):

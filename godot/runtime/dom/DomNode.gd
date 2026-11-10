@@ -551,22 +551,31 @@ var nextSibling: DomNode:
 	get: return next_sibling()
 
 # ───────────────────────── geometry ─────────────────────────
+# true when this element and all its ancestors are displayed
+func _rendered() -> bool:
+	if in_flow_display == "": return false
+	var n: DomNode = self
+	while n != null:
+		if n.st.get("display", "none") == "none": return false
+		n = n.parentElement
+	return true
+
 var offsetWidth: float:
 	get:
 		if doc != null: doc.ensure_layout()
-		return roundf(lw) if in_flow_display != "" else 0.0
+		return roundf(lw) if _rendered() else 0.0
 var offsetHeight: float:
 	get:
 		if doc != null: doc.ensure_layout()
-		return roundf(lh) if in_flow_display != "" else 0.0
+		return roundf(lh) if _rendered() else 0.0
 var clientWidth: float:
 	get:
 		if doc != null: doc.ensure_layout()
-		return roundf(lw - bor[1] - bor[3]) if in_flow_display != "" else 0.0
+		return roundf(lw - bor[1] - bor[3]) if _rendered() else 0.0
 var clientHeight: float:
 	get:
 		if doc != null: doc.ensure_layout()
-		return roundf(lh - bor[0] - bor[2]) if in_flow_display != "" else 0.0
+		return roundf(lh - bor[0] - bor[2]) if _rendered() else 0.0
 var scrollHeight: float:
 	get:
 		if doc != null: doc.ensure_layout()
