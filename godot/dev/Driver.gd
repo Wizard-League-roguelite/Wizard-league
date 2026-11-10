@@ -12,6 +12,15 @@ var until_ms := 0.0
 var perf_left := 0
 var perf_acc := [0, 0, 0]
 var _t_last := 0
+var monkey_until := 0.0
+var monkey_next := 0.0
+var monkey_gap := 250.0
+var monkey_clicks := 0
+var _last_screen := ""
+var _screens := {}
+var shot_dir := ""
+var _shot_at := 0.0
+var _shot_name := ""
 
 func _ready() -> void:
 	var f := FileAccess.open(script_path, FileAccess.READ)
@@ -33,6 +42,21 @@ func _process(_dt: float) -> void:
 			var n: float = perf_acc[3]
 			print("PERF frame=%.1fms (%.1f fps)  game=%.1fms  dom=%.1fms" % [perf_acc[0] / n / 1000.0, 1e6 * n / perf_acc[0], perf_acc[1] / n / 1000.0, perf_acc[2] / n / 1000.0])
 		return
+	if monkey_until > 0.0:
+		if JS.now() >= monkey_until:
+			monkey_until = 0.0
+			print("DRIVER: monkey made ", monkey_clicks, " clicks; screens visited: ", _screens)
+		elif _shot_at > 0.0:
+			if JS.now() >= _shot_at:
+				_shot_at = 0.0
+				await RenderingServer.frame_post_draw
+				get_viewport().get_texture().get_image().save_png(_shot_name)
+			return
+		elif JS.now() >= monkey_next:
+			monkey_next = JS.now() + monkey_gap
+			_monkey()
+			return
+		else: return
 	if wait > 0:
 		wait -= 1
 		return
@@ -49,6 +73,11 @@ func _process(_dt: float) -> void:
 			perf_left = int(s.perf)
 			perf_acc = [0, 0, 0, float(s.perf)]
 			_t_last = Time.get_ticks_usec()
+			return
+		if s.has("monkey"):
+			monkey_until = JS.now() + float(s.monkey) * 1000.0
+			monkey_gap = float(s.get("gap", 250))
+			shot_dir = s.get("shots", "")
 			return
 		if s.has("speed"):
 			JS.sim_speed = int(s.speed)
@@ -110,3 +139,45 @@ func _dump(n: DomNode, depth: int, maxd: int) -> String:
 	if depth < maxd:
 		for c in n.childNodes: out += _dump(c, depth + 1, maxd)
 	return out
+
+# Random play: clicks a random visible, enabled, clickable element (avoiding quit / back buttons).
+const AVOID := ["Quit", "Abandon", "Files", "Back", "Delete", "Sandbox", "Skip", "Rarity", "Library", "Log", "Stats", "Decks", "Reroll"]
+func _monkey() -> void:
+	document.ensure_layout()
+	var cands := []
+	_collect(document.root, cands)
+	if cands.is_empty(): return
+	# favour "end turn" occasionally so battles progress
+	var pick: DomNode = cands[randi() % cands.size()]
+	var r: Rect2 = document.client_rect(pick)
+	var p := r.position + r.size * 0.5
+	if pick.tag == "canvas": p = r.position + Vector2(randf() * r.size.x, randf() * r.size.y)
+	monkey_clicks += 1
+	var hub = document.getElementById("hub-name-input")
+	if hub != null and hub.value == "": hub.value = "Monkey"
+	var scr = document.querySelector(".screen.active")
+	var sid: String = scr._id if scr != null else "?"
+	if sid != _last_screen:
+		_last_screen = sid
+		_screens[sid] = _screens.get(sid, 0) + 1
+		if shot_dir != "" and _screens[sid] <= 2: _shot_at = JS.now() + 700.0; _shot_name = "%s/m_%s_%d.png" % [shot_dir, sid, _screens[sid]]
+		if _screens[sid] <= 3: print("DRIVER: screen -> ", sid, "  battle=", InlineJS.global("battleNumber"))
+	document.pointer_moved(p, 0)
+	document.pointer_down(p, 0)
+	document.pointer_up(p, 0)
+
+func _collect(n: DomNode, out: Array) -> void:
+	if n.nodeType != DomNode.ELEMENT or n.st.get("display", "none") == "none": return
+	if (n._on.has("onclick") or n._listeners.has("click") or n._listeners.has("pointerdown") or n._listeners.has("pointerup")) and not n._disabled and n.lw > 2 and n.lh > 2:
+		var txt: String = n.textContent
+		if txt.length() > 40: txt = ""
+		var bad: bool = n.classes.has("save-slot-delete")
+		for a in AVOID:
+			if txt.contains(a): bad = true
+		if not bad and n.tag != "body" and not n.classes.has("screen"):
+			var r: Rect2 = document.client_rect(n)
+			var c := r.position + r.size * 0.5
+			if c.x >= 0 and c.y >= 0 and c.x < document.viewport_size.x and c.y < document.viewport_size.y:
+				var hit: DomNode = document.element_at(c)
+				if hit != null and (hit == n or n.contains(hit)): out.append(n)
+	for ch in n.childNodes: _collect(ch, out)

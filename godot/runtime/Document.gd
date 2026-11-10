@@ -81,6 +81,7 @@ func _reindex(n: DomNode) -> void:
 
 func _update_viewport() -> void:
 	var vs := Vector2(get_viewport().get_visible_rect().size)
+	if DisplayServer.get_name() == "headless": vs = Vector2(1280, 720)   # no window: use the design size
 	viewport_size = vs
 	host.position = Vector2.ZERO
 	host.size = vs
@@ -357,7 +358,7 @@ func _pseudo(n: DomNode) -> void:
 func _resolve(n: DomNode) -> void:
 	var cs := n.cs
 	var keep := {}
-	for k in ["_shown", "_parent_rid", "_sb_rid", "_xf"]:
+	for k in ["_shown", "_parent_rid", "_sb_rid", "_xf", "_hid", "abs_children"]:
 		if n.st.has(k): keep[k] = n.st[k]
 	var st := keep
 	var disp: String = cs.get("display", "inline")
@@ -386,7 +387,7 @@ func _resolve(n: DomNode) -> void:
 	if lsv != "normal": ls = maxf(-4.0, CssValue.length(lsv, 0.0, fs, viewport_size))
 	if ls <= CssValue.AUTO + 1.0: ls = 0.0
 	st["ls"] = ls
-	var font := DomFonts.font(cs.get("font-family", "serif"), bold, italic, ls)
+	var font := DomFonts.font(cs.get("font-family", "serif"), bold, italic, 0.0)
 	st["font"] = font
 	st["asc"] = DomFonts.ascent(font, fs)
 	st["desc"] = DomFonts.descent(font, fs)
@@ -484,7 +485,7 @@ func _hit(n: DomNode, pt: Vector2, best: Array, events: bool, depth: int) -> voi
 	var s := n.st
 	if s.get("display", "none") == "none" or not s.get("visible", true): return
 	var xf = s.get("_xf")
-	if xf == null: return
+	if xf == null or absf((xf as Transform2D).determinant()) < 1e-9: return
 	var local: Vector2 = (xf as Transform2D).affine_inverse() * pt
 	if s.position == "fixed" and depth > 0:
 		# fixed boxes live in viewport space

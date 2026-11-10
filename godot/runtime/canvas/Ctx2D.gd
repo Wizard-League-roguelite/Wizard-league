@@ -365,7 +365,7 @@ func closePath() -> void:
 		_flush_sub()
 		# a new sub-path starts at the closed path's first point
 		_cur.append(first)
-		_pen = _xf.affine_inverse() * first
+		_pen = _inv() * first
 
 func rect(x, y, w, h) -> void:
 	_flush_sub()
@@ -382,6 +382,10 @@ func roundRect(x, y, w, h, r = 0) -> void:
 	for p in DomPaint.rounded_points(x, y, w, h, [rad, rad, rad, rad]): _cur.append(_xf * p)
 	_cur_closed = true
 	_flush_sub()
+
+# inverse of the current transform (identity when it is degenerate, e.g. scale(0))
+func _inv() -> Transform2D:
+	return _xf.affine_inverse() if absf(_xf.determinant()) > 1e-12 else Transform2D.IDENTITY
 
 func _scale_hint() -> float:
 	return maxf(0.01, (_xf.x.length() + _xf.y.length()) * 0.5)
@@ -474,7 +478,7 @@ func _all_subs() -> Array:
 func fill(_rule = null) -> void:
 	_begin()
 	var a := _all_subs()
-	var inv := _xf.affine_inverse()
+	var inv := _inv()
 	for sp in a[0]:
 		var pts: PackedVector2Array = sp
 		if pts.size() < 3: continue
@@ -508,7 +512,7 @@ func _shadow_poly(pts: PackedVector2Array) -> void:
 func stroke() -> void:
 	_begin()
 	var a := _all_subs()
-	var inv := _xf.affine_inverse()
+	var inv := _inv()
 	for i in range(a[0].size()):
 		var pts: PackedVector2Array = a[0][i]
 		if pts.size() < 2: continue

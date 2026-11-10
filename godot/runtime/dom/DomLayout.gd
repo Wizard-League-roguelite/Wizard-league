@@ -274,18 +274,18 @@ func _text_items(text: String, sn: DomNode, out: Array) -> void:
 			i += 1
 			continue
 		if word != "":
-			out.append(["w", word, sn, DomFonts.width(font, word, fs)])
+			out.append(["w", word, sn, DomFonts.width(font, word, fs, sn.st.ls)])
 			word = ""
 		if ch == "\n" and keep_nl:
 			out.append(["br"])
 		elif preserve:
-			out.append(["s", " ", sn, DomFonts.width(font, " ", fs), true])
+			out.append(["s", " ", sn, DomFonts.width(font, " ", fs, sn.st.ls), true])
 		else:
 			# collapse runs of white space
 			if out.is_empty() or out[out.size() - 1][0] != "s":
-				out.append(["s", " ", sn, DomFonts.width(font, " ", fs), false])
+				out.append(["s", " ", sn, DomFonts.width(font, " ", fs, sn.st.ls), false])
 		i += 1
-	if word != "": out.append(["w", word, sn, DomFonts.width(font, word, fs)])
+	if word != "": out.append(["w", word, sn, DomFonts.width(font, word, fs, sn.st.ls)])
 
 func _measure_inline(container: DomNode, nodes: Array) -> Vector2:
 	var items := []
@@ -366,7 +366,7 @@ func layout_inline(container: DomNode, nodes: Array, x0: float, y0: float, avail
 			if pending != null:
 				cur.append(pending); cur_w += sp; pending = null
 			# break very long words when allowed
-			if kind == "w" and not unbounded and not nowrap and w > avail and it[2].st.get("break_word", false) and avail > 8.0:
+			if kind == "w" and not unbounded and not nowrap and w > avail + 0.5 and it[2].st.get("break_word", false) and avail > 8.0:
 				var parts := _break_word(it, avail - cur_w, avail)
 				for pi in range(parts.size()):
 					if pi > 0:
@@ -494,12 +494,12 @@ func _break_word(it: Array, first_avail: float, avail: float) -> Array:
 	var cur := ""
 	var limit := maxf(first_avail, 8.0)
 	for ch in text:
-		if cur != "" and DomFonts.width(font, cur + ch, fs) > limit:
-			parts.append(["w", cur, sn, DomFonts.width(font, cur, fs)])
+		if cur != "" and DomFonts.width(font, cur + ch, fs, sn.st.ls) > limit:
+			parts.append(["w", cur, sn, DomFonts.width(font, cur, fs, sn.st.ls)])
 			cur = ""
 			limit = avail
 		cur += ch
-	if cur != "": parts.append(["w", cur, sn, DomFonts.width(font, cur, fs)])
+	if cur != "": parts.append(["w", cur, sn, DomFonts.width(font, cur, fs, sn.st.ls)])
 	return parts
 
 # ───────────────────────── box layout ─────────────────────────

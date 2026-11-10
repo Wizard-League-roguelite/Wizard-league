@@ -9,7 +9,17 @@ const path = require('path'), fs = require('fs');
   const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
   page.on('pageerror', e => console.log('PAGE ERROR:', e.message));
   page.on('console', m => { if (m.type() === 'error') console.log('CONSOLE:', m.text()); });
-  await page.route('**/*', r => { const u = r.request().url(); if (u.startsWith('file:')) r.continue(); else r.abort(); });
+  // Serve the same fonts the Godot port bundles (Cinzel; Gelasio standing in for Georgia) so text metrics are comparable.
+  const F = 'file://' + path.resolve(__dirname, '../fonts') + '/';
+  const face = (fam, w, st, file) => `@font-face{font-family:'${fam}';font-weight:${w};font-style:${st};src:url('${F}${file}') format('woff2');}`;
+  const fontCss = face('Cinzel', 400, 'normal', 'Cinzel-Regular.woff2') + face('Cinzel', 700, 'normal', 'Cinzel-Bold.woff2') +
+    face('Georgia', 400, 'normal', 'Gelasio-400-normal.woff2') + face('Georgia', 700, 'normal', 'Gelasio-700-normal.woff2') +
+    face('Georgia', 400, 'italic', 'Gelasio-400-italic.woff2') + face('Georgia', 700, 'italic', 'Gelasio-700-italic.woff2');
+  await page.route('**/*', r => { const u = r.request().url();
+    if (u.startsWith('file:')) r.continue();
+    else if (u.includes('fonts.googleapis.com')) r.fulfill({ contentType: 'text/css', body: fontCss });
+    else r.abort(); });
+  if (process.env.SEED) await page.addInitScript(seed => { let s = seed >>> 0; Math.random = () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }, Number(process.env.SEED));
   await page.goto('file://' + path.resolve(__dirname, '../../index.html'));
   for (const s of steps) {
     if (s.wait != null) await page.waitForTimeout(s.wait);

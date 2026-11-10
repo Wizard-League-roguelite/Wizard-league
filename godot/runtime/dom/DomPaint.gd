@@ -26,8 +26,11 @@ func paint_tree(n: DomNode, parent_rid: RID, order: int, force: bool, parent_z: 
 		if n.rid.is_valid() and n.st.get("_shown", true):
 			RenderingServer.canvas_item_set_visible(n.rid, false)
 			n.st["_shown"] = false
-		_hide_control(n)
+		if not n.st.get("_hid", false):
+			n.st["_hid"] = true
+			_hide_control(n)
 		return
+	n.st["_hid"] = false
 	var fixed: bool = s.position == "fixed"
 	var actual_parent = doc.host_rid if fixed else parent_rid
 	if not n.rid.is_valid():
@@ -127,10 +130,15 @@ func _filter_mod(flt: String, mod: Color) -> Color:
 					mod.r *= k2; mod.g *= k2; mod.b *= k2
 	return mod
 
+# a hidden subtree: native controls and fixed-position boxes (parented to the viewport) must go too
 func _hide_control(n: DomNode) -> void:
 	if n.control != null and is_instance_valid(n.control): n.control.visible = false
 	for c in n.childNodes:
-		if c.nodeType == DomNode.ELEMENT and (c.control != null or c.childNodes.size() > 0): _hide_control(c)
+		if c.nodeType != DomNode.ELEMENT: continue
+		if c.rid.is_valid() and c.st.get("position") == "fixed" and c.st.get("_shown", false):
+			RenderingServer.canvas_item_set_visible(c.rid, false)
+			c.st["_shown"] = false
+		if c.control != null or c.childNodes.size() > 0: _hide_control(c)
 
 func _place_control(n: DomNode) -> void:
 	if n.tag != "input": return
@@ -204,30 +212,31 @@ func _draw_box(n: DomNode) -> void:
 		var font: Font = fs_.font
 		var px: float = fs_.fs
 		if clip_x < INF and f.x + f.w > clip_x:
-			text = _ellipsize(font, text, px, clip_x - f.x)
+			text = _ellipsize(font, text, px, clip_x - f.x, fs_.ls)
 			if text == "": continue
-		draw_text(rid, font, Vector2(f.x, f.y), text, px, fs_.color, fs_.get("shadows"))
+		draw_text(rid, font, Vector2(f.x, f.y), text, px, fs_.color, fs_.get("shadows"), fs_.ls)
 		var deco = sn.cs.get("text-decoration")
 		if deco != null and deco.contains("underline"):
 			RenderingServer.canvas_item_add_line(rid, Vector2(f.x, f.y + 2), Vector2(f.x + f.w, f.y + 2), fs_.color, maxf(1.0, px / 14.0))
 		elif deco != null and deco.contains("line-through"):
 			RenderingServer.canvas_item_add_line(rid, Vector2(f.x, f.y - px * 0.3), Vector2(f.x + f.w, f.y - px * 0.3), fs_.color, maxf(1.0, px / 14.0))
 
-func _ellipsize(font: Font, text: String, px: float, avail: float) -> String:
+func _ellipsize(font: Font, text: String, px: float, avail: float, ls: float = 0.0) -> String:
 	var ell := "…"
 	var ew := DomFonts.width(font, ell, px)
 	if avail <= ew: return ""
 	var out := text
-	while out.length() > 0 and DomFonts.width(font, out, px) + ew > avail: out = out.substr(0, out.length() - 1)
+	while out.length() > 0 and DomFonts.width(font, out, px, ls) + ew > avail: out = out.substr(0, out.length() - 1)
 	return out.strip_edges(false, true) + ell
 
 # Text at fractional pixel sizes: draw at the nearest integer size and scale.
-func draw_text(rid: RID, font: Font, pos: Vector2, text: String, px: float, col: Color, shadows = null) -> void:
+func draw_text(rid: RID, font: Font, pos: Vector2, text: String, px: float, col: Color, shadows = null, ls: float = 0.0) -> void:
 	var isz := maxi(1, int(round(px)))
 	var k := px / float(isz)
 	var scaled := absf(k - 1.0) > 0.004
 	if scaled: RenderingServer.canvas_item_add_set_transform(rid, Transform2D(Vector2(k, 0), Vector2(0, k), pos))
 	var at := Vector2.ZERO if scaled else pos
+	var sp := ls / k
 	if shadows != null:
 		for sh in shadows:
 			var off := Vector2(sh.x, sh.y) / (k if scaled else 1.0)
@@ -238,11 +247,11 @@ func draw_text(rid: RID, font: Font, pos: Vector2, text: String, px: float, col:
 				var c2 := Color(sc.r, sc.g, sc.b, sc.a * 0.22)
 				for a in range(8):
 					var d := Vector2(cos(a * TAU / 8.0), sin(a * TAU / 8.0)) * rad
-					font.draw_string(rid, at + off + d, text, HORIZONTAL_ALIGNMENT_LEFT, -1, isz, c2)
-				font.draw_string(rid, at + off, text, HORIZONTAL_ALIGNMENT_LEFT, -1, isz, Color(sc.r, sc.g, sc.b, sc.a * 0.35))
+					DomFonts.draw(rid, font, at + off + d, text, isz, c2, sp)
+				DomFonts.draw(rid, font, at + off, text, isz, Color(sc.r, sc.g, sc.b, sc.a * 0.35), sp)
 			else:
-				font.draw_string(rid, at + off, text, HORIZONTAL_ALIGNMENT_LEFT, -1, isz, sc)
-	font.draw_string(rid, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, isz, col)
+				DomFonts.draw(rid, font, at + off, text, isz, sc, sp)
+	DomFonts.draw(rid, font, at, text, isz, col, sp)
 	if scaled: RenderingServer.canvas_item_add_set_transform(rid, Transform2D.IDENTITY)
 
 # background, border, box-shadow of a box occupying `rect`
