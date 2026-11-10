@@ -134,8 +134,8 @@ func renderEnemyCards():
 		# In deck mode, position each card below its sprite
 		if (_isDeck and _canvasW > 0):
 			var ep = Sprites.enemySpritePos(i, State.combat.enemies, _canvasW, _canvasH)
-			card.style.left = JS.s(ep.x + (ep.w / 2.0)) + "px"
-			card.style.top = JS.s((ep.y + ep.h) + 6) + "px"
+			card.style.left = JS.s(JS.add(ep.x, ep.w / 2.0)) + "px"
+			card.style.top = JS.s(JS.add(JS.add(ep.y, ep.h), 6)) + "px"
 			card.style.minWidth = "110px"
 		if JS.t(e.get("alive")):
 			var _fn2 = func():

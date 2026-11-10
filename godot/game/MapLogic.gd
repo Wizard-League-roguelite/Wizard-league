@@ -870,8 +870,8 @@ func drawScene():
 	for n in JS.iter(z.nebulae):
 		var pulse = n.base + (sin((frame * 0.012) + n.x) * 0.015)
 		var g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, max(n.rx, n.ry))
-		g.addColorStop(0, JS.s(n.r + min(0.12, pulse * 2)) + ")")
-		g.addColorStop(0.5, JS.s(n.r + pulse) + ")")
+		g.addColorStop(0, JS.s(JS.add(n.r, min(0.12, pulse * 2))) + ")")
+		g.addColorStop(0.5, JS.s(JS.add(n.r, pulse)) + ")")
 		g.addColorStop(1, JS.s(n.r) + "0)")
 		ctx.save()
 		ctx.scale(1, n.ry / float(n.rx))

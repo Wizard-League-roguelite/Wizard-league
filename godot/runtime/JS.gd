@@ -50,6 +50,12 @@ func s(x) -> String:
 			if x != null and x.has_method("_js_to_string"): return x._js_to_string()
 	return str(x)
 
+# `a + b` when either side might be a string
+func add(a, b):
+	if a is String or b is String or a is StringName or b is StringName: return s(a) + s(b)
+	if a == null or b == null: return NAN
+	return a + b
+
 func num(x):
 	match typeof(x):
 		TYPE_INT, TYPE_FLOAT: return x
@@ -726,6 +732,7 @@ func cancelAnimationFrame(id = null) -> void:
 	if id != null: _rafs.erase(id)
 
 func _process(_dt: float) -> void:
+	Ctx2D.frame_id += 1
 	if virtual_time < 0.0: pump()
 
 # Runs due animation-frame callbacks and timers once.

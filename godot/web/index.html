@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Wizard's League</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- Global pixel night sky background canvas -->
+<canvas id="bg-canvas" style="position:fixed;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;z-index:0;pointer-events:none;"></canvas>
+
+<!-- OPENING CUTSCENE -->
+<div id="cutscene-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:#000;cursor:pointer;">
+  <canvas id="cutscene-canvas" style="width:100%;height:100%;display:block;"></canvas>
+  <div style="position:absolute;bottom:18px;right:22px;color:rgba(180,150,255,0.3);font-size:.7rem;font-family:'Cinzel',serif;letter-spacing:.15em;pointer-events:none;">CLICK TO SKIP</div>
+</div>
+
+<div id="title-screen" class="screen active">
+  <h1>Wizard's League</h1>
+  <p class="title-sub">A Roguelite Adventure</p>
+  <button class="btn-main" style="width:200px;margin-top:1.5rem;" onclick="showSaveSelect()">Play</button>
+</div>
+
+<!-- SAVE FILE SELECT -->
+<div id="save-select-screen" class="screen">
+  <div style="font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.2em;color:#444;text-transform:uppercase;margin-bottom:1.2rem;">Select Save File</div>
+  <div id="save-slots" style="display:flex;flex-direction:column;gap:.7rem;width:100%;max-width:420px;"></div>
+  <button class="btn-back" style="margin-top:1rem;width:200px;" onclick="showScreen('title-screen')">← Back</button>
+</div>
+
+<!-- SAVE HUB -->
+<div id="hub-screen" class="screen" style="position:relative;">
+  <!-- Incantation preview button — top-right corner -->
+  <button onclick="showIncantationPreview()" style="position:absolute;top:8px;right:10px;background:rgba(20,10,5,.8);border:1px solid #3a2010;color:#c8a060;font-size:.55rem;font-family:'Cinzel',serif;letter-spacing:.08em;padding:3px 8px;border-radius:4px;cursor:pointer;z-index:10;" title="Preview incantation rarity tiers">📜 Rarity Preview</button>
+  <div class="hub-slot-label" id="hub-slot-label">Save 1</div>
+  <h2 style="font-family:'Cinzel',serif;font-size:1.4rem;letter-spacing:.1em;margin-bottom:.2rem;" id="hub-title">Welcome</h2>
+  <div class="hub-stats-row" id="hub-stats-row"></div>
+  <input type="text" class="txt-input" id="hub-name-input" placeholder="Enter your name" maxlength="20" style="margin-top:1.2rem;"/>
+  <div id="hub-error" style="color:#ff4444;font-size:.75rem;min-height:1rem;margin-bottom:.2rem;"></div>
+  <button class="btn-main" style="width:220px;" onclick="hubPlay()">⚔ Begin Adventure</button>
+  <button class="btn-back" style="margin-top:.8rem;width:220px;" onclick="showSaveSelect()">← Save Files</button>
+</div>
+
+<!-- CHARACTER SELECT -->
+<div id="character-screen" class="screen">
+  <h2 class="char-screen-title">Build Your Wizard</h2>
+  <p class="subtitle" style="margin-bottom:.8rem;">Customise your look — your choices carry across every run</p>
+  <div id="wiz-builder" style="display:flex;gap:18px;width:100%;max-width:860px;flex-wrap:wrap;justify-content:center;align-items:flex-start;">
+    <!-- Preview pane -->
+    <div id="wiz-preview-pane" style="display:flex;flex-direction:column;align-items:center;gap:.5rem;min-width:160px;">
+      <div style="position:relative;border-radius:10px;overflow:hidden;border:1px solid #2a1e0e;">
+        <canvas id="wiz-preview-canvas" width="160" height="240" style="display:block;image-rendering:pixelated;image-rendering:crisp-edges;"></canvas>
+      </div>
+      <div id="wiz-prev-name" style="font-family:'Cinzel',serif;font-size:.75rem;color:#c8a060;letter-spacing:.1em;"></div>
+      <button class="btn-main" id="char-continue-btn" onclick="confirmCharacterSelect()" style="width:140px;padding:.55rem;">Continue →</button>
+      <button class="btn-main" onclick="showBetweenRuns()" style="width:140px;padding:.4rem;font-size:.72rem;background:#0a0806;color:#5a4828;border-color:#2a1e0e;">← Back</button>
+    </div>
+    <!-- Options pane -->
+    <div id="wiz-options-pane" style="flex:1;min-width:240px;display:flex;flex-direction:column;gap:10px;">
+      <div id="wiz-section-archetype"></div>
+      <div id="wiz-section-hat"></div>
+      <div id="wiz-section-outfit"></div>
+      <div id="wiz-section-beard"></div>
+      <div id="wiz-section-staff"></div>
+      <div id="wiz-section-staffglow"></div>
+      <div id="wiz-section-eyes"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ELEMENT SELECT -->
+<div id="element-screen" class="screen">
+  <h2 id="welcome-msg">Choose Your Element</h2>
+  <p class="subtitle">This will be your primary element</p>
+  <div class="element-grid" id="element-grid" style="grid-template-columns:repeat(2,160px);gap:18px;"></div>
+  <div id="selected-label"></div>
+  <button class="btn-main" id="start-battle-btn" onclick="beginRun()">Enter Battle</button>
+</div>
+
+<!-- PASSIVE SELECT -->
+<div id="passive-screen" class="screen">
+  <h2 id="passive-screen-title">Choose a Passive</h2>
+  <p class="subtitle" id="passive-screen-subtitle">Pick one to start your run.</p>
+  <div class="choices" id="passive-choices-screen" style="width:100%;max-width:520px;"></div>
+  <button type="button" class="btn-main" id="passive-start-btn" style="margin-top:1.1rem;width:220px;" disabled>Start Battle</button>
+  <button type="button" class="btn-main" style="margin-top:.7rem;width:220px;font-size:.78rem;padding:.55rem;" onclick="backToElementSelectFromPassive()">↩ Back</button>
+</div>
+
+<!-- MAP -->
+<div id="map-screen" class="screen">
+  <div class="map-canvas-wrap">
+    <canvas id="map-canvas"></canvas>
+    <!-- Zone map overlay (scrollable node graph on top of background canvas) -->
+    <div id="zone-map-overlay">
+      <div id="zone-map-stage">
+        <svg id="zone-map-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </div>
+    <!-- Overlay topbar -->
+    <div class="map-topbar">
+      <div id="map-zone-label" class="map-zone-pill"></div>
+      <span class="map-topbar-sep">·</span>
+      <div class="map-hp-inline">
+        <span id="map-player-hp" class="map-hp-txt"></span>
+        <div class="map-hp-bar-wrap"><div class="hp-fill" id="map-hp-bar"></div></div>
+      </div>
+      <span class="map-topbar-sep">·</span>
+      <div id="map-lives-inline" style="color:#e84a4a;font-size:.7rem;"></div>
+      <span class="map-topbar-sep">·</span>
+      <span id="map-gold-inline" class="map-gold-txt"></span>
+      <span class="map-topbar-sep">·</span>
+      <button onclick="showBookEditor()" style="background:none;border:none;color:#8a6a40;font-size:.68rem;cursor:pointer;padding:.1rem .3rem;font-family:'Cinzel',serif;letter-spacing:.04em;white-space:nowrap;" title="Manage decks">📚 Decks</button>
+      <span class="map-topbar-sep">·</span>
+      <button onclick="showLibrary()" style="background:none;border:none;color:#6a5a8a;font-size:.68rem;cursor:pointer;padding:.1rem .3rem;font-family:'Cinzel',serif;letter-spacing:.04em;white-space:nowrap;" title="Spell Library">📖 Library</button>
+    </div>
+    <div class="map-stats-strip" id="map-stats-strip"></div>
+    <div id="gym-warning-banner" style="display:none;" class="gym-warning"></div>
+    <div id="map-hint" class="map-hint">Click a path to travel</div>
+    <!-- Sandbox zone switcher -->
+    <div id="sandbox-zone-bar" style="display:none;position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:none;gap:4px;flex-wrap:wrap;justify-content:center;background:rgba(0,0,0,.55);border:1px solid #333;border-radius:6px;padding:4px 8px;z-index:50;"></div>
+  </div>
+</div>
+
+<!-- GYM -->
+<div id="gym-screen" class="screen">
+  <div class="big-emoji">🏛️</div>
+  <h2 id="gym-title">Gym Challenge</h2>
+  <div class="gym-subtitle" id="gym-subtitle"></div>
+  <div class="gym-stats-box">Boss HP: <span id="gym-boss-hp-display">—</span> &nbsp;·&nbsp; Dmg: <span id="gym-boss-dmg-display">—</span>/turn</div>
+  <div class="gym-warn-txt" id="gym-warn-txt"></div>
+  <button class="btn-gym" id="gym-challenge-btn" onclick="startGymBattle()">Challenge the Gym</button>
+  <button class="btn-back" id="gym-skip-btn" style="width:260px;" onclick="skipGym()">Skip for Now</button>
+</div>
+
+<!-- RIVAL INTRO SCREEN -->
+<div id="rival-screen" class="screen" style="text-align:center;gap:.8rem;">
+  <div style="font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.15em;color:#6a4a80;text-transform:uppercase;margin-bottom:.2rem;">Rival Encounter</div>
+  <h2 id="rival-title" style="font-family:'Cinzel',serif;font-size:1.2rem;letter-spacing:.1em;margin-bottom:.2rem;">⚔ Rival Ash</h2>
+  <div id="rival-dialogue" style="background:#0f0d1a;border:1px solid #2a1a4a;border-radius:6px;padding:.8rem 1.2rem;margin:.3rem 0 .5rem;font-size:.78rem;color:#9a7aaa;font-style:italic;max-width:360px;line-height:1.6;">"..."</div>
+  <div style="background:#0f0d1a;border:1px solid #2a1a4a;border-radius:6px;padding:.6rem 1.1rem;font-size:.74rem;color:#7a6aaa;">
+    HP: <span id="rival-hp-display" style="color:#9a7aff;font-family:'Cinzel',serif;">—</span>
+    &nbsp;·&nbsp;
+    Dmg: <span id="rival-dmg-display" style="color:#9a7aff;font-family:'Cinzel',serif;">—</span>/turn
+    &nbsp;·&nbsp;
+    Element: <span id="rival-element-display" style="color:#9a7aff;font-family:'Cinzel',serif;">—</span>
+  </div>
+  <div style="font-size:.64rem;color:#4a3a60;margin-top:-.1rem;">Reward: ✦ Passive Ability</div>
+  <button class="btn-gym" onclick="startRivalBattle()" style="margin-top:.3rem;">⚔ Fight Ash</button>
+</div>
+
+<!-- CAMPFIRE -->
+<div id="campfire-screen" class="screen">
+  <h2 style="font-family:'Cinzel',serif;letter-spacing:.1em;margin-bottom:.3rem;">Campfire</h2>
+  <div class="campfire-canvas-wrap">
+    <canvas id="campfire-canvas"></canvas>
+  </div>
+  <p id="campfire-desc" style="color:#888;font-size:.72rem;margin:.4rem 0 .2rem;text-align:center;font-style:italic;"></p>
+  <div id="campfire-choices" class="prog-choices" style="margin-top:.3rem;"></div>
+</div>
+
+<!-- SHOP -->
+<div id="shop-screen" class="screen">
+  <canvas id="shop-canvas" style="image-rendering:pixelated;image-rendering:crisp-edges;max-width:400px;width:100%;border-radius:8px;margin-bottom:.8rem;"></canvas>
+  <p>Gold: <span id="shop-gold-display" style="color:#c8a830;font-family:'Cinzel',serif;">0</span></p>
+  <div class="shop-items" id="shop-items"></div>
+  <button class="btn-main" style="width:220px;" onclick="leaveShop()">Leave Shop</button>
+</div>
+
+<!-- BETWEEN RUNS -->
+<div id="between-runs-screen" class="screen" style="padding:0;overflow:hidden;position:relative;">
+  <!-- Map canvas -->
+  <canvas id="lobby-map-canvas" style="display:block;width:100%;height:100%;cursor:default;"></canvas>
+
+  <!-- Overlay panels — shown one at a time over the map -->
+  <div id="lobby-panel" style="display:none;position:absolute;inset:0;background:#080608ee;overflow-y:auto;padding:1rem;">
+    <button onclick="closeLobbyPanel()" style="position:sticky;top:0;background:#0f0d0b;border:1px solid #3a2a10;color:#c8a060;font-family:'Cinzel',serif;font-size:.72rem;padding:.3rem .8rem;border-radius:4px;cursor:pointer;margin-bottom:.8rem;z-index:10;">← Map</button>
+    <div id="lobby-panel-content"></div>
+  </div>
+
+  <!-- Save Files button always visible -->
+  <button onclick="showSaveSelect()" style="position:absolute;bottom:.6rem;left:.6rem;background:#0a0806;border:1px solid #2a1a08;color:#4a3820;font-family:'Cinzel',serif;font-size:.6rem;padding:.25rem .6rem;border-radius:3px;cursor:pointer;z-index:5;">← Files</button>
+
+  <!-- Veil Unlock Animation Overlay -->
+  <div id="veil-unlock-overlay" style="display:none;position:absolute;inset:0;background:#010008;z-index:20;flex-direction:column;align-items:center;justify-content:center;gap:0;cursor:pointer;">
+    <canvas id="veil-unlock-canvas" style="image-rendering:pixelated;"></canvas>
+    <div id="veil-unlock-title" style="font-family:'Cinzel',serif;font-size:1.3rem;color:#c080ff;letter-spacing:.12em;text-shadow:0 0 20px #8040cc,0 0 40px #5020aa;margin-top:1rem;opacity:0;text-align:center;"></div>
+    <div id="veil-unlock-sub" style="font-family:'Cinzel',serif;font-size:.75rem;color:#9070cc;letter-spacing:.06em;margin-top:.5rem;opacity:0;font-style:italic;text-align:center;"></div>
+  </div>
+
+</div>
+
+<!-- PASSIVE OVERFLOW OVERLAY (shown when global passive cap is hit) -->
+<div class="modal-overlay" id="passive-overflow-overlay">
+  <div class="modal-box" style="max-width:380px;">
+    <div style="font-family:'Cinzel',serif;font-size:.85rem;color:#c8a060;margin-bottom:.3rem;">✦ Passive Roster Full</div>
+    <div style="font-size:.7rem;color:#888;margin-bottom:.8rem;">You have reached your passive limit.</div>
+    <div style="background:#0f0d0b;border:1px solid #2a2020;border-radius:4px;padding:.5rem .7rem;margin-bottom:.8rem;">
+      <div style="font-size:.65rem;color:#6a4a20;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem;">New Passive</div>
+      <div style="font-family:'Cinzel',serif;font-size:.82rem;color:#e8c060;" id="poo-new-passive"></div>
+      <div style="font-size:.65rem;color:#666;margin-top:.2rem;" id="poo-new-desc"></div>
+    </div>
+    <div style="font-size:.65rem;color:#6a4a20;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem;">Replace an existing passive — or decline:</div>
+    <div id="poo-passive-list" style="display:flex;flex-direction:column;gap:.4rem;"></div>
+  </div>
+</div>
+
+<!-- PASSIVE PANEL OVERLAY -->
+<div id="passive-panel-overlay" onclick="if(event.target===this)_closePassivePanel()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9000;align-items:center;justify-content:center;">
+  <div style="background:#0d0b09;border:1px solid #3a2a10;border-radius:8px;max-width:480px;width:92vw;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 8px 40px #000c;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.7rem 1rem .5rem;border-bottom:1px solid #1f1a10;">
+      <div style="font-family:'Cinzel',serif;font-size:.88rem;color:#c8a060;letter-spacing:.06em;">✦ Your Passives <span id="passive-panel-count" style="font-size:.65rem;color:#666;font-family:sans-serif;font-style:normal;"></span></div>
+      <button onclick="_closePassivePanel()" style="background:none;border:none;color:#666;font-size:1.1rem;cursor:pointer;padding:0 .2rem;line-height:1;">✕</button>
+    </div>
+    <div id="passive-panel-list" style="overflow-y:auto;padding:.7rem .85rem;display:flex;flex-direction:column;gap:.5rem;"></div>
+    <div id="passive-panel-empty" style="display:none;padding:1.2rem;text-align:center;font-size:.72rem;color:#444;">No passives yet.</div>
+  </div>
+</div>
+
+<!-- BOOK OVERFLOW OVERLAY -->
+<div class="modal-overlay" id="book-overflow-overlay">
+  <div class="modal-box" style="max-width:380px;">
+    <div style="font-family:'Cinzel',serif;font-size:.85rem;color:#c8a060;margin-bottom:.3rem;">📖 Spellbook Full</div>
+    <div style="font-size:.7rem;color:#888;margin-bottom:.8rem;"><span id="boo-book-name">Book</span> has no free slots.</div>
+    <div style="background:#0f0d0b;border:1px solid #2a2020;border-radius:4px;padding:.5rem .7rem;margin-bottom:.8rem;">
+      <div style="font-size:.65rem;color:#6a4a20;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem;">New Spell</div>
+      <div style="font-family:'Cinzel',serif;font-size:.82rem;color:#e8c060;" id="boo-new-spell"></div>
+      <div style="font-size:.65rem;color:#666;margin-top:.2rem;" id="boo-new-desc"></div>
+    </div>
+    <div style="font-size:.65rem;color:#6a4a20;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem;">Choose a spell to remove:</div>
+    <div id="boo-spell-list" style="display:flex;flex-direction:column;gap:.4rem;"></div>
+  </div>
+</div>
+
+<!-- BOOK DESTINATION PICKER (reward screens) -->
+<div class="modal-overlay" id="book-dest-overlay">
+  <div class="modal-box" style="max-width:380px;">
+    <div style="font-family:'Cinzel',serif;font-size:.85rem;color:#c8a060;margin-bottom:.3rem;">📖 Choose Spellbook</div>
+    <div style="font-size:.72rem;color:#aaa;margin-bottom:.8rem;">Send <span id="bd-item-preview" style="color:#e8c060;"></span> to:</div>
+    <div id="bd-book-list" style="display:flex;flex-direction:column;gap:.4rem;"></div>
+  </div>
+</div>
+
+<!-- SPELL LIBRARY OVERLAY -->
+<div id="spell-library-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:400;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto;">
+  <div style="width:100%;max-width:720px;background:#0d0b09;border:1px solid #3a2a10;border-radius:8px;padding:.9rem;margin:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.7rem;">
+      <span style="font-family:'Cinzel',serif;color:#c8a060;font-size:.88rem;">📖 Library</span>
+      <button onclick="closeLibrary()" style="background:none;border:none;color:#666;font-size:1.1rem;cursor:pointer;line-height:1;padding:0 .2rem;">✕</button>
+    </div>
+    <div id="lib-tabs" class="lib-tabs" style="display:flex;gap:.25rem;margin-bottom:.7rem;"></div>
+    <div id="lib-content" class="lib-content" style="display:flex;flex-direction:column;max-height:72vh;overflow-y:auto;"></div>
+  </div>
+  <!-- Floating tooltip -->
+  <div id="lib-tooltip" style="display:none;position:fixed;z-index:500;max-width:320px;background:#100e0c;border:1px solid #5a3a10;border-radius:5px;padding:.5rem .65rem;pointer-events:none;"></div>
+</div>
+
+<!-- BOOK EDITOR (map screen) -->
+<div id="book-editor-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:300;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto;">
+  <div style="width:100%;max-width:420px;background:#0d0b09;border:1px solid #3a2a10;border-radius:8px;padding:.9rem;margin:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.7rem;">
+      <span style="font-family:'Cinzel',serif;color:#c8a060;font-size:.88rem;">📚 Manage Spellbooks</span>
+      <button onclick="closeBookEditor()" style="background:none;border:none;color:#666;font-size:1.1rem;cursor:pointer;line-height:1;padding:0 .2rem;">✕</button>
+    </div>
+    <div id="be-tabs" style="display:flex;gap:.3rem;margin-bottom:.7rem;"></div>
+    <div id="be-content" style="display:flex;flex-direction:column;gap:0;"></div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal-box">
+    <h4>Abandon Run?</h4>
+    <p>You'll lose all progress this run and return to your save hub.</p>
+    <div class="modal-btns">
+      <button class="modal-btn-yes" onclick="confirmAbandon()">Yes, Quit</button>
+      <button class="modal-btn-no" onclick="closeModal()">Keep Fighting</button>
+    </div>
+  </div>
+</div>
+
+<!-- SANDBOX SPELL PICKER -->
+<div id="sandbox-spell-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:300;overflow-y:auto;padding:1rem;">
+  <div style="max-width:480px;margin:auto;background:#0d0b09;border:1px solid #2a6a3a;border-radius:8px;padding:1rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem;">
+      <span style="font-family:'Cinzel',serif;color:#4aaa6a;font-size:.85rem;">📖 Sandbox: Pick Spells</span>
+      <button onclick="document.getElementById('sandbox-spell-overlay').style.display='none'" style="background:none;border:none;color:#666;font-size:1.1rem;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div id="sso-content"></div>
+  </div>
+</div>
+
+<!-- SANDBOX ENEMY PICKER -->
+<div id="sandbox-enemy-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:300;overflow-y:auto;padding:1rem;">
+  <div style="max-width:460px;margin:auto;background:#0d0b09;border:1px solid #2a2a6a;border-radius:8px;padding:1rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem;">
+      <span style="font-family:'Cinzel',serif;color:#8a8aff;font-size:.85rem;">⚔ Sandbox: Pick Enemy</span>
+      <button onclick="document.getElementById('sandbox-enemy-overlay').style.display='none'" style="background:none;border:none;color:#666;font-size:1.1rem;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div id="seo-content"></div>
+  </div>
+</div>
+
+<!-- SANDBOX BOOK PICKER -->
+<div id="sandbox-book-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:300;overflow-y:auto;padding:1rem;">
+  <div style="max-width:480px;margin:auto;background:#0d0b09;border:1px solid #4a2a6a;border-radius:8px;padding:1rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem;">
+      <span style="font-family:'Cinzel',serif;color:#aa6aff;font-size:.85rem;">📚 Sandbox: Manage Books</span>
+      <button onclick="document.getElementById('sandbox-book-overlay').style.display='none'" style="background:none;border:none;color:#666;font-size:1.1rem;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div id="sbo-content"></div>
+  </div>
+</div>
+
+<!-- BATTLE INFO POPUP (Log / Stats / Library) -->
+<div id="battle-info-overlay" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.82);align-items:flex-start;justify-content:center;padding:1rem;" onclick="if(event.target===this)closeBattleInfo()">
+  <div style="width:100%;max-width:520px;background:#0d0b09;border:1px solid #3a2a10;border-radius:8px;overflow:hidden;max-height:88vh;display:flex;flex-direction:column;margin:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .8rem;border-bottom:1px solid #221508;flex-shrink:0;background:#0a0806;">
+      <div style="display:flex;gap:.2rem;">
+        <button class="bip-tab active" id="bip-btn-log" onclick="switchBipTab('log',this)">📜 Log</button>
+        <button class="bip-tab" id="bip-btn-stats" onclick="switchBipTab('stats',this)">📋 Stats</button>
+        <button class="bip-tab" id="bip-btn-library" onclick="switchBipTab('library',this)">📖 Library</button>
+      </div>
+      <button onclick="closeBattleInfo()" style="background:none;border:none;color:#555;font-size:1.1rem;cursor:pointer;padding:0 .2rem;line-height:1;">✕</button>
+    </div>
+    <div id="bip-log" class="bip-panel active"></div>
+    <div id="bip-stats" class="bip-panel"></div>
+    <div id="bip-library" class="bip-panel" style="padding:0;">
+      <div class="lib-tabs" style="display:flex;gap:.25rem;padding:.5rem .7rem .3rem;flex-shrink:0;"></div>
+      <div class="lib-content" style="display:flex;flex-direction:column;overflow-y:auto;flex:1;padding:0 .7rem .5rem;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- COMBAT -->
+<div id="combat-screen" class="screen">
+
+  <!-- ── TOP: fixed battlefield ── -->
+  <div class="combat-top">
+    <div class="combat-topbar">
+      <div class="element-badge" id="combat-element-badge">🔥 Fire</div>
+      <div id="mist-badge" style="display:none;background:#120020;border:1px solid #5020aa;color:#c080ff;padding:.18rem .5rem;font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.06em;border-radius:4px;white-space:nowrap;"></div>
+      <div class="combat-header" id="combat-round-label">⚔ Battle 1 ⚔</div>
+      <div class="stats-bar">
+        <div class="stat-item"><div class="stat-label">ATK</div><div class="stat-value power" id="combat-atk">0</div></div>
+        <div class="stat-item"><div class="stat-label">EFX</div><div class="stat-value sp" id="combat-ep">0</div></div>
+        <div class="stat-item"><div class="stat-label">DEF</div><div class="stat-value" style="color:#4aaa8a" id="combat-def">0</div></div>
+        <div class="stat-item"><div class="stat-label">Skill Pts</div><div class="stat-value sp" id="combat-sp">0</div></div>
+        <div class="stat-item"><div class="stat-label">Gold</div><div class="stat-value gold" id="combat-gold">0</div></div>
+        <div class="stat-item"><div class="stat-label">Lives</div><div class="stat-value" id="combat-lives" style="color:#e84a4a;">❤❤❤</div></div>
+        <div class="stat-item" id="stats-bar-actions-row" style="display:none;border-top:1px solid rgba(80,50,20,0.4);padding-top:4px;margin-top:2px;"><div class="stat-label">Actions</div><div class="stat-value" id="stats-bar-actions-chip" style="color:#8a6a40;">0 / 0</div></div>
+      </div>
+      <!-- Tab bar (moved to topbar) -->
+      <div class="combat-tabs" id="combat-tabs">
+        <button class="ctab active" id="ctab-actions" onclick="switchCombatTab('actions')">⚔ Actions</button>
+        <button class="ctab" id="ctab-log" onclick="switchCombatTab('log')">📜 Log</button>
+        <button class="ctab" id="ctab-runinfo" onclick="switchCombatTab('runinfo')">📋 Run Info</button>
+        <button class="ctab" onclick="showLibrary()" style="opacity:.75;">📖 Library</button>
+      </div>
+      <div style="display:flex;gap:.4rem;margin-left:auto;align-items:center;">
+        <button id="sandbox-book-btn" onclick="sandboxOpenBookPicker()" style="display:none;background:#0e0a1a;border:1px solid #4a2a6a;color:#aa6aff;padding:.25rem .6rem;font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.08em;cursor:pointer;border-radius:4px;text-transform:uppercase;white-space:nowrap;">📚 Books</button>
+        <button id="sandbox-spell-btn" onclick="sandboxOpenSpellPicker()" style="display:none;background:#0a1a0a;border:1px solid #2a6a3a;color:#4aaa6a;padding:.25rem .6rem;font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.08em;cursor:pointer;border-radius:4px;text-transform:uppercase;white-space:nowrap;">📖 Spells</button>
+        <button id="sandbox-enemy-btn" onclick="sandboxOpenEnemyPicker()" style="display:none;background:#0a0a1a;border:1px solid #2a2a6a;color:#4a4aaa;padding:.25rem .6rem;font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.08em;cursor:pointer;border-radius:4px;text-transform:uppercase;white-space:nowrap;">⚔ Enemy</button>
+        <button id="sandbox-skip-btn" onclick="sandboxSkipBattle()" style="display:none;background:#0a1a0a;border:1px solid #2a6a2a;color:#4aaa4a;padding:.25rem .6rem;font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.08em;cursor:pointer;border-radius:4px;text-transform:uppercase;white-space:nowrap;">⚡ Skip</button>
+        <button onclick="switchCombatTab('log')" style="background:#0a0a14;border:1px solid #2a2a4a;color:#7a7aaa;padding:.25rem .6rem;font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.08em;cursor:pointer;border-radius:4px;text-transform:uppercase;white-space:nowrap;">📜 Log</button>
+        <button onclick="showLibrary()" style="background:#0a0a14;border:1px solid #2a2a4a;color:#7a7aaa;padding:.25rem .6rem;font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.08em;cursor:pointer;border-radius:4px;text-transform:uppercase;white-space:nowrap;">📖 Library</button>
+        <button onclick="showBattleInfo('stats')" style="background:#0a0a14;border:1px solid #2a2a4a;color:#7a7aaa;padding:.25rem .6rem;font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.08em;cursor:pointer;border-radius:4px;text-transform:uppercase;white-space:nowrap;">📋 Stats</button>
+        <button onclick="promptAbandon()" style="background:#0f0a08;border:1px solid #3a2010;color:#6a4a30;padding:.25rem .6rem;font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.08em;cursor:pointer;border-radius:4px;text-transform:uppercase;white-space:nowrap;">✕ Quit</button>
+      </div>
+    </div>
+    <div id="sandbox-zone-combat-bar" style="display:none;gap:4px;flex-wrap:wrap;justify-content:center;background:rgba(0,0,0,.55);border-bottom:1px solid #333;padding:3px 8px;"></div>
+
+    <!-- POKEMON-STYLE BATTLEFIELD CANVAS -->
+    <div class="battle-arena" id="battle-arena">
+      <canvas id="battle-canvas"></canvas>
+
+      <!-- Enemy intent card overlay — HTML cards above sprites -->
+      <div id="enemy-intent-overlay"></div>
+
+      <!-- Enemy HUD panels — top right -->
+      <div class="arena-enemy-hud" id="arena-enemy-hud"></div>
+
+      <!-- Deck mode stats panel — sits above the player HUD, bottom-left -->
+      <div id="deck-stats-panel" style="display:none;">
+        <div class="dsp-row"><span class="dsp-label">ATK</span><span class="dsp-val power" id="dsp-atk">0</span></div>
+        <div class="dsp-row"><span class="dsp-label">EFX</span><span class="dsp-val sp" id="dsp-efx">0</span></div>
+        <div class="dsp-row"><span class="dsp-label">DEF</span><span class="dsp-val" style="color:#4aaa8a" id="dsp-def">0</span></div>
+        <div class="dsp-row"><span class="dsp-label">Gold</span><span class="dsp-val gold" id="dsp-gold">0</span></div>
+        <div class="dsp-row"><span class="dsp-label">Lives</span><span class="dsp-val" style="color:#e84a4a;" id="dsp-lives">❤</span></div>
+        <div class="dsp-row dsp-actions"><span class="dsp-label">Actions</span><span class="dsp-val" id="dsp-actions">0 / 0</span></div>
+      </div>
+
+      <!-- Player HUD — bottom left -->
+      <div class="arena-player-hud" id="arena-player-hud">
+        <div class="arena-hud-name" id="player-hud-name">—</div>
+        <div class="arena-hud-hp-wrap"><div class="arena-hud-hp-fill" id="player-hud-hp-fill" style="width:100%"></div></div>
+        <div class="arena-hud-hp-text" id="player-hp-text">—</div>
+        <div class="status-row" id="player-status-row"></div>
+      </div>
+
+      <!-- Summon indicators — bottom right -->
+      <div class="arena-summons" id="arena-summons"></div>
+
+      <!-- DECK MODE overlays (hidden in spellbook mode) -->
+      <!-- Left: deck switcher icons -->
+      <div id="arena-deck-switcher" style="display:none;"></div>
+      <!-- Bottom right: end turn + actions left -->
+      <div id="arena-endturn-panel" style="display:none;">
+        <button id="arena-end-turn-btn" class="arena-endturn-btn" onclick="commitEndTurn()" disabled>⚔ End Turn</button>
+        <div id="arena-actions-left-label" class="arena-actions-label"></div>
+      </div>
+      <!-- Below player HUD: passives -->
+      <div id="arena-passives" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ── BOTTOM: tabbed panel ── -->
+  <div class="combat-bottom">
+
+    <!-- ACTIONS tab -->
+    <div class="ctab-panel active" id="ctabp-actions">
+
+      <!-- Plasma charge bar (shown only for Plasma) -->
+      <div id="plasma-charge-wrap" style="display:none;width:100%;padding:.4rem .6rem 0;max-width:980px;margin:0 auto;">
+        <div style="display:flex;justify-content:space-between;font-size:.62rem;color:#9a5aaa;margin-bottom:3px;">
+          <span id="plasma-charge-txt">⚡ Charge: 3 / 20</span>
+        </div>
+        <div style="width:100%;height:7px;background:#1a0a2a;border-radius:3px;overflow:hidden;">
+          <div id="plasma-charge-bar" style="height:100%;background:#6a2a8a;border-radius:3px;transition:width .3s,background .3s;width:15%;"></div>
+        </div>
+      </div>
+
+      <!-- SPELLBOOK WIDGET -->
+      <div class="spellbook-widget" id="spellbook-widget">
+
+        <!-- Spine / top bar -->
+        <div class="sb-topbar">
+          <div class="sb-book-tabs" id="sb-book-tabs"><!-- book switcher injected --></div>
+          <div class="sb-topbar-right">
+            <button class="sb-item-btn" id="sb-item-btn" onclick="toggleInventory()">🎒 <span id="inv-count-label">0</span></button>
+            <button class="sb-endturn-btn" id="end-turn-btn" onclick="commitEndTurn()" disabled>⚔ End Turn</button>
+          </div>
+        </div>
+
+        <!-- Passives row -->
+        <div class="sb-passives-row" id="sb-passives-row"><!-- passive circles injected --></div>
+
+        <!-- Queue bar -->
+        <div class="sb-queue-bar">
+          <div class="sb-queue-label">
+            <span id="turn-indicator" style="font-size:.6rem;color:#6a4a20;letter-spacing:.1em;text-transform:uppercase;">Planning</span>
+            <span id="queue-slots-left" style="color:#8a6a30;font-size:.62rem;margin-left:.4rem;"></span>
+          </div>
+          <div class="queue-slots" id="queue-slots"><span class="queue-empty">No actions queued</span></div>
+        </div>
+
+        <!-- Spell grid (3 cols) — hidden in deck mode -->
+        <div class="sb-spell-grid" id="spell-grid"></div>
+
+        <!-- Inventory panel (spellbook mode) -->
+        <div class="inv-panel" id="inv-panel"></div>
+
+      </div>
+
+      <!-- Deck mode: played cards row — full width, outside spellbook widget -->
+      <div id="played-card-row" style="display:none;"></div>
+
+      <!-- Deck mode: card hand area — full width, outside spellbook widget -->
+      <div id="card-hand-area" style="display:none;">
+        <div id="card-hand-row">
+          <div id="card-hand"></div>
+          <div id="item-hand"></div>
+        </div>
+        <div id="deck-counter">📚 Deck: 0</div>
+      </div>
+
+    </div>
+
+    <!-- LOG tab -->
+    <div class="ctab-panel" id="ctabp-log">
+      <div class="battle-log-full" id="battle-log"></div>
+    </div>
+
+    <!-- RUN INFO tab -->
+    <div class="ctab-panel" id="ctabp-runinfo">
+      <div class="run-info-panel" id="run-info-panel"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- POST-BATTLE LOOT SCREEN -->
+<div id="post-battle-loot-screen" class="screen">
+  <div class="prog-title" style="margin-bottom:.3rem;">⚔ Victory ⚔</div>
+  <div class="prog-sub" id="pbl-sub">Battle complete — collect your rewards.</div>
+  <div id="pbl-cards" style="display:flex;flex-direction:column;gap:.6rem;margin:.8rem .5rem;max-width:480px;width:100%;"></div>
+  <div style="text-align:center;margin-top:.7rem;">
+    <button id="pbl-continue-btn" onclick="pblContinue()" style="display:none;background:#0f0d1a;border:1px solid #5a40aa;color:#9a70ee;padding:.5rem 2rem;font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;border-radius:6px;cursor:pointer;transition:border-color .2s,color .2s;">Continue →</button>
+  </div>
+  <div style="text-align:center;margin-top:.5rem;">
+    <button onclick="togglePblLog(this)" style="background:none;border:1px solid #2a2018;border-radius:4px;color:#6a5030;font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.08em;cursor:pointer;padding:.2rem .7rem;">📋 Battle Log ▾</button>
+  </div>
+  <div id="pbl-log-panel" style="display:none;max-height:180px;overflow-y:auto;background:#07050c;border:1px solid #1a1420;border-radius:6px;padding:.5rem .7rem;margin:.3rem .5rem 0;"></div>
+</div>
+
+<!-- BATTLE REWARD SCREEN -->
+<div id="battle-reward-screen" class="screen">
+  <div class="level-badge" id="br-badge">Battle 1</div>
+  <div class="prog-title" id="br-title">✦ Victory ✦</div>
+  <div class="prog-sub" id="br-sub">Choose your reward.</div>
+  <div class="prog-choices" id="br-choices"></div>
+  <div style="text-align:center;margin-top:.6rem;">
+    <button id="br-reroll-btn" onclick="rerollBattleReward()" style="display:none;background:#0f0d0b;border:1px solid #3a3020;color:#8a6a30;padding:.3rem .9rem;font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;border-radius:4px;cursor:pointer;">🎲 Reroll Choices (<span id="br-reroll-count">0</span>)</button>
+  </div>
+  <div style="text-align:center;margin-top:.4rem;">
+    <button onclick="toggleRewardLog(this)" style="background:none;border:1px solid #2a2018;border-radius:4px;color:#6a5030;font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.08em;cursor:pointer;padding:.2rem .7rem;">📋 Battle Log ▾</button>
+  </div>
+  <div id="br-log-panel" style="display:none;max-height:180px;overflow-y:auto;background:#07050c;border:1px solid #1a1420;border-radius:6px;padding:.5rem .7rem;margin:.3rem .5rem 0;"></div>
+</div>
+
+<!-- INCANTATION CHOICE SCREEN -->
+<div id="incantation-screen" class="screen">
+  <div class="level-badge" id="inc-level-badge">Battle 6</div>
+  <div class="prog-title">✦ Incantation ✦</div>
+  <div class="prog-sub">Choose a spell to upgrade.</div>
+  <div class="prog-choices" id="inc-choices"></div>
+</div>
+
+<!-- SPELL CHOICE SCREEN -->
+<div id="spellchoice-screen" class="screen">
+  <div class="level-badge" id="sc-level-badge">Battle 3</div>
+  <div class="prog-title">✦ New Spell ✦</div>
+  <div class="prog-sub">Choose one spell to add to your arsenal.</div>
+  <div class="prog-choices" id="sc-choices"></div>
+</div>
+
+<!-- PASSIVE CHOICE SCREEN -->
+<div id="passivechoice-screen" class="screen">
+  <div class="level-badge" id="pc-level-badge">Gym Clear</div>
+  <div class="prog-title">✦ New Passive ✦</div>
+  <div class="prog-sub">Choose a permanent passive ability.</div>
+  <div class="prog-choices" id="pc-choices"></div>
+</div>
+
+<!-- LEGENDARY REWARD SCREEN -->
+<div id="legendary-screen" class="screen">
+  <div class="level-badge">Gym Clear</div>
+  <div class="prog-title" style="color:#d4a0ff;">✦ Legendary Reward ✦</div>
+  <div class="prog-sub">Choose one legendary reward to keep forever.</div>
+  <div class="prog-choices" id="leg-choices"></div>
+</div>
+
+<!-- ELEMENT UNLOCK SCREEN -->
+<div id="elementunlock-screen" class="screen">
+  <div class="level-badge" id="eu-level-badge">Gym Clear</div>
+  <div class="prog-title">✦ Second Element ✦</div>
+  <div class="prog-sub">Unlock a second element — then choose one of its spells.</div>
+  <div class="prog-choices" id="eu-element-choices"></div>
+</div>
+
+<!-- BOOK DISCOVERY SCREEN -->
+<div id="bookdiscovery-screen" class="screen">
+  <div class="level-badge" id="bd-badge">Boss Clear</div>
+  <div class="prog-title">✦ Spellbook Found ✦</div>
+  <div class="prog-sub" id="bd-sub">A spellbook has revealed itself — choose one to take with you.</div>
+  <div class="prog-choices" id="bd-choices"></div>
+</div>
+
+<!-- RUN BOOK SELECTION SCREEN -->
+<div id="bookselect-screen" class="screen">
+  <div class="level-badge" id="bs-badge">Starting Spellbook</div>
+  <div class="prog-title" id="bs-title">✦ Choose Your Book ✦</div>
+  <div class="prog-sub" id="bs-sub">Pick the spellbook you'll begin this run with.</div>
+  <div class="prog-choices" id="bs-choices"></div>
+</div>
+
+<!-- RUN VICTORY SCREEN -->
+<div id="run-victory-screen" class="screen" style="padding:0;overflow:hidden;position:relative;">
+  <canvas id="victory-canvas" style="display:block;width:100%;max-width:480px;margin:0 auto;image-rendering:pixelated;"></canvas>
+  <div style="position:relative;z-index:2;padding:1rem 1.2rem;max-width:480px;margin:0 auto;">
+    <div id="victory-stats" style="background:#0a1a0a;border:1px solid #2a5a2a;border-radius:8px;padding:.9rem 1rem;margin-bottom:1rem;font-size:.72rem;line-height:1.9;color:#88cc88;font-family:'Cinzel',serif;"></div>
+    <div style="display:flex;gap:.7rem;justify-content:center;">
+      <button onclick="victoryBackToLobby()" style="padding:.55rem 1.4rem;background:#0a1a0a;border:1px solid #2a6a2a;border-radius:5px;color:#66cc66;font-family:'Cinzel',serif;font-size:.75rem;cursor:pointer;">Back to Lobby</button>
+      <button onclick="victoryFreeplay()" style="padding:.55rem 1.4rem;background:#0a200a;border:1px solid #44aa44;border-radius:5px;color:#aaffaa;font-family:'Cinzel',serif;font-size:.75rem;cursor:pointer;">Continue (Freeplay)</button>
+    </div>
+  </div>
+</div>
+
+<!-- Passive Choice Modal -->
+<div class="modal-overlay" id="passive-modal">
+  <div class="modal">
+    <h3 id="passive-title">Choose a Passive</h3>
+    <p id="passive-subtitle">Pick one to start your run. You can earn others later.</p>
+    <div class="choices" id="passive-choices"></div>
+  </div>
+</div>
+
+<!-- Spell tooltip (long-press on card) -->
+<div id="spell-tooltip" style="display:none;"></div>
+
+<!-- Volume widget -->
+<div id="vol-widget" style="
+  position:fixed; top:44px; left:8px; z-index:9999;
+  display:flex; align-items:center; gap:.2rem;
+  background:rgba(8,8,13,0.78); border:1px solid rgba(50,35,15,0.45);
+  border-radius:4px;
+  padding:.14rem .38rem; backdrop-filter:blur(6px);">
+  <span id="vol-icon" style="font-size:0.56rem; cursor:pointer; color:#c8a060; user-select:none; line-height:1;" onclick="volumeToggleMute()">🔊</span>
+  <input id="vol-slider" type="range" min="0" max="100" value="50"
+    oninput="volumeSet(this.value)"
+    style="width:36px; accent-color:#c8a060; cursor:pointer; height:2px;">
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  Script load order matters — each file depends on the  -->
+<!--  globals defined in all files above it.                -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<!-- Data layer -->
+<script src="js/data/constants.js"></script>
+<script src="js/data/characters.js"></script>
+<script src="js/data/spells.js"></script>
+<script src="js/data/incantations.js"></script>
+<script src="js/data/items.js"></script>
+<script src="js/data/artifacts.js"></script>
+<script src="js/data/spellbooks.js"></script>
+<script src="js/data/deckIcons.js"></script>
+<script src="js/data/talents.js"></script>
+<script src="js/data/knowledgeTree.js"></script>
+<script src="js/data/encounters.js"></script>
+<script src="js/data/passives.js"></script>
+
+<!-- Audio -->
+<script src="js/audio/music.js"></script>
+<script src="js/audio/mp3audio.js"></script>
+
+<!-- Rendering -->
+<script src="js/rendering/cutscene.js"></script>
+<script src="js/rendering/castle_cutscene.js"></script>
+<script src="js/rendering/dark_one_intro.js"></script>
+<script src="js/rendering/animations.js"></script>
+<script src="js/data/sprite_data.js"></script>
+<script src="js/rendering/sprites.js"></script>
+
+<!-- Logic -->
+<script src="js/logic/state.js"></script>
+<script src="js/logic/helpers.js"></script>
+<script src="js/logic/seeds.js"></script>
+<script src="js/logic/surge.js"></script>
+<script src="js/data/duos.js"></script>
+<script src="js/logic/enemyAbilities.js"></script>
+<script src="js/data/mist.js"></script>
+<script src="js/logic/hit.js"></script>
+<script src="js/logic/combat.js"></script>
+<script src="js/rendering/spellIcons.js"></script>
+<script src="js/rendering/passiveIcons.js"></script>
+<script src="js/rendering/ui.js"></script>
+<script src="js/logic/map.js"></script>
+<script src="js/rendering/mapCanvas.js"></script>
+<script src="js/ui/gymRival.js"></script>
+<script src="js/ui/shopCampfire.js"></script>
+<script src="js/logic/battleLoad.js"></script>
+<script src="js/logic/progression.js"></script>
+<script src="js/ui/veil.js"></script>
+
+<!-- Entry point -->
+<script src="js/rendering/lobbyMap.js"></script>
+<script src="js/logic/battleReward.js"></script>
+<script src="js/ui/betweenRuns.js"></script>
+<script src="js/ui/sandbox.js"></script>
+<script src="js/ui/bookEditor.js"></script>
+<script src="js/ui/library.js"></script>
+<script src="js/analytics.js"></script>
+<script src="js/main.js"></script>
+<script src="version.js"></script>
+<script>
+  (function(){
+    const v = typeof GAME_VERSION !== 'undefined' ? GAME_VERSION : null;
+    if (!v || !v.hash || v.hash === 'dev') return;
+    let dateStr = '';
+    if (v.date) {
+      try {
+        const iso = v.date.replace(' UTC', 'Z').replace(' ', 'T');
+        const local = new Date(iso).toLocaleString(undefined, {
+          month:'short', day:'numeric', year:'numeric',
+          hour:'numeric', minute:'2-digit', timeZoneName:'short'
+        });
+        dateStr = '  ' + local;
+      } catch(_) { dateStr = '  ' + v.date; }
+    }
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed;bottom:6px;left:8px;font-size:.5rem;color:#3a3028;font-family:monospace;pointer-events:none;z-index:9999;letter-spacing:.04em;';
+    el.textContent = (v.version ? 'v' + v.version + '  ' : '') + v.hash + dateStr;
+    document.body.appendChild(el);
+  })();
+</script>
+
+</body>
+</html>

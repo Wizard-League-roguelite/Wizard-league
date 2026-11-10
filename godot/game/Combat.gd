@@ -1247,7 +1247,7 @@ func endBattle(won = null):
 			var beatenGym = Encounters.currentGymDef()
 			var gymIdx = State.currentGymIdx
 			if JS.t(beatenGym):
-				UI.log_("🏆 Gym " + JS.s(State.currentGymIdx + 1) + " — " + beatenGym.name + " defeated!", "win")
+				UI.log_("🏆 Gym " + JS.s(JS.add(State.currentGymIdx, 1)) + " — " + beatenGym.name + " defeated!", "win")
 			# Artifact discovery (65% chance)
 			var newArt = Artifacts.onGymDefeated(gymIdx)
 			if JS.t(newArt):

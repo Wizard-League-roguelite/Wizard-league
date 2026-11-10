@@ -260,7 +260,7 @@ func _bbIce(ctx = null, W = null, H = null):
 		var ah = JS.round(H * (0.06 + (0.03 * sin(aPhase * 0.7))))
 		var ag = ctx.createLinearGradient(0, ay, 0, ay + ah)
 		ag.addColorStop(0, "transparent")
-		ag.addColorStop(0.5, JS.s(auroraC[ai] + (0.18 + (0.1 * sin(aPhase * 1.3)))) + ")")
+		ag.addColorStop(0.5, JS.s(JS.add(auroraC[ai], 0.18 + (0.1 * sin(aPhase * 1.3)))) + ")")
 		ag.addColorStop(1, "transparent")
 		ctx.fillStyle = ag
 		ctx.fillRect(0, ay, W, ah)

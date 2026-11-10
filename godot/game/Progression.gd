@@ -605,7 +605,7 @@ func _drawNebulae(ctx = null, W = null, horizY = null, tick = null):
 	for p in JS.iter(patches):
 		var alpha = p.b + (0.018 * sin((tick * 0.0009) + p.x))
 		var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, max(p.rx, p.ry))
-		g.addColorStop(0, JS.s(p.col + (alpha * 2)) + ")")
+		g.addColorStop(0, JS.s(JS.add(p.col, alpha * 2)) + ")")
 		g.addColorStop(1, JS.s(p.col) + "0)")
 		ctx.save()
 		ctx.scale(1, p.ry / float(p.rx))
@@ -1055,7 +1055,7 @@ func _terrainIce(ctx = null, W = null, H = null, horizY = null, tick = null):
 		var aH = JS.round(horizY * 0.07)
 		var ag = ctx.createLinearGradient(0, aY, 0, aY + aH)
 		ag.addColorStop(0, "transparent")
-		ag.addColorStop(0.4, JS.s(aurColors[i] + (0.14 + (0.08 * sin((tick * 0.007) + i)))) + ")")
+		ag.addColorStop(0.4, JS.s(JS.add(aurColors[i], 0.14 + (0.08 * sin((tick * 0.007) + i)))) + ")")
 		ag.addColorStop(1, "transparent")
 		ctx.fillStyle = ag
 		ctx.fillRect(0, aY, W, aH)

@@ -323,7 +323,7 @@ func _drawZonePanel(ctx = null, px = null, py = null, pw = null, ph = null, el =
 				var ah = ph * (0.06 + (0.04 * sin(aPhase * 0.7)))
 				var ag = ctx.createLinearGradient(px, ay, px, ay + ah)
 				ag.addColorStop(0, "transparent")
-				ag.addColorStop(0.5, JS.s(auroraColors[i] + (0.18 + (0.12 * sin(aPhase * 1.3)))) + ")")
+				ag.addColorStop(0.5, JS.s(JS.add(auroraColors[i], 0.18 + (0.12 * sin(aPhase * 1.3)))) + ")")
 				ag.addColorStop(1, "transparent")
 				ctx.fillStyle = ag
 				ctx.fillRect(px, ay, pw, ah)
@@ -559,7 +559,7 @@ func _drawZonePanel(ctx = null, px = null, py = null, pw = null, ph = null, el =
 				var yf = JS.idx(_e6, 1)
 				var hf = JS.idx(_e6, 2)
 				var ng = ctx.createRadialGradient(px + (pw * ((0.3 + (ni * 0.2)) + (0.1 * sin((t * 0.005) + ni)))), py + (ph * yf), pw * 0.01, px + (pw * ((0.3 + (ni * 0.2)) + (0.1 * sin((t * 0.005) + ni)))), py + (ph * yf), pw * (0.4 + hf))
-				ng.addColorStop(0, JS.s(c + (0.28 + (0.12 * sin((t * 0.011) + (ni * 2))))) + ")")
+				ng.addColorStop(0, JS.s(JS.add(c, 0.28 + (0.12 * sin((t * 0.011) + (ni * 2))))) + ")")
 				ng.addColorStop(1, "transparent")
 				ctx.fillStyle = ng
 				ctx.fillRect(px, py, pw, ph)
