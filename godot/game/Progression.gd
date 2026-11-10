@@ -151,8 +151,8 @@ func buildMapNodes(encounters = null, specials = null, canvasW = null, canvasH =
 		var ny = JS.round(gY.call(nx))
 		# _isSpecial: campfire or shop replacing this slot
 		if JS.t(enc.get("_isSpecial")):
-			var spColor = ("#d4822a" if enc.get("_specialType") == "campfire" else "#2aaa7a")
-			var spLabel = ("Campfire" if enc.get("_specialType") == "campfire" else "Shop")
+			var spColor = ("#d4822a" if JS.eq(enc.get("_specialType"), "campfire") else "#2aaa7a")
+			var spLabel = ("Campfire" if JS.eq(enc.get("_specialType"), "campfire") else "Shop")
 			nodes.append({
 				"x": nx,
 				"y": ny,
@@ -273,10 +273,10 @@ func _drawNode(ctx = null, node = null, hovered = null, tick = null):
 	ctx.stroke()
 	ctx.restore()
 	# Content: reward icon (animated) or special icon
-	if (type_ == "combat" or type_ == "pack"):
+	if (JS.eq(type_, "combat") or JS.eq(type_, "pack")):
 		# Float animation — different phase per x position so nodes don't sync
 		var floatY = sin((tick * 0.003) + (node.get("x") * 0.012)) * 5
-		var scalePulse = (1 + (0.08 * sin(tick * 0.005)) if type_ == "major" else 1)
+		var scalePulse = (1 + (0.08 * sin(tick * 0.005)) if JS.eq(type_, "major") else 1)
 		ctx.save()
 		ctx.font = JS.s(JS.round((r - 6) * scalePulse)) + "px serif"
 		ctx.textAlign = "center"
@@ -383,7 +383,7 @@ func _renderMap():
 	_drawNightSky(ctx, W, H, horizY, tick)
 	_drawTerrain(ctx, W, H, horizY, tick)
 	# Ground paths from origin to every node (drawn below nodes)
-	var isAirZone = State.currentZoneElement == "Air"
+	var isAirZone = JS.eq(State.currentZoneElement, "Air")
 	if not isAirZone:
 		for node in JS.iter(_mapNodes):
 			_drawGroundPath(ctx, _mapOriginX, _mapOriginY, node.get("x"), node.get("y"), node.get("color"), W, H, horizY, node.get("pathBias"))
@@ -533,7 +533,7 @@ func _drawClouds(ctx = null, W = null, H = null, horizY = null, tick = null):
 
 func _getStarField(W = null, H = null, horizY = null):
 	var key = JS.s(W) + "x" + JS.s(H)
-	if (JS.t(_starCache) and _starCacheKey == key):
+	if (JS.t(_starCache) and JS.eq(_starCacheKey, key)):
 		return _starCache
 	var out = []
 	for i in range(90):
@@ -1757,13 +1757,13 @@ func _drawGroundPath(ctx = null, ox = null, oy = null, nx = null, ny = null, nod
 	var px = (-dy) / float(dist)
 	var py = dx / float(dist)
 	# perpendicular unit vector
-	if pathBias == "straight":
+	if JS.eq(pathBias, "straight"):
 		# Dead straight — no swing
 		cp1x[0] = ox + (dx * 0.33)
 		cp1y[0] = oy + (dy * 0.33)
 		cp2x[0] = ox + (dx * 0.67)
 		cp2y[0] = oy + (dy * 0.67)
-	elif pathBias == "right":
+	elif JS.eq(pathBias, "right"):
 		# Swing hard right (positive perp) — arcs around campfire on the right side
 		var swing = min(dist * 0.22, W * 0.14)
 		cp1x[0] = (ox + (dx * 0.25)) + (px * (-swing))
@@ -1857,7 +1857,7 @@ func _drawAirCloudNode(ctx = null, node = null, hovered = null, tick = null):
 	# Cloud pad
 	_cloudPlatform(ctx, x, cloudY, padW, padH, false)
 	# Sprites standing on top of cloud
-	if (((type_ == "combat" or type_ == "pack") and JS.t(sprites)) and JS.t(len(sprites))):
+	if (((JS.eq(type_, "combat") or JS.eq(type_, "pack")) and JS.t(sprites)) and JS.t(len(sprites))):
 		_drawNodeSprites(ctx, x, cloudY - 10, sprites, hovered)
 	else:
 		_drawNodeIcon(ctx, x, cloudY - 10, node, hovered, tick)
@@ -2674,7 +2674,7 @@ func _cfDrawZone(ctx = null, cx = null, cy = null, hovered = null, tick = null, 
 	# Glow
 	_cfGlow(ctx, cx, cy, glowC, hovered, tick, 44)
 	# Logs (Air: wind swirl instead)
-	if zone == "Air":
+	if JS.eq(zone, "Air"):
 		var wt = JS.mod(tick * 0.003, 1)
 		for i in range(3):
 			var ox = sin(((wt * PI) * 2) + (i * 2.1)) * 8
@@ -2684,8 +2684,8 @@ func _cfDrawZone(ctx = null, cx = null, cy = null, hovered = null, tick = null, 
 			ctx.fillRect(JS.round((cx - 12) + ox), (cy - 3) + (i * 2), 24, 1)
 			ctx.restore()
 	else:
-		var log1 = ("#0a1a2a" if zone == "Ice" else ("#0a2030" if zone == "Water" else ("#1a1a00" if zone == "Lightning" else ("#1a0a2a" if zone == "Plasma" else "#3d1f08"))))
-		var log2 = ("#1a3a4a" if zone == "Ice" else ("#1a4050" if zone == "Water" else ("#333300" if zone == "Lightning" else ("#2a1a3a" if zone == "Plasma" else "#5a2d0c"))))
+		var log1 = ("#0a1a2a" if JS.eq(zone, "Ice") else ("#0a2030" if JS.eq(zone, "Water") else ("#1a1a00" if JS.eq(zone, "Lightning") else ("#1a0a2a" if JS.eq(zone, "Plasma") else "#3d1f08"))))
+		var log2 = ("#1a3a4a" if JS.eq(zone, "Ice") else ("#1a4050" if JS.eq(zone, "Water") else ("#333300" if JS.eq(zone, "Lightning") else ("#2a1a3a" if JS.eq(zone, "Plasma") else "#5a2d0c"))))
 		_cfLogs(ctx, cx, cy, log1, log2)
 	# Sparks
 	_cfSparks2(ctx, cx, cy, tick, [JS.idx(pal, 0), JS.idx(pal, 1), JS.idx(pal, 4)], zone)
@@ -2763,7 +2763,7 @@ func _drawNodeIcon(ctx = null, cx = null, cy = null, node = null, hovered = null
 	var cols = 24
 	var baseRows = null
 	var pal = null
-	if type_ == "campfire":
+	if JS.eq(type_, "campfire"):
 		# Warm fire palette: 1=log-dark 2=log-mid 3=ember 4=core-flame
 		baseRows = MAP_SPRITE_CAMPFIRE_BASE
 		pal = ["#5a3010", "#8a5020", "#FF8822", "#FFDD00", "#FF4400"]
@@ -2800,7 +2800,7 @@ func _drawNodeIcon(ctx = null, cx = null, cy = null, node = null, hovered = null
 		ctx.globalAlpha = (1 if JS.t(hovered) else 0.9)
 		Sprites.drawSprite(ctx, MAP_SPRITE_CAMPFIRE_FLAME, sx, flameOffY, scale_, flameP)
 		ctx.restore()
-	elif type_ == "shop":
+	elif JS.eq(type_, "shop"):
 		# Shop: 1=canvas/fabric 2=counter-wood 3=highlight 4=shadow
 		baseRows = MAP_SPRITE_SHOP
 		pal = ["#2aaa7a", "#1a6a4a", "#55ddaa", "#0a3a2a"]
@@ -2819,7 +2819,7 @@ func _drawNodeIcon(ctx = null, cx = null, cy = null, node = null, hovered = null
 			ctx.fillStyle = "#FFEE44"
 			ctx.fillRect(cx - 2, (cy - (spriteH / 2.0)) - 5, 2, 2)
 			ctx.restore()
-	elif type_ == "gym":
+	elif JS.eq(type_, "gym"):
 		# Gym: 1=stone 2=column-shadow 3=gold-trim
 		baseRows = MAP_SPRITE_GYM
 		pal = [color, "#6a5020", "#FFD700", "#3a2808"]

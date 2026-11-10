@@ -26,13 +26,13 @@ func _plantSeed(targetSide = null, type_ = null, stacks = null, timer = null, op
 		stacks += JS.or_(State.combat.get("_seedSurgeBonus"), 2)
 		State.combat._seedSurgePending = false
 		State.combat._seedSurgeBonus = 2
-	var tgt = (State.status.get("player") if targetSide == "player" else (JS.or_(JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx")), {})).get("status"))
+	var tgt = (State.status.get("player") if JS.eq(targetSide, "player") else (JS.or_(JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx")), {})).get("status"))
 	if not JS.t(tgt):
 		return surge
 	if not JS.t(tgt.get("seeds")):
 		tgt.seeds = []
 	var eternal = Main.hasPassive("nature_eternal_garden")
-	if type_ == "silence":
+	if JS.eq(type_, "silence"):
 		# Silence never merges — each cast is its own independent seed
 		for i in range(ceili(stacks)):
 			tgt.get("seeds").append({"type": "silence", "stacks": 1, "timer": timer, "incantLevel": incantLevel})
@@ -62,7 +62,7 @@ func _bloomSeed(targetSide = null, seed_ = null, enemyIdx = null, opts = null):
 	if (not JS.t(seed_) or seed_.get("stacks") <= 0):
 		return
 	var prevActive = State.combat.get("activeEnemyIdx")
-	if (targetSide == "enemy" and enemyIdx != null):
+	if (JS.eq(targetSide, "enemy") and enemyIdx != null):
 		State.setActiveEnemy(enemyIdx)
 	var powerMult = (opts.get("powerMult") if (JS.t(opts) and opts.get("powerMult") != null) else 1)
 	var efx = Helpers.effectPowerFor("player")
@@ -84,7 +84,7 @@ func _bloomSeed(targetSide = null, seed_ = null, enemyIdx = null, opts = null):
 				"noRecord": true,
 			})
 			# Wildfire Seeds (Fire+Nature): apply Burn equal to damage dealt
-			if ((not JS.t(State.combat.get("over")) and Main.hasPassive("duo_wildfire_seeds")) and targetSide == "enemy"):
+			if ((not JS.t(State.combat.get("over")) and Main.hasPassive("duo_wildfire_seeds")) and JS.eq(targetSide, "enemy")):
 				var _bEnemyNow = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 				if (JS.t(_bEnemyNow) and JS.t(_bEnemyNow.get("alive"))):
 					var actualDmg = max(0, _hpBefore - _bEnemyNow.get("hp"))
@@ -137,30 +137,30 @@ func _bloomSeed(targetSide = null, seed_ = null, enemyIdx = null, opts = null):
 			Helpers.addMomentumStacks(momGain)
 			UI.log_(label + " — +" + JS.s(momGain) + " Momentum!", "player")
 	if JS.t(State.combat.get("over")):
-		if targetSide == "enemy":
+		if JS.eq(targetSide, "enemy"):
 			State.setActiveEnemy(prevActive)
 		return
 	# ── Thorn Bloom: +2 Root if target is Rooted ──
-	if (targetSide == "enemy" and Main.hasPassive("nature_thorn_bloom")):
+	if (JS.eq(targetSide, "enemy") and Main.hasPassive("nature_thorn_bloom")):
 		var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 		if ((JS.t(e) and JS.t(e.get("alive"))) and (JS.or_(e.get("status").get("rootStacks"), 0)) > 0):
 			Helpers.applyRoot("player", "enemy", 2)
 			UI.log_("🌹 Thorn Bloom: +2 Root on bloom!", "status")
 	# ── Rooted Bloom: Root = stacks that bloomed ──
-	if (targetSide == "enemy" and Main.hasPassive("nature_rooted_bloom")):
+	if (JS.eq(targetSide, "enemy") and Main.hasPassive("nature_rooted_bloom")):
 		var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 		if (JS.t(e) and JS.t(e.get("alive"))):
 			Helpers.applyRoot("player", "enemy", seed_.get("stacks"))
 			UI.log_("🌺 Rooted Bloom: +" + JS.s(seed_.get("stacks")) + " Root from bloom!", "status")
 	if JS.t(State.combat.get("over")):
-		if targetSide == "enemy":
+		if JS.eq(targetSide, "enemy"):
 			State.setActiveEnemy(prevActive)
 		return
 	# ── Perennial: replant with 1 stack at timer 3 ──
 	if Main.hasPassive("nature_perennial"):
 		_plantSeed(targetSide, seed_.type, 1, 3, {"incantLevel": il})
 		UI.log_("🌸 Perennial: " + JS.s(_seedLabel(seed_.type)) + " Seed replanted (timer 3).", "status")
-	if targetSide == "enemy":
+	if JS.eq(targetSide, "enemy"):
 		State.setActiveEnemy(prevActive)
 
 # ─── VERDANT PATIENCE ────────────────────────────────────────────────────────
@@ -273,7 +273,7 @@ func _deepRootsCheck():
 func _rootedBloomDecay(targetSide = null):
 	if not Main.hasPassive("nature_rooted_bloom"):
 		return
-	var seeds = (State.status.get("player").get("seeds") if targetSide == "player" else JS.andf((JS.or_(JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx")), {})).get("status"), func(): return JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx")).get("status").get("seeds")))
+	var seeds = (State.status.get("player").get("seeds") if JS.eq(targetSide, "player") else JS.andf((JS.or_(JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx")), {})).get("status"), func(): return JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx")).get("status").get("seeds")))
 	if (not JS.t(seeds) or not JS.t(len(seeds))):
 		return
 	# "nearest" = lowest timer (closest to blooming)

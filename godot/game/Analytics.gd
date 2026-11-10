@@ -14,7 +14,7 @@ func _boot():
 func sendRunAnalytics(outcome = null):
 	# Skip dev/testing contexts
 	var isLocalhost = JS.isLocalBuild()
-	var isFullUnlock = State.playerName == "Full Unlock"
+	var isFullUnlock = JS.eq(State.playerName, "Full Unlock")
 	if ((JS.t(isLocalhost) or JS.t(Constants.sandboxMode)) or isFullUnlock):
 		return
 	# Collect spell IDs from every spellbook, skip internal built-ins (_basic_attack etc.)

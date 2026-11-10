@@ -310,7 +310,7 @@ func renderStatusTags():
 			var v = floori(s.get("stoneStacks"))
 			pr.appendChild(tag("🪨" + JS.s(v), "tag-block", "Stone ×" + JS.s(v) + " — +" + JS.s(v * 3) + " ATK, +" + JS.s(v * 2) + " Armor; decays 25%/turn"))
 		# Plasma
-		if State.playerElement == "Plasma":
+		if JS.eq(State.playerElement, "Plasma"):
 			if JS.t(s.get("stallActive")):
 				pr.appendChild(tag("🫧 Stall", "tag-phase", "Stall — enemy action delayed, charge refunded next turn"))
 			if s.get("borrowedCharge") > 0:
@@ -320,7 +320,7 @@ func renderStatusTags():
 			if JS.t(State.combat.get("plasmaOvercharged")):
 				pr.appendChild(tag("✦ OC", "tag-phase", "Overcharged — next plasma cast has bonus power"))
 		# Air: Momentum
-		if State.playerElement == "Air":
+		if JS.eq(State.playerElement, "Air"):
 			if (JS.or_(s.get("momentumStacks"), 0)) > 0:
 				pr.appendChild(tag("💨" + JS.s(floori(s.get("momentumStacks"))) + "M", "tag-phase", "Momentum ×" + JS.s(floori(s.get("momentumStacks"))) + " — +" + JS.s(floori(s.get("momentumStacks"))) + " ATK, +" + JS.s(floori(s.get("momentumStacks")) * 2) + "% dodge; decays each turn"))
 			if JS.t(s.get("windWallActive")):
@@ -354,19 +354,19 @@ func log_(msg = null, type_ = null):
 	line.textContent = msg
 	el.appendChild(line)
 	# Only auto-scroll if log tab is active
-	if MapLogic._activeCombatTab == "log":
+	if JS.eq(MapLogic._activeCombatTab, "log"):
 		el.scrollTop = el.scrollHeight
 	# Badge the log tab when not visible
-	if MapLogic._activeCombatTab != "log":
+	if not JS.eq(MapLogic._activeCombatTab, "log"):
 		MapLogic._logHasNew = true
 		MapLogic._updateLogBadge(true)
 
 func showScreen(id = null):
 	# Stop lobby map when navigating away from between-runs
-	if id != "between-runs-screen":
+	if not JS.eq(id, "between-runs-screen"):
 		LobbyMap.stopLobbyMap()
 	# Stop zone wizard animation when leaving map
-	if id != "map-screen":
+	if not JS.eq(id, "map-screen"):
 		MapCanvas._znStopWizardAnim()
 	# Stop any running game over / victory animation
 	var goCanvas = document.getElementById("gameover-canvas")
@@ -390,15 +390,15 @@ func showScreen(id = null):
 		"between-runs-screen",
 		"character-screen",
 	]
-	if id == "combat-screen":
+	if JS.eq(id, "combat-screen"):
 		Mp3Audio.musicPlaySmart(("battle_" + JS.s(_zone) if JS.t(_zone) else "battle_Fire"))
 	elif JS.includes(["map-screen", "campfire-screen", "shop-screen", "gym-screen", "rival-screen"], id):
 		Mp3Audio.musicPlaySmart("map")
 	elif JS.includes(_menuScreens, id):
 		Mp3Audio.musicPlaySmart("menu")
-	elif id == "run-victory-screen":
+	elif JS.eq(id, "run-victory-screen"):
 		Mp3Audio.musicPlaySmart("menu")
-	elif id == "between-runs-screen":
+	elif JS.eq(id, "between-runs-screen"):
 		Mp3Audio.musicStopAll()
 
 func restartToSelect():
@@ -516,7 +516,7 @@ func doBasicAttack(ctx = null):
 	var dmg = JS.round((((Constants.BASE_DMG + (JS.or_(State.combat.get("tempDmgBonus"), 0))) + (JS.or_(State.player.get("basicDmgFlat"), 0))) + elemDmgBonus) * (JS.or_(State.player.get("basicDmgMult"), 1.0)))
 	# Burn stacks for Fire scale with level
 	var burnStacks = (JS.round(2 + Incantations._incantationBonus(basicLevel, 1, 0.9)) if hasElemBasicActive else 0)
-	var elemEffects = ([{"type": "burn", "stacks": burnStacks}] if (hasElemBasicActive and State.playerElement == "Fire") else [])
+	var elemEffects = ([{"type": "burn", "stacks": burnStacks}] if (hasElemBasicActive and JS.eq(State.playerElement, "Fire")) else [])
 	var _basicNames = {
 		"Fire": "Ember Strike",
 		"Water": "Tidal Jab",
@@ -549,24 +549,24 @@ func doBasicAttack(ctx = null):
 		return
 	# Post-hit elemental procs — all scale with basicLevel via _incantationBonus
 	var _ib = func(base = null, scale_ = null, decay = null): return base + Incantations._incantationBonus(basicLevel, scale_, decay)
-	if State.playerElement == "Water":
+	if JS.eq(State.playerElement, "Water"):
 		Helpers.applyFoam("player", "enemy", JS.round(_ib.call(1, 0.5, 0.9)))
-	if State.playerElement == "Ice":
+	if JS.eq(State.playerElement, "Ice"):
 		Helpers.applyFrost("player", "enemy", _ib.call(1, 0.5, 0.9))
-	if State.playerElement == "Earth":
+	if JS.eq(State.playerElement, "Earth"):
 		Helpers.addStoneStacks("player", JS.round(_ib.call(1, 0.5, 0.9)))
-	if State.playerElement == "Nature":
+	if JS.eq(State.playerElement, "Nature"):
 		Helpers.applyRoot("player", "enemy", JS.round(_ib.call(1, 0.5, 0.9)))
-	if State.playerElement == "Lightning":
+	if JS.eq(State.playerElement, "Lightning"):
 		var extraShock = JS.round(_ib.call(1, 0.5, 0.9) * (1 + (Helpers.effectPowerFor("player") / 50.0)))
 		State.status.get("enemy").shockStacks = (JS.or_(State.status.get("enemy").get("shockStacks"), 0)) + extraShock
 		log_("⚡ Spark Strike: +" + JS.s(extraShock) + " extra Shock (×" + JS.s(State.status.get("enemy").get("shockStacks")) + ")", "status")
-	if State.playerElement == "Plasma":
+	if JS.eq(State.playerElement, "Plasma"):
 		var charge = JS.round(_ib.call(2, 1, 1.0))
 		State.status.get("player").plasmaCharge = min((JS.or_(State.status.get("player").get("plasmaCharge"), 0)) + charge, 20)
 		Spells.updateChargeUI()
 		log_("🔮 Surge Bolt: +" + JS.s(charge) + " Charge (" + JS.s(State.status.get("player").get("plasmaCharge")) + " total)", "player")
-	if State.playerElement == "Air":
+	if JS.eq(State.playerElement, "Air"):
 		Helpers.addMomentumStacks(JS.round(_ib.call(1, 1, 1.0)))
 
 # ── Spell damage preview for tooltips ────────────────────────────────────────
@@ -892,7 +892,7 @@ func renderSpellButtons():
 			if not JS.t(spell.get("isPlasmaAbility")):
 				continue
 			var onCD = (JS.or_(spell.get("currentCD"), 0)) > 0
-			var isVar = spell.get("chargeCost") == "variable"
+			var isVar = JS.eq(spell.get("chargeCost"), "variable")
 			var fixedCost = (spell.get("chargeCost") if (JS.typeof_(spell.get("chargeCost"))) == "number" else 0)
 			if JS.idx(State.combat.get("plasmaSpendAmounts"), spell.id) == null:
 				State.combat.get("plasmaSpendAmounts")[spell.id] = (min(6, availCharge) if isVar else fixedCost)
@@ -1200,7 +1200,7 @@ func renderSpellButtons():
 				# Instant-use: don't queue, just set the shift and consume PP
 				# Normal queued spell — set shift then queue
 				# Pressure Launch: show +1/-1 choice when 10+ Momentum (runs popup then re-calls with chosen value)
-				if (((extraPriority == null and Main.hasPassive("air_pressure_launch")) and State.playerElement == "Air") and (JS.or_(State.status.get("player").get("momentumStacks"), 0)) >= 10):
+				if (((extraPriority == null and Main.hasPassive("air_pressure_launch")) and JS.eq(State.playerElement, "Air")) and (JS.or_(State.status.get("player").get("momentumStacks"), 0)) >= 10):
 					var _fn21 = func(chosen = null):
 						_doQueueSpell[0].call(chosen)
 					_showAirPriorityPopup([{"label": "+1 (fast)", "value": 1}, {"label": "−1 (slow)", "value": -1}], _fn21)
@@ -1331,7 +1331,7 @@ func _showSpellTooltip(spell = null, hintText = null, cardEl = null):
 	var iconHTML = SpellIcons.spellIconSVG(spell, 52)
 	var cdText = ("<span class=\"stt-stat\">CD <b>" + JS.s(spell.get("baseCooldown")) + "</b></span>" if spell.get("baseCooldown") > 1 else ("<span class=\"stt-stat\" style=\"color:#c8a060;\">✦ Free</span>" if JS.eq(spell.get("baseCooldown"), 0) else ""))
 	var ppText = ("<span class=\"stt-stat\">PP <b>" + JS.s(JS.or_(spell.get("currentPP"), 0)) + "/" + JS.s(spell.get("maxPP")) + "</b></span>" if spell.get("maxPP") != null else "")
-	var dmgText = ("<span class=\"stt-stat\">" + JS.s(hintText) + "</span>" if (JS.t(hintText) and hintText != "No PP") else "")
+	var dmgText = ("<span class=\"stt-stat\">" + JS.s(hintText) + "</span>" if (JS.t(hintText) and not JS.eq(hintText, "No PP")) else "")
 	tip.innerHTML = ("<div class=\"stt-header\" style=\"border-color:" + JS.s(rarityColor) + "33;\">") + ("<div class=\"stt-icon\">" + iconHTML + "</div>") + "<div class=\"stt-title-block\">" + ("<div class=\"stt-name\" style=\"color:#f0f0f8;\">" + JS.s(spell.get("name")) + "</div>") + "<div class=\"stt-badges\">" + ("<span class=\"stt-elem\" style=\"color:" + elemColor + ";\">" + (JS.or_(spell.get("element"), "")) + "</span>") + ("<span class=\"stt-rarity\" style=\"color:" + JS.s(rarityColor) + ";\">" + JS.s(rarityLabel) + "</span>" if JS.t(rarityLabel) else "") + "</div>" + "</div>" + "</div>" + ("<div class=\"stt-desc\">" + JS.s(spell.get("desc")) + "</div>" if JS.t(spell.get("desc")) else "") + ("<div class=\"stt-stats\">" + cdText + ppText + dmgText + "</div>")
 	# Position above the card
 	var rect = cardEl.getBoundingClientRect()
@@ -1600,7 +1600,7 @@ func _renderCardHand(isMyTurn = null, queueFull = null, cdPreviewReduce = null):
 					_doCardQueueSpell[0].call(chosen)
 				_showAirPriorityPopup(spell.get("pickPriority"), _fn40)
 				return
-			if ((Main.hasPassive("air_pressure_launch") and State.playerElement == "Air") and (JS.or_(State.status.get("player").get("momentumStacks"), 0)) >= 10):
+			if ((Main.hasPassive("air_pressure_launch") and JS.eq(State.playerElement, "Air")) and (JS.or_(State.status.get("player").get("momentumStacks"), 0)) >= 10):
 				var _fn41 = func(chosen = null):
 					_doCardQueueSpell[0].call(chosen)
 				_showAirPriorityPopup([{"label": "+1 (fast)", "value": 1}, {"label": "−1 (slow)", "value": -1}], _fn41)

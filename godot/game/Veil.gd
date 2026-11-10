@@ -56,7 +56,7 @@ func _renderVeilContent(content = null):
 
 func _veilBtnStyle(active = null, type_ = null):
 	var base = "padding:3px 9px;border-radius:4px;font-size:.63rem;cursor:pointer;\n                font-family:'Cinzel',serif;transition:all .15s;"
-	if (JS.t(active) and type_ == "off"):
+	if (JS.t(active) and JS.eq(type_, "off")):
 		return base + "background:#2a0040;border:1px solid #8040cc;color:#c080ff;"
 	if JS.t(active):
 		return base + "background:#4020aa;border:1px solid #c080ff;color:#fff;"

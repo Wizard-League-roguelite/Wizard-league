@@ -278,11 +278,11 @@ func incantationStatDisplay(spellObj = null):
 	var curLevel = JS.or_(spellObj.get("incantationLevel"), 1)
 	var val = base + _incantationBonus(curLevel, cfg.get("baseScale"), cfg.get("decay"))
 	var fmt = null
-	if (cfg.get("scaledStat") == "rootChance" or cfg.get("scaledStat") == "lifeStealPct"):
+	if (JS.eq(cfg.get("scaledStat"), "rootChance") or JS.eq(cfg.get("scaledStat"), "lifeStealPct")):
 		fmt = JS.s(JS.round(val * 100)) + "%"
-	elif cfg.get("scaledStat") == "multiplier":
+	elif JS.eq(cfg.get("scaledStat"), "multiplier"):
 		fmt = "×" + JS.toFixed(val, 2)
-	elif ((cfg.get("scaledStat") == "frostStacks" or cfg.get("scaledStat") == "shockStacks") or cfg.get("scaledStat") == "frostApplied"):
+	elif ((JS.eq(cfg.get("scaledStat"), "frostStacks") or JS.eq(cfg.get("scaledStat"), "shockStacks")) or JS.eq(cfg.get("scaledStat"), "frostApplied")):
 		fmt = JS.toFixed(val, 1)
 	elif ((JS.typeof_(base)) == "number" and not JS.isInteger(base)):
 		fmt = JS.toFixed(val, 1)
@@ -304,11 +304,11 @@ func incantationUpgradeDisplay(spellObj = null):
 	var prevVal = base + prevBonus
 	var nextVal = base + nextBonus
 	var _fn1 = func(v = null):
-		if (cfg.get("scaledStat") == "rootChance" or cfg.get("scaledStat") == "lifeStealPct"):
+		if (JS.eq(cfg.get("scaledStat"), "rootChance") or JS.eq(cfg.get("scaledStat"), "lifeStealPct")):
 			return JS.s(JS.round(v * 100)) + "%"
-		if cfg.get("scaledStat") == "multiplier":
+		if JS.eq(cfg.get("scaledStat"), "multiplier"):
 			return "×" + JS.toFixed(v, 2)
-		if (cfg.get("scaledStat") == "frostStacks" or cfg.get("scaledStat") == "shockStacks"):
+		if (JS.eq(cfg.get("scaledStat"), "frostStacks") or JS.eq(cfg.get("scaledStat"), "shockStacks")):
 			return JS.toFixed(v, 1)
 		if ((JS.typeof_(base)) == "number" and not JS.isInteger(base)):
 			return JS.toFixed(v, 1)

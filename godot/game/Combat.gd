@@ -272,7 +272,7 @@ func startRound():
 		JS.setTimeout(startRound, delay[0] + 200)
 		return
 	# ── Air: Wind Wall delayed damage fires at round start ──
-	if ((State.playerElement == "Air" and (JS.or_(State.status.get("player").get("windWallPending"), 0)) > 0) and not JS.t(State.combat.get("over"))):
+	if ((JS.eq(State.playerElement, "Air") and (JS.or_(State.status.get("player").get("windWallPending"), 0)) > 0) and not JS.t(State.combat.get("over"))):
 		var wpDmg = State.status.get("player").get("windWallPending")
 		State.status.get("player").windWallPending = 0
 		var anyEnemy = JS.find(State.combat.get("enemies"), func(e = null): return JS.t(e.get("alive")))
@@ -287,24 +287,24 @@ func startRound():
 	State.combat._aoPriorityShift = 0
 	State.combat.actionsLeft = Helpers.actionsPerTurnFor("player") + Artifacts.artifactExtraActions()
 	# ── Air: Slipstream talent — bonus action every N turns ──
-	if ((State.playerElement == "Air" and JS.t(State.player.get("_slipstreamInterval"))) and (JS.mod(State.combat.get("turnInBattle"), State.player.get("_slipstreamInterval"))) == 0):
+	if ((JS.eq(State.playerElement, "Air") and JS.t(State.player.get("_slipstreamInterval"))) and (JS.mod(State.combat.get("turnInBattle"), State.player.get("_slipstreamInterval"))) == 0):
 		State.combat.actionsLeft += 1
 		UI.log_("💨 Slipstream: +1 bonus action! (turn " + JS.s(State.combat.get("turnInBattle")) + ")", "status")
 	# ── Air: Sleeper Gust bonus actions ──
-	if (State.playerElement == "Air" and (JS.or_(State.status.get("player").get("nextTurnBonusActions"), 0)) > 0):
+	if (JS.eq(State.playerElement, "Air") and (JS.or_(State.status.get("player").get("nextTurnBonusActions"), 0)) > 0):
 		var bonus = State.status.get("player").get("nextTurnBonusActions")
 		State.combat.actionsLeft += bonus
 		UI.log_("💨 +" + JS.s(bonus) + " bonus action" + ("s" if bonus > 1 else "") + " from Sleeper Gust!", "status")
 		State.status.get("player").nextTurnBonusActions = 0
 	# ── Duo: Thermal Draft (Air+Fire) — Momentum from total enemy Burn ──
-	if (Main.hasPassive("duo_thermal_draft") and State.playerElement == "Air"):
+	if (Main.hasPassive("duo_thermal_draft") and JS.eq(State.playerElement, "Air")):
 		var totalBurn = JS.reduce(State.combat.get("enemies"), func(s = null, e = null): return s + (JS.or_(e.get("status").get("burnStacks"), 0) if JS.t(e.get("alive")) else 0), 0)
 		var momGain = JS.round(totalBurn * 0.15)
 		if momGain > 0:
 			Helpers.addMomentumStacks(momGain)
 			UI.log_("🔥💨 Thermal Draft: +" + JS.s(momGain) + " Momentum (" + JS.s(totalBurn) + " Burn).", "status")
 	# ── Air: Tailwind Carry bonus action ──
-	if (State.playerElement == "Air" and JS.t(State.combat.get("_tailwindBonusNextTurn"))):
+	if (JS.eq(State.playerElement, "Air") and JS.t(State.combat.get("_tailwindBonusNextTurn"))):
 		State.combat._tailwindBonusNextTurn = false
 		State.combat.actionsLeft += 1
 		State.combat._tailwindBonusActionPriority = JS.or_(State.combat.get("_tailwindBonusPriority"), 1)
@@ -318,7 +318,7 @@ func startRound():
 	State.combat.plasmaChargeReserved = 0
 	# reset reserved charge each new round
 	# ── Plasma: round-start charge management ──
-	if State.playerElement == "Plasma":
+	if JS.eq(State.playerElement, "Plasma"):
 		# Stall regain
 		if JS.t(State.status.get("player").get("stallActive")):
 			State.status.get("player").stallActive = false
@@ -378,7 +378,7 @@ func startRound():
 
 # ── Air: extra priority added to each queued action ─────────────────────────
 func _airQueuePriorityBonus():
-	if State.playerElement != "Air":
+	if not JS.eq(State.playerElement, "Air"):
 		return 0
 	var bonus = 0
 	# Prevailing Wind: permanent +1 or -1 for all actions
@@ -817,7 +817,7 @@ func resolveFlat(flatActions = null, idx = null, chainGen = null):
 			_tickAfterburn("after")
 			State.combat._afterburnActive = false
 		# Tailwind Carry: all player actions went first → bonus action next turn
-		if (((not JS.t(State.combat.get("over")) and Main.hasPassive("air_tailwind_carry")) and State.playerElement == "Air") and JS.t(State.combat.get("_tailwindAllFirst"))):
+		if (((not JS.t(State.combat.get("over")) and Main.hasPassive("air_tailwind_carry")) and JS.eq(State.playerElement, "Air")) and JS.t(State.combat.get("_tailwindAllFirst"))):
 			var _tcChoice = JS.or_(State.player.get("_tailwindCarryChoice"), "fast")
 			State.combat._tailwindBonusPriority = (-1 if _tcChoice == "slow" else 1)
 			State.combat._tailwindBonusNextTurn = true
@@ -853,7 +853,7 @@ func resolveFlat(flatActions = null, idx = null, chainGen = null):
 		var _prevWasPlayer = (idx > 0 and JS.idx(flatActions, idx - 1).get("p").get("id") == "player")
 		if not _prevWasPlayer:
 			State.combat._vortexUsedThisSequence = false
-		State.combat._vortexStrikeActive = (((Main.hasPassive("air_vortex_strike") and State.playerElement == "Air") and _prevWasPlayer) and not JS.t(State.combat.get("_vortexUsedThisSequence")))
+		State.combat._vortexStrikeActive = (((Main.hasPassive("air_vortex_strike") and JS.eq(State.playerElement, "Air")) and _prevWasPlayer) and not JS.t(State.combat.get("_vortexUsedThisSequence")))
 		if JS.t(State.combat.get("_vortexStrikeActive")):
 			State.combat._vortexUsedThisSequence = true
 			UI.log_("🌀 Vortex Strike! +50% damage.", "status")
@@ -862,11 +862,11 @@ func resolveFlat(flatActions = null, idx = null, chainGen = null):
 		State.combat._vortexStrikeActive = false
 		State.combat._queueAbsPrioritySum = (JS.or_(State.combat.get("_queueAbsPrioritySum"), 0)) + abs(JS.or_(action.get("priority"), 0))
 		# Headwind: bonus hit when acting first (EAB=0)
-		if ((((not JS.t(State.combat.get("over")) and State.playerElement == "Air") and Main.hasPassive("air_headwind")) and (JS.or_(JS.idx(flatActions, idx).get("enemyActionsBefore"), 0)) == 0) and not JS.t(isPlasmaFinal)):
+		if ((((not JS.t(State.combat.get("over")) and JS.eq(State.playerElement, "Air")) and Main.hasPassive("air_headwind")) and (JS.or_(JS.idx(flatActions, idx).get("enemyActionsBefore"), 0)) == 0) and not JS.t(isPlasmaFinal)):
 			var _hwDmg = JS.round(10 + (Helpers.attackPowerFor("player", "enemy") * 0.5))
 			Hit.applyDirectDamage("player", "enemy", _hwDmg, "💨 Headwind")
 		# Turbulence: momentum from enemy actions before
-		if (((not JS.t(State.combat.get("over")) and State.playerElement == "Air") and Main.hasPassive("air_turbulence")) and not JS.t(isPlasmaFinal)):
+		if (((not JS.t(State.combat.get("over")) and JS.eq(State.playerElement, "Air")) and Main.hasPassive("air_turbulence")) and not JS.t(isPlasmaFinal)):
 			var _turbGain = min(2, JS.or_(JS.idx(flatActions, idx).get("enemyActionsBefore"), 0)) * 2
 			if _turbGain > 0:
 				Helpers.addMomentumStacks(_turbGain)
@@ -921,7 +921,7 @@ func _liveAttackHint(idx = null, baseDmg = null, el = null):
 	State.combat.activeEnemyIdx = prevIdx
 	var dmg = max(0, JS.round(baseDmg + ap))
 	# Zone bonus
-	if ((JS.t(State.combat.get("activeZoneElement")) and dmg > 0) and Helpers.primaryElement(JS.or_(e.get("element"), "")) == State.combat.get("activeZoneElement")):
+	if ((JS.t(State.combat.get("activeZoneElement")) and dmg > 0) and JS.eq(Helpers.primaryElement(JS.or_(e.get("element"), "")), State.combat.get("activeZoneElement"))):
 		dmg = JS.round(dmg * 1.2)
 	# Enemy shock reduces their outgoing damage
 	var shockStacks = JS.or_(es.get("shockStacks"), 0)

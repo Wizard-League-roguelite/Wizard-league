@@ -657,9 +657,9 @@ func drawBattleBG(ctx = null, W = null, H = null):
 # ═══ CHARACTER SPRITE SELECTOR ════════════════════════════════════════════════
 func getPlayerCharSprite(charId = null):
 	var id = (charId if charId != null else Characters.playerCharId)
-	if (id == "battlemage" or id == "warrior"):
+	if (JS.eq(id, "battlemage") or JS.eq(id, "warrior")):
 		return SpriteData.SPRITE_CHAR_WARRIOR
-	if (id == "hexblade" or id == "rogue"):
+	if (JS.eq(id, "hexblade") or JS.eq(id, "rogue")):
 		return SpriteData.SPRITE_CHAR_ROGUE
 	return SpriteData.SPRITE_CHAR_MAGE
 
@@ -715,7 +715,7 @@ func triggerHitFlash(defenderSide = null, enemyIdx = null):
 		"side": defenderSide,
 		"idx": (enemyIdx if enemyIdx != null else State.combat.get("activeEnemyIdx")),
 		"frames": 10,
-		"color": ("#FF3322" if defenderSide == "player" else "#FFAA33"),
+		"color": ("#FF3322" if JS.eq(defenderSide, "player") else "#FFAA33"),
 	})
 
 # Draws a perspective ground band from horizon line to player ground line (H*0.90)
@@ -1336,7 +1336,7 @@ func renderBattlefield():
 		for flash in JS.iter(State.combat.get("hitFlashes")):
 			if flash.get("frames") <= 0:
 				continue
-			var rect = (playerSpritePos(W, H) if flash.get("side") == "player" else enemySpritePos(flash.get("idx"), allE, W, H))
+			var rect = (playerSpritePos(W, H) if JS.eq(flash.get("side"), "player") else enemySpritePos(flash.get("idx"), allE, W, H))
 			ctx.save()
 			ctx.globalAlpha = (flash.get("frames") / 10.0) * 0.6
 			ctx.fillStyle = flash.get("color")

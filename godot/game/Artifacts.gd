@@ -336,12 +336,12 @@ func artifactExtraActions():
 		return 0
 	var star = JS.or_(a.get("star"), 0)
 	var extra = 0
-	if activeId == "battle_rhythm":
+	if JS.eq(activeId, "battle_rhythm"):
 		var interval = (1 if star >= 3 else (2 if star >= 1 else 3))
 		var t = JS.or_(State.combat.get("turnInBattle"), 0)
 		if (t > 0 and (JS.mod(t, interval)) == 0):
 			extra += 1
-	if activeId == "quick_hands":
+	if JS.eq(activeId, "quick_hands"):
 		if star >= 3:
 			extra += 1
 		else:
@@ -353,7 +353,7 @@ func artifactExtraActions():
 # Called from endBattle(won=true) — warlord's banner (only if active)
 func applyBannerReward():
 	var meta = getMeta()
-	if meta.get("activeArtifactId") != "warlords_banner":
+	if not JS.eq(meta.get("activeArtifactId"), "warlords_banner"):
 		return
 	var a = JS.find(JS.or_(meta.get("artifacts"), []), func(x = null): return x.get("id") == "warlords_banner")
 	if not JS.t(a):

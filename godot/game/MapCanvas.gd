@@ -385,11 +385,11 @@ func makeGymCard(forced = null):
 func makeSpecialCard(type_ = null):
 	var card = document.createElement("div")
 	card.className = "special-card"
-	if type_ == "campfire":
+	if JS.eq(type_, "campfire"):
 		card.classList.add("card-campfire")
 		card.innerHTML = "<div class=\"enc-left\"><div class=\"enc-name\" style=\"color:#d4822a\">🔥 Campfire</div><div class=\"enc-desc\" style=\"color:#7a5a2a\">Recover 50% HP</div></div><div class=\"enc-right\" style=\"color:#7a5a2a\">REST</div>"
 		card.onclick = func(): return ShopCampfire.enterCampfire()
-	elif type_ == "rival":
+	elif JS.eq(type_, "rival"):
 		var rHP = GymRival.rivalHP()
 		var rDmg = GymRival.rivalDmg()
 		card.style.borderColor = "#3a1a6a"
@@ -492,7 +492,7 @@ func generateZoneGraph():
 					rewardType = JS.or_(JS.idx(_startRewards, ci), "minor")
 				else:
 					rewardType = BattleReward.getZoneRewardType(t, State.currentGymIdx, ci)
-					if rewardType == "primary_spell":
+					if JS.eq(rewardType, "primary_spell"):
 						rewardType = "spell"
 				enc = _pickZoneGraphEnc(zoneEl)
 				enc._rewardType = rewardType

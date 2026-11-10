@@ -434,8 +434,8 @@ func _boot():
 	}
 
 func ktGetBudget(meta = null, type_ = null):
-	var key = ("ktBudgetElementalLevel" if type_ == "elemental" else "ktBudgetGeneralLevel")
-	var base = (KT_ELEMENTAL_BUDGET_BASE if type_ == "elemental" else KT_GENERAL_BUDGET_BASE)
+	var key = ("ktBudgetElementalLevel" if JS.eq(type_, "elemental") else "ktBudgetGeneralLevel")
+	var base = (KT_ELEMENTAL_BUDGET_BASE if JS.eq(type_, "elemental") else KT_GENERAL_BUDGET_BASE)
 	var lvl = min(JS.or_(JS.idx(meta, key), 0), len(KT_BUDGET_UPGRADE_COSTS))
 	var budget = base + (lvl * KT_BUDGET_PER_UPGRADE)
 	if JS.includes(JS.or_(meta.get("ktEquipped"), []), "kt_abundance"):
@@ -446,7 +446,7 @@ func ktGetBudget(meta = null, type_ = null):
 
 func ktPhoresUsed(meta = null, type_ = null):
 	var equipped = JS.or_(meta.get("ktEquipped"), [])
-	var pool = (JS.flat(JS.values(KT_ELEMENTAL_CARDS)) if type_ == "elemental" else KT_GENERAL_CARDS)
+	var pool = (JS.flat(JS.values(KT_ELEMENTAL_CARDS)) if JS.eq(type_, "elemental") else KT_GENERAL_CARDS)
 	var _fn1 = func(sum = null, id = null):
 		var card = JS.find(pool, func(c = null): return JS.eq(c.id, id))
 		return sum + (card.get("phorosCost") if JS.t(card) else 0)
@@ -551,7 +551,7 @@ func ktEquipCard(cardId = null):
 # ── Expand a budget pool (Phos) ──────────────────────────────────────────────
 func ktUpgradeBudget(type_ = null):
 	var meta = Artifacts.getMeta()
-	var key = ("ktBudgetElementalLevel" if type_ == "elemental" else "ktBudgetGeneralLevel")
+	var key = ("ktBudgetElementalLevel" if JS.eq(type_, "elemental") else "ktBudgetGeneralLevel")
 	var lvl = JS.or_(JS.idx(meta, key), 0)
 	if lvl >= len(KT_BUDGET_UPGRADE_COSTS):
 		return false

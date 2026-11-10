@@ -36,7 +36,7 @@ func _isPlasmaPassive(passiveId = null):
 
 # Returns the subset of player.spellbooks that can accept the given spell.
 func _validDestBooksFor(kind = null, itemDef = null):
-	if kind == "passive":
+	if JS.eq(kind, "passive"):
 		return []
 	# passives are global, not book-routed
 	var isPlasmaAbility = (itemDef.get("isPlasmaAbility") if JS.t(itemDef) else itemDef)
@@ -48,7 +48,7 @@ func _validDestBooksFor(kind = null, itemDef = null):
 	return JS.arr(JS.map(State.player.get("spellbooks"), func(b = null, idx = null): return {"b": b, "idx": idx})).filter(_fn1)
 
 func _pickBookDest(kind = null, itemDef = null, cb = null):
-	if kind == "passive":
+	if JS.eq(kind, "passive"):
 		cb.call(null)
 		return
 	# passives are global
@@ -64,7 +64,7 @@ func _pickBookDest(kind = null, itemDef = null, cb = null):
 	# Item preview
 	var preview = document.getElementById("bd-item-preview")
 	if JS.t(preview):
-		if kind == "passive":
+		if JS.eq(kind, "passive"):
 			var def = State._lookupPassiveDef((itemDef if (JS.typeof_(itemDef)) == "string" else itemDef.id))
 			preview.innerHTML = (JS.s(def.get("emoji")) + " <strong>" + JS.s(def.title) + "</strong>" if JS.t(def) else JS.or_(itemDef.get("id"), itemDef))
 		else:
@@ -202,7 +202,7 @@ func _beRenderPickDest():
 	backBtn.onclick = _fn7
 	var label = document.createElement("span")
 	label.style.cssText = "font-size:.68rem;color:#c8a060;font-family:'Cinzel',serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-	if item.get("kind") == "spell":
+	if JS.eq(item.get("kind"), "spell"):
 		label.textContent = "Moving: " + JS.s(item.get("spellObj").get("emoji")) + " " + JS.s(item.get("spellObj").get("name"))
 	else:
 		var def = State._lookupPassiveDef(item.id)
@@ -214,7 +214,7 @@ func _beRenderPickDest():
 	var _fn8 = func(_p0 = null):
 		var idx = JS.idx(_p0, "idx")
 		return not JS.eq(idx, item.get("srcBookIdx"))
-	var dests = JS.arr(_validDestBooksFor(item.get("kind"), (item.get("spellObj") if item.get("kind") == "spell" else item.id))).filter(_fn8)
+	var dests = JS.arr(_validDestBooksFor(item.get("kind"), (item.get("spellObj") if JS.eq(item.get("kind"), "spell") else item.id))).filter(_fn8)
 	if len(dests) == 0:
 		cont.appendChild(_beEmpty("No other valid books to move to."))
 		return
@@ -268,7 +268,7 @@ func _beRenderPickDest():
 # ── Move / swap executors ─────────────────────────────────────────────────────
 func _beDoMove(destBookIdx = null):
 	var item = _beMoveItem
-	if (not JS.t(item) or item.get("kind") != "spell"):
+	if (not JS.t(item) or not JS.eq(item.get("kind"), "spell")):
 		return
 	var src = JS.idx(State.player.get("spellbooks"), item.get("srcBookIdx"))
 	var dest = JS.idx(State.player.get("spellbooks"), destBookIdx)
@@ -284,7 +284,7 @@ func _beDoMove(destBookIdx = null):
 
 func _beDoSwap(destBookIdx = null, destItemIdx = null):
 	var item = _beMoveItem
-	if (not JS.t(item) or item.get("kind") != "spell"):
+	if (not JS.t(item) or not JS.eq(item.get("kind"), "spell")):
 		return
 	var src = JS.idx(State.player.get("spellbooks"), item.get("srcBookIdx"))
 	var dest = JS.idx(State.player.get("spellbooks"), destBookIdx)

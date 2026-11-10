@@ -74,7 +74,7 @@ func _botAct():
 	var scr = document.querySelector(".screen.active")
 	var id = (scr.id if JS.t(scr) else "none")
 	if not JS.eq(id, _botLastScreen):
-		if _botLastScreen == "combat-screen":
+		if JS.eq(_botLastScreen, "combat-screen"):
 			_botBattles += 1
 			var lines = JS.arr(JS.arr(document.querySelectorAll("#battle-log .log-line"))).map(func(l = null): return l.textContent)
 			_botRecord("LOG " + JS.join(lines, " | "))
@@ -91,7 +91,7 @@ func _botAct():
 	if (JS.t(cut) and cut.offsetWidth > 0):
 		cut.click()
 		return
-	if id == "between-runs-screen":
+	if JS.eq(id, "between-runs-screen"):
 		if JS.t(_botStarted):
 			_botRecord("RUN OVER")
 			_botDone = true
@@ -113,7 +113,7 @@ func _botAct():
 			scope = ov
 	if not JS.t(scope):
 		return
-	if (id == "combat-screen" and JS.eq(scope, scr)):
+	if (JS.eq(id, "combat-screen") and JS.eq(scope, scr)):
 		if (JS.t(State.combat.get("over")) or not JS.t(State.combat.get("playerTurn"))):
 			return
 		if JS.t(_botGod):
@@ -137,7 +137,7 @@ func _botAct():
 		_botRecord("END hp=" + JS.s(State.player.get("hp")) + " enemy=" + JS.join(JS.arr(State.combat.get("enemies")).map(func(e = null): return e.get("hp")), "/"))
 		Combat.commitEndTurn()
 		return
-	var cands = JS.arr(JS.arr(scope.querySelectorAll("*"))).filter(func(el = null): return (((not (not JS.t(el.get("onclick"))) or el.get("tagName") == "BUTTON") and _botVisible(el)) and not _botAvoided(el)))
+	var cands = JS.arr(JS.arr(scope.querySelectorAll("*"))).filter(func(el = null): return (((not (not JS.t(el.get("onclick"))) or JS.eq(el.get("tagName"), "BUTTON")) and _botVisible(el)) and not _botAvoided(el)))
 	if not JS.t(len(cands)):
 		return
 	# walk through the clickable elements in turn until the screen changes

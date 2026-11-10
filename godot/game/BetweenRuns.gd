@@ -54,18 +54,18 @@ func switchBrunTab(tab = null, btnEl = null):
 	if not JS.t(content):
 		return
 	var meta = Artifacts.getMeta()
-	if tab == "history":
+	if JS.eq(tab, "history"):
 		var history = JS.or_(meta.get("runHistory"), [])
 		if not JS.t(len(history)):
 			content.innerHTML = "<div class=\"brun-empty\">No runs recorded yet.</div>"
 			return
 		content.innerHTML = JS.join(JS.arr(history).map(func(r = null): return "\n      <div class=\"brun-hist-row\">\n        <div class=\"brun-hist-el\">" + (JS.or_(r.get("emoji"), "⚔")) + " " + (JS.or_(r.get("element"), "?")) + " <span style=\"color:#4a6a8a;font-size:.6rem;margin-left:.3rem;\">" + ("→ " + JS.s(r.get("zone")) + " Zone" if (JS.t(r.get("zone")) and not JS.eq(r.get("zone"), r.get("element"))) else "") + "</span></div>\n        <div class=\"brun-hist-stats\">\n          <span>" + JS.s(JS.or_(r.get("battles"), 0)) + " battles</span>\n          <span>" + JS.s(JS.or_(JS.or_(r.get("rooms"), r.get("battles")), 0)) + " rooms</span>\n          <span style=\"color:#c8a830\">" + JS.s(JS.or_(r.get("gold"), 0)) + "g</span>\n          <span style=\"color:#a080ff\">" + JS.s(JS.or_(r.get("phos"), 0)) + "✦</span>\n        </div>\n        <div class=\"brun-hist-details\" style=\"display:flex;gap:.8rem;font-size:.6rem;color:#555;margin-top:.2rem;\">\n          <span>⚔ " + JS.s(JS.or_(r.get("dmgDealt"), 0)) + " dealt</span>\n          <span>🛡 " + JS.s(JS.or_(r.get("dmgTaken"), 0)) + " taken</span>\n          <span>📚 " + JS.s(JS.or_(r.get("spells"), 0)) + " spells</span>\n        </div>\n        <div class=\"brun-hist-date\">" + (JS.or_(r.get("date"), "")) + "</div>\n      </div>"), "")
-	elif tab == "artifacts":
+	elif JS.eq(tab, "artifacts"):
 		Artifacts.markArtifactsSeen()
 		renderArtifactVaultTab(content, meta)
-	elif tab == "talents":
+	elif JS.eq(tab, "talents"):
 		renderKnowledgeTreeTab(content, meta)
-	elif tab == "books":
+	elif JS.eq(tab, "books"):
 		renderBookUpgradesTab(content, meta)
 
 # ── Artifact Vault Tab ────────────────────────────────────────────────────────
@@ -221,7 +221,7 @@ func _rerenderBookPanel():
 	if JS.t(c1):
 		renderBookUpgradesTab(c1, freshMeta)
 	var c2 = document.getElementById("lobby-panel-content")
-	if (JS.t(c2) and c2.style.get("display") != "none"):
+	if (JS.t(c2) and not JS.eq(c2.style.get("display"), "none")):
 		renderBookUpgradesTab(c2, freshMeta)
 
 func equipStartingBook(id = null):
@@ -243,10 +243,10 @@ func purchaseBookSlotUpgrade(bookKey = null, type_ = null):
 	if not JS.t(JS.idx(meta.get("bookSlotUpgrades"), bookKey)):
 		meta.get("bookSlotUpgrades")[bookKey] = {}
 	var current = JS.or_(JS.idx(JS.idx(meta.get("bookSlotUpgrades"), bookKey), type_), 0)
-	var max_ = (BOOK_SLOT_MAX_SPELL if type_ == "spellSlots" else BOOK_SLOT_MAX_PASSIVE)
+	var max_ = (BOOK_SLOT_MAX_SPELL if JS.eq(type_, "spellSlots") else BOOK_SLOT_MAX_PASSIVE)
 	if current >= max_:
 		return
-	var cost = (_spellSlotCost if type_ == "spellSlots" else _passiveSlotCost).call(current)
+	var cost = (_spellSlotCost if JS.eq(type_, "spellSlots") else _passiveSlotCost).call(current)
 	if (JS.or_(meta.get("phos"), 0)) < cost:
 		return
 	meta.phos -= cost
@@ -270,7 +270,7 @@ func renderTalentTab(content = null, meta = null):
 	html[0] = "<div class=\"talent-phos-bar\">\n    <span>✦ Phos Available</span>\n    <span class=\"talent-phos-val\" id=\"talent-phos-display\">" + JS.s(phos) + "</span>\n  </div>"
 	# Section picker buttons — non-sandbox hides unreleased element sections
 	var allSections = JS.keys(Talents.TALENT_TREE)
-	var sections = (allSections if JS.t(Constants.sandboxMode) else JS.arr(allSections).filter(func(k = null): return (k == "universal" or JS.includes(Constants.RELEASED_ELEMENTS, k))))
+	var sections = (allSections if JS.t(Constants.sandboxMode) else JS.arr(allSections).filter(func(k = null): return (JS.eq(k, "universal") or JS.includes(Constants.RELEASED_ELEMENTS, k))))
 	html[0] += "<div class=\"talent-section-tabs\" id=\"talent-section-tabs\">"
 	var _arr4 = JS.iter(sections)
 	for i in range(len(_arr4)):
@@ -326,7 +326,7 @@ func buyTalent(nodeId = null):
 
 # ── Knowledge Tree ────────────────────────────────────────────────────────────
 func _ktBudgetRowHTML(type_ = null, meta = null):
-	var isEl = type_ == "elemental"
+	var isEl = JS.eq(type_, "elemental")
 	var label = ("Elemental" if isEl else "General")
 	var pool = (JS.flat(JS.values(KnowledgeTree.KT_ELEMENTAL_CARDS)) if isEl else KnowledgeTree.KT_GENERAL_CARDS)
 	var budget = KnowledgeTree.ktGetBudget(meta, type_)
@@ -358,7 +358,7 @@ func switchKtSubTab(tab = null, btnEl = null):
 	if not JS.t(area):
 		return
 	var meta = Artifacts.getMeta()
-	if tab == "general":
+	if JS.eq(tab, "general"):
 		renderKtGeneral(area, meta)
 	else:
 		renderKtElemental(area, meta)

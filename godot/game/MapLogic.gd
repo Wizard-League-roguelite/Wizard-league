@@ -715,13 +715,13 @@ func switchCombatTab(tab = null):
 	for t in JS.iter(["actions", "log", "runinfo"]):
 		JS.callm_opt(JS.g(JS.callm_opt(document, "getElementById", ["ctab-" + JS.s(t)]), "classList"), "toggle", ["active", JS.eq(t, tab)])
 		JS.callm_opt(JS.g(JS.callm_opt(document, "getElementById", ["ctabp-" + JS.s(t)]), "classList"), "toggle", ["active", JS.eq(t, tab)])
-	if tab == "log":
+	if JS.eq(tab, "log"):
 		_logHasNew = false
 		_updateLogBadge(false)
 		var log_ = document.getElementById("battle-log")
 		if JS.t(log_):
 			log_.scrollTop = log_.scrollHeight
-	if tab == "runinfo":
+	if JS.eq(tab, "runinfo"):
 		renderRunInfo()
 
 func _updateLogBadge(hasNew = null):
@@ -760,17 +760,17 @@ func switchBipTab(tab = null, btnEl = null):
 	var panel = document.getElementById("bip-" + JS.s(tab))
 	if JS.t(panel):
 		panel.classList.add("active")
-	if tab == "log":
+	if JS.eq(tab, "log"):
 		var src = document.getElementById("battle-log")
 		var dest = document.getElementById("bip-log")
 		if (JS.t(src) and JS.t(dest)):
 			dest.innerHTML = src.innerHTML
 			dest.scrollTop = dest.scrollHeight
-	elif tab == "stats":
+	elif JS.eq(tab, "stats"):
 		renderRunInfo(document.getElementById("bip-stats"))
-	elif tab == "library":
+	elif JS.eq(tab, "library"):
 		Library._libRoot = document.getElementById("bip-library")
-		var visibleEls = (JS.arr(Library.LIBRARY_ELEMENTS).filter(func(el = null): return (JS.includes(Constants.RELEASED_ELEMENTS, el) or el == "Duo")) if not JS.t(Constants.sandboxMode) else Library.LIBRARY_ELEMENTS)
+		var visibleEls = (JS.arr(Library.LIBRARY_ELEMENTS).filter(func(el = null): return (JS.includes(Constants.RELEASED_ELEMENTS, el) or JS.eq(el, "Duo"))) if not JS.t(Constants.sandboxMode) else Library.LIBRARY_ELEMENTS)
 		if (not JS.t(Library._libActiveEl) or not JS.includes(visibleEls, Library._libActiveEl)):
 			Library._libActiveEl = JS.idx(visibleEls, 0)
 		Library._libRender()

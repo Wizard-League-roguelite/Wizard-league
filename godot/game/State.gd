@@ -268,7 +268,7 @@ func initSpellbooksForRun():
 	player.passiveSlots = 6
 	# global cap, expandable via rewards
 	# Plasma players always start with a dedicated Plasma Abilities book
-	if playerElement == "Plasma":
+	if JS.eq(playerElement, "Plasma"):
 		ensurePlasmaBook()
 	syncActiveBook()
 
@@ -343,7 +343,7 @@ func addPassiveToBook(passiveId = null):
 		return
 	player.get("passives").append(passiveId)
 	Library.markPassiveSeen(passiveId)
-	if passiveId == "air_tailwind":
+	if JS.eq(passiveId, "air_tailwind"):
 		player.attackPower += 15
 
 func showPassiveOverflowScreen(passiveId = null):

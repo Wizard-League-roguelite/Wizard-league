@@ -1504,7 +1504,7 @@ func updateChargeUI():
 	var txt = document.getElementById("plasma-charge-txt")
 	if not JS.t(wrap_):
 		return
-	if State.playerElement != "Plasma":
+	if not JS.eq(State.playerElement, "Plasma"):
 		wrap_.style.display = "none"
 		return
 	wrap_.style.display = "block"
@@ -1518,7 +1518,7 @@ func updateChargeUI():
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 func giveStarterSpell():
-	if State.playerElement == "Plasma":
+	if JS.eq(State.playerElement, "Plasma"):
 		# Plasma starts with all primary abilities — check all books to avoid duplicates
 		for s in JS.iter(JS.values(SPELL_CATALOGUE)):
 			if (s.get("element") == "Plasma" and s.get("tier") == "primary"):

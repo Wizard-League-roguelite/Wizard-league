@@ -277,7 +277,7 @@ func getWizColorMap():
 	var staffClr = JS.or_(JS.find(WIZ_STAFF_COLORS, func(c = null): return JS.eq(c.id, b.get("staffColor"))), JS.idx(WIZ_STAFF_COLORS, 0))
 	var glowClr = JS.or_(JS.find(WIZ_STAFF_GLOWS, func(g = null): return JS.eq(g.id, b.get("staffGlow"))), JS.idx(WIZ_STAFF_GLOWS, 0))
 	var eyeClr = JS.or_(JS.find(WIZ_EYE_COLORS, func(e = null): return JS.eq(e.id, b.get("eyeColor"))), JS.idx(WIZ_EYE_COLORS, 0))
-	var showBeard = b.get("beardStyle") != "none"
+	var showBeard = not JS.eq(b.get("beardStyle"), "none")
 	return {
 		".": null,
 		"1": outClr.get("p0"),
@@ -414,7 +414,7 @@ func _renderWizPreview():
 	if not JS.t(rows):
 		return
 	# Build full custom color map — overrides charToColor for every character
-	var showBeard = b.get("beardStyle") != "none"
+	var showBeard = not JS.eq(b.get("beardStyle"), "none")
 	var customColorMap = {
 		".": null,
 		"1": outClr.get("p0"),

@@ -799,6 +799,8 @@ class Emitter {
         const b = (L.type === 'Literal' && R.type === 'MemberExpression') ? this.safeP(R) : this.exprP(R);
         if (rt === 'bool' && lt == null || lt === 'bool' && rt == null) return (o === '!=' ? 'not ' : '') + `JS.eq(${a}, ${b})`;
         if (rt === 'number' && lt == null && R.type === 'Literal') return (o === '!=' ? 'not ' : '') + `JS.eq(${a}, ${b})`;
+        // unknown value against a string literal: GDScript errors on String == int, JS just says false
+        if ((rt === 'string' && lt == null && !isStringy(L)) || (lt === 'string' && rt == null && !isStringy(R))) return (o === '!=' ? 'not ' : '') + `JS.eq(${a}, ${b})`;
         if (lt == null && rt == null && L.type !== 'Literal' && R.type !== 'Literal') return (o === '!=' ? 'not ' : '') + `JS.eq(${this.expr(L)}, ${this.expr(R)})`;
         return `${a} ${o} ${b}`;
       }

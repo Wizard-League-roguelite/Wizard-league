@@ -197,7 +197,7 @@ func toggleRewardLog(btn = null):
 	var panel = document.getElementById("br-log-panel")
 	if not JS.t(panel):
 		return
-	var open = panel.style.get("display") != "none"
+	var open = not JS.eq(panel.style.get("display"), "none")
 	if open:
 		panel.style.display = "none"
 		btn.textContent = "📋 Battle Log ▾"
@@ -319,7 +319,7 @@ func togglePblLog(btn = null):
 	var panel = document.getElementById("pbl-log-panel")
 	if not JS.t(panel):
 		return
-	var open = panel.style.get("display") != "none"
+	var open = not JS.eq(panel.style.get("display"), "none")
 	if open:
 		panel.style.display = "none"
 		btn.textContent = "📋 Battle Log ▾"
@@ -660,9 +660,9 @@ func _renderUpgradeChoices(tier = null):
 	if not JS.t(cont):
 		return
 	cont.innerHTML = ""
-	var pool = (buildMajorUpgradePool() if tier == "major" else buildMinorUpgradePool())
+	var pool = (buildMajorUpgradePool() if JS.eq(tier, "major") else buildMinorUpgradePool())
 	# Major pool already returns exactly 3 weighted picks; minor pool needs random sampling
-	var chosen = (pool if tier == "major" else pickRandom(pool, min(4, len(pool))))
+	var chosen = (pool if JS.eq(tier, "major") else pickRandom(pool, min(4, len(pool))))
 	for opt in JS.iter(chosen):
 		var btn = document.createElement("button")
 		btn.className = "prog-choice-btn"
@@ -919,10 +919,10 @@ func showSpellChoiceScreen(level = null, tier = null, forElement = null):
 	if forElement == null:
 		forElement = null
 	var duoSpell = [null]
-	var tierLabel = ("Primary Spell" if tier == "primary" else ("✦ Legendary Spell" if tier == "legendary" else "Spell"))
+	var tierLabel = ("Primary Spell" if JS.eq(tier, "primary") else ("✦ Legendary Spell" if JS.eq(tier, "legendary") else "Spell"))
 	document.getElementById("sc-level-badge").textContent = ("Battle " + JS.s(level) if (JS.typeof_(level)) == "number" else JS.s(level))
-	document.querySelector("#spellchoice-screen .prog-title").textContent = ("✦ Legendary Card ✦" if tier == "legendary" else "✦ New Card ✦")
-	document.querySelector("#spellchoice-screen .prog-sub").textContent = ("Choose a primary card to start your journey." if tier == "primary" else ("Choose a legendary card." if tier == "legendary" else "Choose a card to add to your deck."))
+	document.querySelector("#spellchoice-screen .prog-title").textContent = ("✦ Legendary Card ✦" if JS.eq(tier, "legendary") else "✦ New Card ✦")
+	document.querySelector("#spellchoice-screen .prog-sub").textContent = ("Choose a primary card to start your journey." if JS.eq(tier, "primary") else ("Choose a legendary card." if JS.eq(tier, "legendary") else "Choose a card to add to your deck."))
 	var cont = document.getElementById("sc-choices")
 	cont.innerHTML = ""
 	var pool = buildSpellChoicePool(tier, forElement)
@@ -935,7 +935,7 @@ func showSpellChoiceScreen(level = null, tier = null, forElement = null):
 		Library.markSpellSeen(s.id)
 	# ── Duo spell: bonus 4th option (10% per eligible spell, pick one winner) ──
 	duoSpell[0] = null
-	if tier == "secondary":
+	if JS.eq(tier, "secondary"):
 		var eligible = JS.arr(Duos._eligibleDuoSpells()).filter(func(s = null): return not JS.t(JS.find(chosen, func(c = null): return JS.eq(c.id, s.id))))
 		var winners = JS.arr(eligible).filter(func(): return JS.random() < 0.1)
 		if len(winners) > 0:
@@ -1078,12 +1078,12 @@ func buildSpellChoicePool(tier = null, forElement = null):
 				continue
 			if JS.t(s.get("isStarter")):
 				continue
-			if (JS.or_(s.get("tier"), "secondary")) != tier:
+			if not JS.eq((JS.or_(s.get("tier"), "secondary")), tier):
 				continue
 			if (JS.t(s.get("requiresTag")) and not ownedTagSet.has(s.get("requiresTag"))):
 				continue
 			pool.append(s)
-	if tier == "secondary":
+	if JS.eq(tier, "secondary"):
 		for id in JS.iter(Spells.NEUTRAL_SPELL_IDS):
 			if not owned.has(id):
 				pool.append(JS.idx(Spells.SPELL_CATALOGUE, id))
@@ -1114,7 +1114,7 @@ func showElementUnlockScreen(level = null):
 		var _fn47 = func():
 			State.player.get("unlockedElements").append(el)
 			# Plasma always gets its own dedicated spellbook
-			if el == "Plasma":
+			if JS.eq(el, "Plasma"):
 				State.ensurePlasmaBook()
 			Spells.addSpellById(JS.idx(Spells.STARTER_SPELL, el))
 			# Queue: passive choice for new element, spell choice in new element, then legendary
@@ -1130,17 +1130,17 @@ func showElementUnlockScreen(level = null):
 
 # ── PASSIVE CHOICE ──
 func _applyPickupChoice(passiveId = null, value = null):
-	if passiveId == "air_prevailing_wind":
-		State.player._prevailingWindPriority = (1 if value == "fast" else -1)
-	elif passiveId == "air_tailwind_carry":
+	if JS.eq(passiveId, "air_prevailing_wind"):
+		State.player._prevailingWindPriority = (1 if JS.eq(value, "fast") else -1)
+	elif JS.eq(passiveId, "air_tailwind_carry"):
 		State.player._tailwindCarryChoice = value
-	elif passiveId == "duo_bellows":
+	elif JS.eq(passiveId, "duo_bellows"):
 		State.player._bellowsChoice = value
 
 func showPassiveChoiceScreen(level = null, forElement = null):
 	if forElement == null:
 		forElement = null
-	var badgeText = ("Rival Defeated" if level == "rival" else ("Gym Clear — New Passive" if level == "gym" else "Level " + JS.s(level) + " — New Passive"))
+	var badgeText = ("Rival Defeated" if JS.eq(level, "rival") else ("Gym Clear — New Passive" if JS.eq(level, "gym") else "Level " + JS.s(level) + " — New Passive"))
 	document.getElementById("pc-level-badge").textContent = badgeText
 	var c = document.getElementById("pc-choices")
 	c.innerHTML = ""

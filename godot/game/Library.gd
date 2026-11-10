@@ -46,12 +46,12 @@ func markPassiveSeen(id = null):
 
 # ─── DATA HELPERS ──────────────────────────────────────────────────────────
 func _libSpellsFor(el = null):
-	if el == "Duo":
+	if JS.eq(el, "Duo"):
 		return JS.arr(JS.values(Spells.SPELL_CATALOGUE)).filter(func(s = null): return s.get("tier") == "merged")
 	return JS.arr(JS.values(Spells.SPELL_CATALOGUE)).filter(func(s = null): return JS.eq(s.get("element"), el))
 
 func _libPassivesFor(el = null):
-	if el == "Duo":
+	if JS.eq(el, "Duo"):
 		return JS.or_(JS.idx(Passives.PASSIVE_CHOICES, "Duo"), [])
 	return JS.or_(JS.idx(Passives.PASSIVE_CHOICES, el), [])
 
@@ -81,7 +81,7 @@ func _libTipShow(e = null, html = null):
 
 func _libTipMove(e = null):
 	var tip = document.getElementById("lib-tooltip")
-	if (not JS.t(tip) or tip.style.get("display") == "none"):
+	if (not JS.t(tip) or JS.eq(tip.style.get("display"), "none")):
 		return
 	var margin = 12
 	var x = e.clientX + margin
@@ -114,11 +114,11 @@ func _libSpellFormulaHtml(spell = null):
 	var base = JS.idx(Incantations._INCANTATION_BASE_VALUES, spell.id)
 	if (JS.t(cfg) and base != null):
 		var label = JS.or_(JS.idx(Incantations._STAT_LABELS, cfg.get("scaledStat")), cfg.get("scaledStat"))
-		var isFloat = (((((cfg.get("scaledStat") == "frostStacks" or cfg.get("scaledStat") == "shockStacks") or cfg.get("scaledStat") == "frostApplied") or cfg.get("scaledStat") == "multiplier") or cfg.get("scaledStat") == "lifeStealPct") or cfg.get("scaledStat") == "rootChance")
+		var isFloat = (((((JS.eq(cfg.get("scaledStat"), "frostStacks") or JS.eq(cfg.get("scaledStat"), "shockStacks")) or JS.eq(cfg.get("scaledStat"), "frostApplied")) or JS.eq(cfg.get("scaledStat"), "multiplier")) or JS.eq(cfg.get("scaledStat"), "lifeStealPct")) or JS.eq(cfg.get("scaledStat"), "rootChance"))
 		var _fn1 = func(v = null):
-			if (cfg.get("scaledStat") == "rootChance" or cfg.get("scaledStat") == "lifeStealPct"):
+			if (JS.eq(cfg.get("scaledStat"), "rootChance") or JS.eq(cfg.get("scaledStat"), "lifeStealPct")):
 				return JS.s(JS.round(v * 100)) + "%"
-			if cfg.get("scaledStat") == "multiplier":
+			if JS.eq(cfg.get("scaledStat"), "multiplier"):
 				return "×" + JS.toFixed(v, 2)
 			return (JS.toFixed(v, 1) if isFloat else JS.round(v))
 		var fmtVal = _fn1
@@ -152,7 +152,7 @@ func _libGetContent():
 # ─── OVERLAY ───────────────────────────────────────────────────────────────
 func showLibrary():
 	_libRoot = null
-	var visibleEls = (JS.arr(LIBRARY_ELEMENTS).filter(func(el = null): return (JS.includes(Constants.RELEASED_ELEMENTS, el) or el == "Duo")) if not JS.t(Constants.sandboxMode) else LIBRARY_ELEMENTS)
+	var visibleEls = (JS.arr(LIBRARY_ELEMENTS).filter(func(el = null): return (JS.includes(Constants.RELEASED_ELEMENTS, el) or JS.eq(el, "Duo"))) if not JS.t(Constants.sandboxMode) else LIBRARY_ELEMENTS)
 	if (not JS.t(_libActiveEl) or not JS.includes(visibleEls, _libActiveEl)):
 		_libActiveEl = JS.idx(visibleEls, 0)
 	_libRender()
@@ -178,7 +178,7 @@ func _libRenderTabs():
 	var seenSpells = JSSet.new(JS.or_(meta.get("seenSpells"), []))
 	var seenPassives = JSSet.new(JS.or_(meta.get("seenPassives"), []))
 	# Row 1: element tabs — non-sandbox only shows released elements + Duo
-	var visibleElements = (JS.arr(LIBRARY_ELEMENTS).filter(func(el = null): return (JS.includes(Constants.RELEASED_ELEMENTS, el) or el == "Duo")) if not JS.t(Constants.sandboxMode) else LIBRARY_ELEMENTS)
+	var visibleElements = (JS.arr(LIBRARY_ELEMENTS).filter(func(el = null): return (JS.includes(Constants.RELEASED_ELEMENTS, el) or JS.eq(el, "Duo"))) if not JS.t(Constants.sandboxMode) else LIBRARY_ELEMENTS)
 	var row1 = document.createElement("div")
 	row1.style.cssText = "display:flex;gap:.25rem;"
 	for el in JS.iter(visibleElements):
@@ -234,17 +234,17 @@ func _libRenderContent():
 	var el = _libActiveEl
 	if not JS.t(el):
 		return
-	if el == "Mechanics":
+	if JS.eq(el, "Mechanics"):
 		_libRenderMechanics(cont)
 		return
-	if el == "Combat":
+	if JS.eq(el, "Combat"):
 		_libRenderCombat(cont)
 		return
 	var meta = Artifacts.getMeta()
 	var seenSpells = JSSet.new(JS.or_(meta.get("seenSpells"), []))
 	var seenPassives = JSSet.new(JS.or_(meta.get("seenPassives"), []))
 	var allSpells = _libSpellsFor(el)
-	if el == "Duo":
+	if JS.eq(el, "Duo"):
 		if len(allSpells) > 0:
 			var disc = len(JS.arr(allSpells).filter(func(s = null): return seenSpells.has(s.id)))
 			cont.appendChild(_libSectionHdr("Merged Spells", disc, len(allSpells)))
@@ -265,7 +265,7 @@ func _libRenderContent():
 	for _e5 in JS.iter(tiers):
 		var key = JS.idx(_e5, "key")
 		var label = JS.idx(_e5, "label")
-		var spells = JS.arr(allSpells).filter(func(s = null): return (JS.or_(s.get("tier"), "secondary")) == key)
+		var spells = JS.arr(allSpells).filter(func(s = null): return JS.eq((JS.or_(s.get("tier"), "secondary")), key))
 		if not JS.t(len(spells)):
 			continue
 		var revealedCount = len(JS.arr(spells).filter(func(s = null): return (JS.t(s.get("isStarter")) or seenSpells.has(s.id))))
@@ -314,7 +314,7 @@ func _libSimulateSpell(spell = null):
 		var mult = JS.or_(spell.get("dmgMult"), 1.0)
 		var perHit = JS.round((bd + simAtk) * mult)
 		# Plasma: EFX adds to damage the same way ATK does
-		var isPlasma = State.playerElement == "Plasma"
+		var isPlasma = JS.eq(State.playerElement, "Plasma")
 		if isPlasma:
 			perHit += simEfx
 		# Apply real effect formulas (mirroring performHit)

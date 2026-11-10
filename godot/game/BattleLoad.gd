@@ -153,7 +153,7 @@ func loadBattle(enc = null):
 	if (JS.or_(State.player.get("_talentStoneStart"), 0)) > 0:
 		State.status.get("player").stoneStacks = (JS.or_(State.status.get("player").get("stoneStacks"), 0)) + State.player.get("_talentStoneStart")
 	# Plasma: start each battle with 3 charge (+ Reserve Cell bonus)
-	if State.playerElement == "Plasma":
+	if JS.eq(State.playerElement, "Plasma"):
 		var startCharge = (3 + (10 if Main.hasPassive("plasma_reserve_cell") else 0)) + (JS.or_(State.player.get("_talentChargeStart"), 0))
 		State.status.get("player").plasmaCharge = startCharge
 		State.status.get("player").plasmaChargeHalf = 0

@@ -150,7 +150,7 @@ func triggerBlockAnim(variant = null):
 
 # ─── Position helpers ─────────────────────────────────────────────────────────
 func _spriteCenter(side = null, enemyIdx = null, W = null, H = null):
-	if side == "player":
+	if JS.eq(side, "player"):
 		var p = Sprites.playerSpritePos(W, H)
 		return {"x": p.get("x") + (p.get("w") / 2.0), "y": p.get("y") + (p.get("h") / 2.0)}
 		return {"x": W * 0.15, "y": H * 0.7}
@@ -162,7 +162,7 @@ func _spriteCenter(side = null, enemyIdx = null, W = null, H = null):
 # ─── FIRE: Glowing fireball with ember trail + explosion ──────────────────────
 func _drawFireball(ctx = null, a = null, W = null, H = null):
 	var from = _spriteCenter(a.get("attackerSide"), a.get("targetEnemyIdx"), W, H)
-	var toSide = ("enemy" if a.get("attackerSide") == "player" else "player")
+	var toSide = ("enemy" if JS.eq(a.get("attackerSide"), "player") else "player")
 	var to = _spriteCenter(toSide, a.get("targetEnemyIdx"), W, H)
 	var prog = a.get("t") / float(a.get("dur"))
 	var HIT = 0.76
@@ -222,7 +222,7 @@ func _drawFireball(ctx = null, a = null, W = null, H = null):
 # ─── LIGHTNING: Instant branching bolt + electric sparks ──────────────────────
 func _drawLightning(ctx = null, a = null, W = null, H = null):
 	var from = _spriteCenter(a.get("attackerSide"), a.get("targetEnemyIdx"), W, H)
-	var toSide = ("enemy" if a.get("attackerSide") == "player" else "player")
+	var toSide = ("enemy" if JS.eq(a.get("attackerSide"), "player") else "player")
 	var to = _spriteCenter(toSide, a.get("targetEnemyIdx"), W, H)
 	var prog = a.get("t") / float(a.get("dur"))
 	var fade = (1 if prog < 0.2 else max(0, 1 - ((prog - 0.2) / 0.8)))
@@ -286,7 +286,7 @@ func _drawLightning(ctx = null, a = null, W = null, H = null):
 # ─── ICE: Staggered crystal shards + shatter burst ───────────────────────────
 func _drawIceShards(ctx = null, a = null, W = null, H = null):
 	var from = _spriteCenter(a.get("attackerSide"), a.get("targetEnemyIdx"), W, H)
-	var toSide = ("enemy" if a.get("attackerSide") == "player" else "player")
+	var toSide = ("enemy" if JS.eq(a.get("attackerSide"), "player") else "player")
 	var to = _spriteCenter(toSide, a.get("targetEnemyIdx"), W, H)
 	var prog = a.get("t") / float(a.get("dur"))
 	var SHARDS = 5
@@ -349,7 +349,7 @@ func _drawIceShards(ctx = null, a = null, W = null, H = null):
 # ─── WATER: Sinusoidal wave stream + bubble splash ────────────────────────────
 func _drawWaterWave(ctx = null, a = null, W = null, H = null):
 	var from = _spriteCenter(a.get("attackerSide"), a.get("targetEnemyIdx"), W, H)
-	var toSide = ("enemy" if a.get("attackerSide") == "player" else "player")
+	var toSide = ("enemy" if JS.eq(a.get("attackerSide"), "player") else "player")
 	var to = _spriteCenter(toSide, a.get("targetEnemyIdx"), W, H)
 	var prog = a.get("t") / float(a.get("dur"))
 	var HIT = 0.74
@@ -407,7 +407,7 @@ func _drawWaterWave(ctx = null, a = null, W = null, H = null):
 # ─── EARTH: Tumbling rocks with dust + shockwave ──────────────────────────────
 func _drawEarthSlam(ctx = null, a = null, W = null, H = null):
 	var from = _spriteCenter(a.get("attackerSide"), a.get("targetEnemyIdx"), W, H)
-	var toSide = ("enemy" if a.get("attackerSide") == "player" else "player")
+	var toSide = ("enemy" if JS.eq(a.get("attackerSide"), "player") else "player")
 	var to = _spriteCenter(toSide, a.get("targetEnemyIdx"), W, H)
 	var prog = a.get("t") / float(a.get("dur"))
 	var HIT = 0.7
@@ -473,7 +473,7 @@ func _drawEarthSlam(ctx = null, a = null, W = null, H = null):
 # ─── NATURE: Growing vine tendrils + thorn burst ─────────────────────────────
 func _drawVineLash(ctx = null, a = null, W = null, H = null):
 	var from = _spriteCenter(a.get("attackerSide"), a.get("targetEnemyIdx"), W, H)
-	var toSide = ("enemy" if a.get("attackerSide") == "player" else "player")
+	var toSide = ("enemy" if JS.eq(a.get("attackerSide"), "player") else "player")
 	var to = _spriteCenter(toSide, a.get("targetEnemyIdx"), W, H)
 	var prog = a.get("t") / float(a.get("dur"))
 	var HIT = 0.7
@@ -548,7 +548,7 @@ func _drawVineLash(ctx = null, a = null, W = null, H = null):
 # ─── PLASMA: Pulsing orb with orbiting satellites + ring explosion ─────────────
 func _drawPlasmaOrb(ctx = null, a = null, W = null, H = null):
 	var from = _spriteCenter(a.get("attackerSide"), a.get("targetEnemyIdx"), W, H)
-	var toSide = ("enemy" if a.get("attackerSide") == "player" else "player")
+	var toSide = ("enemy" if JS.eq(a.get("attackerSide"), "player") else "player")
 	var to = _spriteCenter(toSide, a.get("targetEnemyIdx"), W, H)
 	var prog = a.get("t") / float(a.get("dur"))
 	var HIT = 0.74
@@ -621,7 +621,7 @@ func _drawPlasmaOrb(ctx = null, a = null, W = null, H = null):
 # ─── AIR: Wind slash streaks + swirl burst ────────────────────────────────────
 func _drawWindSlash(ctx = null, a = null, W = null, H = null):
 	var from = _spriteCenter(a.get("attackerSide"), a.get("targetEnemyIdx"), W, H)
-	var toSide = ("enemy" if a.get("attackerSide") == "player" else "player")
+	var toSide = ("enemy" if JS.eq(a.get("attackerSide"), "player") else "player")
 	var to = _spriteCenter(toSide, a.get("targetEnemyIdx"), W, H)
 	var prog = a.get("t") / float(a.get("dur"))
 	var HIT = 0.66
@@ -695,7 +695,7 @@ func _drawWindSlash(ctx = null, a = null, W = null, H = null):
 # ─── ARC (Neutral) — particles fly arc path + glow impact ────────────────────
 func _drawArc(ctx = null, a = null, W = null, H = null):
 	var from = _spriteCenter(a.get("attackerSide"), a.get("targetEnemyIdx"), W, H)
-	var toSide = ("enemy" if a.get("attackerSide") == "player" else "player")
+	var toSide = ("enemy" if JS.eq(a.get("attackerSide"), "player") else "player")
 	var to = _spriteCenter(toSide, a.get("targetEnemyIdx"), W, H)
 	var prog = a.get("t") / float(a.get("dur"))
 	for p in JS.iter(a.get("particles")):

@@ -20,21 +20,21 @@ func primaryElement(label = null):
 	return JS.idx(JS.split(label, JS.re("[\\/ ]", "")), 0).strip_edges()
 
 func elementOfSide(side = null):
-	if side == "player":
+	if JS.eq(side, "player"):
 		return State.playerElement
 	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	return (primaryElement(JS.or_(e.get("element"), "")) if JS.t(e) else "")
 
 func maxHPFor(side = null):
-	if side != "player":
+	if not JS.eq(side, "player"):
 		return 999
 	# enemies use their own maxHP field
 	var base = Constants.BASE_MAX_HP + (JS.or_(State.player.get("baseMaxHPBonus"), 0))
-	return (floori(base * 0.5) if State.playerElement == "Water" else base)
+	return (floori(base * 0.5) if JS.eq(State.playerElement, "Water") else base)
 
 func healingMultiplier():
 	var mult = (1.5 if Main.hasPassive("water_restoration") else 1.0)
-	if State.combat.get("activeZoneElement") == "Plasma":
+	if JS.eq(State.combat.get("activeZoneElement"), "Plasma"):
 		mult *= 1.25
 	if JS.t(State.player.get("_healBonus")):
 		mult += State.player.get("_healBonus")
@@ -42,10 +42,10 @@ func healingMultiplier():
 
 func applyHeal(side = null, amount = null, label = null):
 	# Defense scales heal amount: +0.5 HP per Defense point
-	var defBonus = (floori(defenseFor("player") * 0.5) if side == "player" else 0)
-	var baseMult = (healingMultiplier() if side == "player" else 1.0)
+	var defBonus = (floori(defenseFor("player") * 0.5) if JS.eq(side, "player") else 0)
+	var baseMult = (healingMultiplier() if JS.eq(side, "player") else 1.0)
 	var actual = JS.round((amount + defBonus) * baseMult)
-	if side == "player":
+	if JS.eq(side, "player"):
 		var mx = maxHPFor("player")
 		var before = State.player.get("hp")
 		State.player.hp = min(mx, State.player.get("hp") + actual)
@@ -73,8 +73,8 @@ func enemyScaledStat():
 # ── Three player stat accessors ───────────────────────────────────────────────
 # Attack Power: scales raw hit damage
 func attackPowerFor(side = null, targetSide = null):
-	var pow_ = (State.player.get("attackPower") if side == "player" else _enemyStat("statPow"))
-	var s = (State.status.get("player") if side == "player" else (JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx")) if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))) else {"status": {}}).get("status"))
+	var pow_ = (State.player.get("attackPower") if JS.eq(side, "player") else _enemyStat("statPow"))
+	var s = (State.status.get("player") if JS.eq(side, "player") else (JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx")) if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))) else {"status": {}}).get("status"))
 	# Stone: +3 AP/stack (doubled by Stone Stance)
 	var sm = (2 if JS.t(s.get("stoneStanceThisTurn")) else 1)
 	pow_ += (floori(JS.or_(s.get("stoneStacks"), 0)) * 3) * sm
@@ -82,7 +82,7 @@ func attackPowerFor(side = null, targetSide = null):
 	pow_ -= floori(JS.or_(s.get("frostStacks"), 0))
 	# Root bonus vs rooted targets — scales with attacker's EFX (+1 per 10 EFX)
 	if JS.t(targetSide):
-		var ts = (State.status.get("player") if targetSide == "player" else (JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx")) if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))) else {"status": {}}).get("status"))
+		var ts = (State.status.get("player") if JS.eq(targetSide, "player") else (JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx")) if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))) else {"status": {}}).get("status"))
 		var totalRoots = (JS.or_(ts.get("rootStacks"), 0)) + (JS.or_(ts.get("overgrowthStacks"), 0))
 		if totalRoots > 0:
 			var efxBonus = floori(effectPowerFor(side) / 10.0)
@@ -90,7 +90,7 @@ func attackPowerFor(side = null, targetSide = null):
 			var bonus = (baseBonus * 2 if Main.hasPassive("nature_thorned_strikes") else baseBonus)
 			pow_ += bonus * totalRoots
 	# Blazing Heat (Fire): +totalEnemyBurn/2 AP
-	if (side == "player" and Main.hasPassive("fire_blazing_heat")):
+	if (JS.eq(side, "player") and Main.hasPassive("fire_blazing_heat")):
 		pow_ += floori(totalEnemyBurnStacks() / 2.0)
 	# Fire Rage temp power
 	if s.get("rageBoostTurns") > 0:
@@ -100,50 +100,50 @@ func attackPowerFor(side = null, targetSide = null):
 	# War Cry / battle-scoped bonuses
 	pow_ += JS.or_(s.get("battlePowerBonus"), 0)
 	# Plasma Energy Feedback: +1 AP per current Charge
-	if (side == "player" and Main.hasPassive("plasma_energy_feedback")):
+	if (JS.eq(side, "player") and Main.hasPassive("plasma_energy_feedback")):
 		pow_ += JS.or_(State.status.get("player").get("plasmaCharge"), 0)
 	# Air Momentum: +0.8 AP per Momentum stack
-	if (side == "player" and State.playerElement == "Air"):
+	if (JS.eq(side, "player") and JS.eq(State.playerElement, "Air")):
 		pow_ += floori((JS.or_(State.status.get("player").get("momentumStacks"), 0)) * 0.8)
 	# Enemy AP reduced by player's Defense
-	if side == "enemy":
+	if JS.eq(side, "enemy"):
 		pow_ -= defenseFor("player")
 	# Mutual book aura (Soul Codex etc.) — enemy shares ATK aura
-	if side == "enemy":
+	if JS.eq(side, "enemy"):
 		pow_ += (JS.or_(State.player.get("_mutualEnemyAura").get("atk"), 0) if JS.t(State.player.get("_mutualEnemyAura")) else 0)
 	return max(0, pow_)
 
 # Effect Power: scales status potency (burn stacks, frost, root, shock)
 func effectPowerFor(side = null):
-	var pow_ = (State.player.get("effectPower") if side == "player" else _enemyStat("statEfx"))
-	var s = (State.status.get("player") if side == "player" else (JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx")) if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))) else {"status": {}}).get("status"))
+	var pow_ = (State.player.get("effectPower") if JS.eq(side, "player") else _enemyStat("statEfx"))
+	var s = (State.status.get("player") if JS.eq(side, "player") else (JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx")) if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))) else {"status": {}}).get("status"))
 	# Frost on self: -1 EP/stack
 	pow_ -= floori(JS.or_(s.get("frostStacks"), 0))
 	# Battle-scoped EFX bonus (from EFX Crystal consumable)
-	if side == "player":
+	if JS.eq(side, "player"):
 		pow_ += JS.or_(s.get("battleEfxBonus"), 0)
 	# Enemy EFX reduced by player's Defense
-	if side == "enemy":
+	if JS.eq(side, "enemy"):
 		pow_ -= defenseFor("player")
 	# Mutual book aura — enemy shares EFX aura
-	if side == "enemy":
+	if JS.eq(side, "enemy"):
 		pow_ += (JS.or_(State.player.get("_mutualEnemyAura").get("efx"), 0) if JS.t(State.player.get("_mutualEnemyAura")) else 0)
 	return max(0, pow_)
 
 # Defense: scales armor gained, heal amounts, reduces enemy AP and EFX.
 # Foam reduces Defense — negative Defense means enemies deal bonus damage per hit.
 func defenseFor(side = null):
-	var def = (State.player.get("defense") if side == "player" else _enemyStat("statDef"))
-	var s = (State.status.get("player") if side == "player" else (JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx")) if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))) else {"status": {}}).get("status"))
+	var def = (State.player.get("defense") if JS.eq(side, "player") else _enemyStat("statDef"))
+	var s = (State.status.get("player") if JS.eq(side, "player") else (JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx")) if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))) else {"status": {}}).get("status"))
 	# Frost weakens defense too
 	def -= floori((JS.or_(s.get("frostStacks"), 0)) * 0.5)
 	# Foam: reduces Defense (can go negative — negative def means bonus enemy ATK/EFX)
 	def -= floori((JS.or_(s.get("foamStacks"), 0)) * 1.5)
 	# Battle-scoped DEF bonus (from Defense Crystal consumable)
-	if side == "player":
+	if JS.eq(side, "player"):
 		def += JS.or_(s.get("battleDefBonus"), 0)
 	# Mutual book aura — enemy shares DEF aura
-	if side == "enemy":
+	if JS.eq(side, "enemy"):
 		def += (JS.or_(State.player.get("_mutualEnemyAura").get("def"), 0) if JS.t(State.player.get("_mutualEnemyAura")) else 0)
 	return def
 
@@ -152,9 +152,9 @@ func enemyPower():
 	return enemyScaledStat()
 
 func burnDmgPerStack(side = null, sourceEFX = null):
-	var legendary = ((side == "player" and Main.hasPassive("fire_roaring_heat")) or (side == "enemy" and Main.enemyHasPassive("fire_roaring_heat")))
+	var legendary = ((JS.eq(side, "player") and Main.hasPassive("fire_roaring_heat")) or (JS.eq(side, "enemy") and Main.enemyHasPassive("fire_roaring_heat")))
 	# _talentBurnDmg: flat bonus burn damage/stack when enemy is burning (player applied it)
-	var talentBonus = (JS.or_(State.player.get("_talentBurnDmg"), 0) if side == "enemy" else 0)
+	var talentBonus = (JS.or_(State.player.get("_talentBurnDmg"), 0) if JS.eq(side, "enemy") else 0)
 	var base = (1.5 if legendary else 1.0)
 	return (base + ((JS.or_(sourceEFX, 0)) / 100.0)) + talentBonus
 
@@ -176,7 +176,7 @@ func effectiveArmor(side = null):
 
 # ── Power computation ────────────────────────────────────────────────────────
 func powerFor(side = null, targetSide = null):
-	var pow_ = (State.player.get("attackPower") if side == "player" else enemyPower())
+	var pow_ = (State.player.get("attackPower") if JS.eq(side, "player") else enemyPower())
 	var s = JS.idx(State.status, side)
 	# Stone: +3 power/stack (doubled by Stone Stance)
 	var sm = (2 if JS.t(s.get("stoneStanceThisTurn")) else 1)
@@ -193,7 +193,7 @@ func powerFor(side = null, targetSide = null):
 			var bonus = (baseBonus * 2 if Main.hasPassive("nature_thorned_strikes") else baseBonus)
 			pow_ += bonus * totalRoots
 	# Blazing Heat (Fire passive): +total enemy burn / 2
-	if (side == "player" and Main.hasPassive("fire_blazing_heat")):
+	if (JS.eq(side, "player") and Main.hasPassive("fire_blazing_heat")):
 		pow_ += floori(totalEnemyBurnStacks() / 2.0)
 	# Fire Rage temp power (2-turn window)
 	if s.get("rageBoostTurns") > 0:
@@ -208,30 +208,30 @@ func powerFor(side = null, targetSide = null):
 func armorReductionFor(side = null):
 	var el = elementOfSide(side)
 	# Hard Shell (Earth passive): flat 10 reduction
-	if (el == "Earth" and ((side == "player" and Main.hasPassive("earth_hard_shell")) or (side == "enemy" and Main.enemyHasPassive("earth_hard_shell")))):
+	if (JS.eq(el, "Earth") and ((JS.eq(side, "player") and Main.hasPassive("earth_hard_shell")) or (JS.eq(side, "enemy") and Main.enemyHasPassive("earth_hard_shell")))):
 		return 10
 	return 0
 
 # ── Fissure check (Earth pierce) ─────────────────────────────────────────────
 func isEarthFissure(attackerSide = null, pkg = null):
-	return (pkg.get("abilityElement") == "Earth" and ((attackerSide == "player" and Main.hasPassive("earth_fissure")) or (attackerSide == "enemy" and Main.enemyHasPassive("earth_fissure"))))
+	return (JS.eq(pkg.get("abilityElement"), "Earth") and ((JS.eq(attackerSide, "player") and Main.hasPassive("earth_fissure")) or (JS.eq(attackerSide, "enemy") and Main.enemyHasPassive("earth_fissure"))))
 
 # ── Dodge / Phase ─────────────────────────────────────────────────────────────
 func dodgeChanceFor(side = null):
 	if JS.idx(State.status, side).get("phaseTurns") > 0:
 		return 1
 	# Air: Momentum grants +2% dodge per stack (cap 80%)
-	if (side == "player" and State.playerElement == "Air"):
+	if (JS.eq(side, "player") and JS.eq(State.playerElement, "Air")):
 		return min(0.8, floori(JS.or_(State.status.get("player").get("momentumStacks"), 0)) * 0.02)
 	# Plasma Ghost Step talent: flat base dodge chance
-	if side == "player":
+	if JS.eq(side, "player"):
 		return min(0.5, JS.or_(State.player.get("_talentDodgeBonus"), 0))
 	return 0
 
 # ── Cooldowns ─────────────────────────────────────────────────────────────────
 func adjustedCooldownFor(side = null, baseCd = null):
 	var cd = baseCd
-	if elementOfSide(side) == "Ice":
+	if JS.eq(elementOfSide(side), "Ice"):
 		cd = max(0, cd - 1)
 	# Ice baseline -1 CD
 	return max(0, cd)
@@ -250,13 +250,13 @@ func enemyCooldownPenalty():
 func actionsPerTurnFor(side = null):
 	var actions = Constants.BASE_ACTIONS_PER_TURN
 	# Shop-purchased bonus actions (player only, cooldown-limited)
-	if side == "player":
+	if JS.eq(side, "player"):
 		actions += JS.or_(State.player.get("bonusActions"), 0)
 	# Rapid Tempo passive: alternate +1 action every other turn
-	if elementOfSide(side) == "Air":
-		var hasRapidTempo = ((side == "player" and Main.hasPassive("air_rapid_tempo")) or (side == "enemy" and Main.enemyHasPassive("air_rapid_tempo")))
+	if JS.eq(elementOfSide(side), "Air"):
+		var hasRapidTempo = ((JS.eq(side, "player") and Main.hasPassive("air_rapid_tempo")) or (JS.eq(side, "enemy") and Main.enemyHasPassive("air_rapid_tempo")))
 		if hasRapidTempo:
-			if side == "player":
+			if JS.eq(side, "player"):
 				State.combat.playerAirToggle = (not JS.t(State.combat.get("playerAirToggle")))
 				if JS.t(State.combat.get("playerAirToggle")):
 					actions += 1
@@ -347,9 +347,9 @@ func applyFoam(attackerSide = null, defenderSide = null, stacks = null):
 	Hit._plasmaChargeOnDebuff(defenderSide)
 
 func applyFrost(attackerSide = null, defenderSide = null, stacks = null):
-	if (attackerSide == "player" and Main.hasPassive("ice_stay_frosty")):
+	if (JS.eq(attackerSide, "player") and Main.hasPassive("ice_stay_frosty")):
 		stacks += 1
-	if attackerSide == "player":
+	if JS.eq(attackerSide, "player"):
 		stacks += JS.or_(State.player.get("_talentFrostBonus"), 0)
 	var efx = effectPowerFor(attackerSide)
 	var scaledStacks = stacks * (1 + (efx / 50.0))
@@ -363,15 +363,15 @@ func applyFrost(attackerSide = null, defenderSide = null, stacks = null):
 
 func applyRoot(attackerSide = null, defenderSide = null, stacks = null):
 	var total = stacks
-	if (attackerSide == "player" and Main.hasPassive("nature_stay_rooted")):
+	if (JS.eq(attackerSide, "player") and Main.hasPassive("nature_stay_rooted")):
 		total += 1
-	if attackerSide == "player":
+	if JS.eq(attackerSide, "player"):
 		total += JS.or_(State.player.get("_talentRootBonus"), 0)
 	JS.idx(State.status, defenderSide).rootStacks = (JS.or_(JS.idx(State.status, defenderSide).get("rootStacks"), 0)) + total
 	UI.log_("🌿 Root +" + JS.s(total) + " (×" + JS.s(JS.idx(State.status, defenderSide).get("rootStacks")) + ")", "status")
 	Hit._plasmaChargeOnDebuff(defenderSide)
 	# Deep Roots: every 3rd Root applied to an enemy reduces Seed timers by 1
-	if (attackerSide == "player" and defenderSide == "enemy"):
+	if (JS.eq(attackerSide, "player") and JS.eq(defenderSide, "enemy")):
 		Seeds._deepRootsCheck()
 
 func addStoneStacks(side = null, stacks = null):
@@ -386,7 +386,7 @@ func addMomentumStacks(stacks = null):
 	State.status.get("player").momentumStacks = (JS.or_(State.status.get("player").get("momentumStacks"), 0)) + scaled
 	UI.log_("💨 Momentum +" + JS.toFixed(scaled, 1) + " (×" + JS.toFixed(State.status.get("player").get("momentumStacks"), 1) + ")", "status")
 	# Gale Root (Air+Nature duo): each raw stack has 20% chance to apply 1 Root to active enemy
-	if ((Main.hasPassive("duo_gale_root") and State.playerElement == "Air") and not JS.t(State.combat.get("over"))):
+	if ((Main.hasPassive("duo_gale_root") and JS.eq(State.playerElement, "Air")) and not JS.t(State.combat.get("over"))):
 		var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 		if (JS.t(e) and JS.t(e.get("alive"))):
 			var rootApplied = 0
@@ -396,7 +396,7 @@ func addMomentumStacks(stacks = null):
 			if rootApplied > 0:
 				applyRoot("player", "enemy", rootApplied)
 	# Rushing Growth (Air+Nature duo): every 10 raw stacks gained reduces a random Seed timer by 1
-	if (Main.hasPassive("duo_rushing_growth") and State.playerElement == "Air"):
+	if (Main.hasPassive("duo_rushing_growth") and JS.eq(State.playerElement, "Air")):
 		State.combat._momentumSeedProgress = (JS.or_(State.combat.get("_momentumSeedProgress"), 0)) + stacks
 		while JS.un(State.combat.get("_momentumSeedProgress")) >= 10:
 			State.combat._momentumSeedProgress -= 10
@@ -417,18 +417,18 @@ func gainBlock(side = null, amount = null):
 	if amount <= 0:
 		return
 	# Defense scales armor gained: +2 per Defense point. Foam-reduced Defense gives less armor.
-	var defBonus = (floori(defenseFor("player") * 2) if side == "player" else 0)
+	var defBonus = (floori(defenseFor("player") * 2) if JS.eq(side, "player") else 0)
 	var total = max(0, amount + defBonus)
 	JS.idx(State.status, side).block = (JS.or_(JS.idx(State.status, side).get("block"), 0)) + total
 	if defBonus > 0:
 		UI.log_("🛡️ +" + JS.s(total) + " Armor (" + JS.s(amount) + " base + " + JS.s(defBonus) + " from Defense)", "status")
-	if side == "player":
+	if JS.eq(side, "player"):
 		Animations.triggerBlockAnim("armor")
 	# Bedrock: gain 1 stone per armor gain
-	if (side == "player" and Main.hasPassive("earth_bedrock")):
+	if (JS.eq(side, "player") and Main.hasPassive("earth_bedrock")):
 		addStoneStacks("player", 1)
 	# Bramble Guard: apply 1 root to all enemies on armor gain
-	if (side == "player" and Main.hasPassive("nature_bramble_guard")):
+	if (JS.eq(side, "player") and Main.hasPassive("nature_bramble_guard")):
 		for e in JS.iter(aliveEnemies()):
 			var idx = JS.indexOf(State.combat.get("enemies"), e)
 			State.setActiveEnemy(idx)
@@ -449,7 +449,7 @@ func applySelfDamage(amount = null, label = null):
 			Combat.endBattle(false)
 
 func applyFlowToWaterPkg(pkg = null):
-	if ((not Main.hasPassive("water_flow") or pkg.get("abilityElement") != "Water") or not (pkg.get("baseDamage") > 0)):
+	if ((not Main.hasPassive("water_flow") or not JS.eq(pkg.get("abilityElement"), "Water")) or not (pkg.get("baseDamage") > 0)):
 		return pkg
 	return JS.merge([pkg, {"baseDamage": ceili((JS.or_(pkg.get("baseDamage"), 0)) / 2.0), "hits": (JS.or_(pkg.get("hits"), 1)) * 2}])
 

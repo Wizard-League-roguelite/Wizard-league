@@ -736,6 +736,8 @@ func layout_flex(n: DomNode, inner_w: float, inner_h: float, cb_h: float, auto_h
 		var b := AUTO
 		if basis != "auto" and basis != "content":
 			b = CssValue.length(basis, main_avail, el.st.fs, vp)
+			# a percentage basis against an indefinite container size behaves like `content`
+			if CssValue.is_percent(basis) and is_auto(main_avail): b = AUTO
 			if not is_auto(b) and not border_box(el): b += hpad(el) if row else vpad(el)
 			if not is_auto(b): b = maxf(b, hpad(el) if row else vpad(el))
 		if row:

@@ -155,7 +155,7 @@ func _initLobbyBgZones():
 		all[j] = _t2
 	_lobbyBgZones = JS.slice(all, 0, 3)
 	# Camp must never appear in the middle panel (index 1)
-	if JS.idx(_lobbyBgZones, 1) == "Camp":
+	if JS.eq(JS.idx(_lobbyBgZones, 1), "Camp"):
 		var swap = (0 if JS.vrandom() < 0.5 else 2)
 		var _t3 = JS.idx(_lobbyBgZones, swap)
 		var _t4 = JS.idx(_lobbyBgZones, 1)
@@ -917,16 +917,16 @@ func _lobbyCinematicStep():
 	if not JS.t(_lobbyCinematic):
 		return
 	_lobbyCinematicTick += 1
-	if _lobbyCinematic == "castle_enter":
+	if JS.eq(_lobbyCinematic, "castle_enter"):
 		# Transition once wizard has stopped walking (reached gate)
 		if not JS.t(_lobbyWalking):
 			_lobbyCinematic = "castle_teeth"
 			_lobbyCinematicTick = 0
-	elif _lobbyCinematic == "castle_teeth":
+	elif JS.eq(_lobbyCinematic, "castle_teeth"):
 		if _lobbyCinematicTick > 110:
 			_lobbyCinematic = "castle_fade"
 			_lobbyCinematicTick = 0
-	elif _lobbyCinematic == "castle_fade":
+	elif JS.eq(_lobbyCinematic, "castle_fade"):
 		if _lobbyCinematicTick > 80:
 			_lobbyCinematic = null
 			_lobbyCinematicTick = 0
@@ -946,7 +946,7 @@ func _lobbyMovePlayer():
 	var dx = tx - px
 	var dy = ty - py
 	var dist = sqrt((dx * dx) + (dy * dy))
-	var speed = (1.6 if _lobbyCinematic == "castle_enter" else 3.2)
+	var speed = (1.6 if JS.eq(_lobbyCinematic, "castle_enter") else 3.2)
 	if dist < (speed + 1):
 		_lobbyPlayerX = _lobbyTargetX
 		_lobbyPlayerY = _lobbyTargetY
@@ -1114,7 +1114,7 @@ func _drawLobbyMap(ctx = null, W = null, H = null):
 	sc.fillRect(0, H * 0.35, W, H * 0.65)
 	# Copy to main canvas — one filtered drawImage, negligible cost
 	ctx.save()
-	if ((_lobbyCinematic == "castle_teeth" and _lobbyCinematicTick >= 97) and _lobbyCinematicTick < 110):
+	if ((JS.eq(_lobbyCinematic, "castle_teeth") and _lobbyCinematicTick >= 97) and _lobbyCinematicTick < 110):
 		var intensity = (1 - ((_lobbyCinematicTick - 97) / 13.0)) * 3
 		ctx.translate(((JS.vrandom() - 0.5) * intensity) * 2, (JS.vrandom() - 0.5) * intensity)
 	ctx.filter = "brightness(1.10) contrast(1.06)"
@@ -1128,7 +1128,7 @@ func _drawLobbyMap(ctx = null, W = null, H = null):
 		var bh = max(18, H * 0.032)
 		var bx = (W - bw) - 6
 		var by = 6
-		var hov = _lobbyHoveredId == "__refreshBg__"
+		var hov = JS.eq(_lobbyHoveredId, "__refreshBg__")
 		ctx.save()
 		ctx.fillStyle = ("#1a1a2a" if hov else "#0e0e18")
 		ctx.strokeStyle = ("#8866cc" if hov else "#443366")
@@ -1144,7 +1144,7 @@ func _drawLobbyMap(ctx = null, W = null, H = null):
 		ctx.fillText("⟳ bg", bx + (bw / 2.0), by + (bh / 2.0))
 		ctx.restore()
 	# Fade to black overlay (no shake)
-	if _lobbyCinematic == "castle_fade":
+	if JS.eq(_lobbyCinematic, "castle_fade"):
 		var fadeAlpha = min(1, _lobbyCinematicTick / 60.0)
 		ctx.fillStyle = "rgba(0,0,0," + JS.s(fadeAlpha) + ")"
 		ctx.fillRect(0, 0, W, H)
@@ -1297,7 +1297,7 @@ func _drawLobbycastle(ctx = null, W = null, H = null):
 		ctx.fill()
 	# ── "Begin Run" button in top keep section (fits between towers) ─────────
 	if true:
-		var hovered = _lobbyHoveredId == "castle"
+		var hovered = JS.eq(_lobbyHoveredId, "castle")
 		var btnMaxW = s * 0.26
 		# fits within the ~s*0.232 gap between towers (scaled up)
 		var btnH = JS.round(max(16, s * 0.085))
@@ -1354,8 +1354,8 @@ func _drawLobbycastle(ctx = null, W = null, H = null):
 	var parapetW = bridgeW * 0.08
 	# Compute raise progress (0 = flat, 1 = fully raised against gate)
 	var raiseP = 0
-	if (_lobbyCinematic == "castle_teeth" or _lobbyCinematic == "castle_fade"):
-		var bt = (110 if _lobbyCinematic == "castle_fade" else _lobbyCinematicTick)
+	if (JS.eq(_lobbyCinematic, "castle_teeth") or JS.eq(_lobbyCinematic, "castle_fade")):
+		var bt = (110 if JS.eq(_lobbyCinematic, "castle_fade") else _lobbyCinematicTick)
 		var raw = max(0, min(1, (bt - 6) / 92.0))
 		raiseP = raw * raw
 	var tiltScale = max(0, 1 - raiseP)
@@ -1932,9 +1932,9 @@ func _drawLobbyForeground(ctx = null, W = null, H = null):
 func _lobbyBuildingHasNotif(id = null):
 	var meta = Artifacts.getMeta()
 	var phos = JS.or_(meta.get("phos"), 0)
-	if id == "vault":
+	if JS.eq(id, "vault"):
 		return len(JS.or_(meta.get("unseenArtifacts"), [])) > 0
-	if id == "library":
+	if JS.eq(id, "library"):
 		if len(JS.or_(meta.get("unseenBookIds"), [])) > 0:
 			return true
 		var bul = JS.or_(meta.get("bookUpgradeLevels"), {})
@@ -1953,7 +1953,7 @@ func _lobbyBuildingHasNotif(id = null):
 		if ((JS.or_(def.get("spellSlots"), 0)) < 3 and phos >= (((JS.or_(def.get("spellSlots"), 0)) + 1) * 10)):
 			return true
 		return false
-	if id == "talents":
+	if JS.eq(id, "talents"):
 		var talents = JS.or_(meta.get("talents"), {})
 		for key in JS.iter(JS.keys(JS.or_(Talents.TALENT_TREE, {}))):
 			for node in JS.iter(Talents.TALENT_TREE[key].get("nodes")):
@@ -2738,14 +2738,14 @@ func _drawBuildingVeil(ctx = null, bx = null, by = null, bs = null, hov = null, 
 
 func _drawLobbyPlayer(ctx = null, W = null, H = null):
 	# Hide wizard entirely during teeth and fade phases
-	if (_lobbyCinematic == "castle_teeth" or _lobbyCinematic == "castle_fade"):
+	if (JS.eq(_lobbyCinematic, "castle_teeth") or JS.eq(_lobbyCinematic, "castle_fade")):
 		return
 	var x = JS.round(_lobbyPlayerX * W)
 	var y = JS.round(_lobbyMY(_lobbyPlayerY, W, H) * H)
 	var scale_ = max(1, min(2, floori(W / 400.0)))
 	# During castle_enter: shrink and fade as wizard walks into the gate
 	var wizAlpha = 1
-	if _lobbyCinematic == "castle_enter":
+	if JS.eq(_lobbyCinematic, "castle_enter"):
 		var enterProgress = max(0, min(1, (0.6 - _lobbyPlayerY) / 0.12))
 		scale_ = max(0.2, scale_ * (1 - (enterProgress * 0.75)))
 		wizAlpha = max(0, 1 - (enterProgress * 0.95))
@@ -2802,7 +2802,7 @@ func _lobbyBuildColorMap():
 	var staffClr = JS.find(Characters.WIZ_STAFF_COLORS, func(c = null): return JS.eq(c.id, b.get("staffColor")))
 	var glowClr = JS.find(Characters.WIZ_STAFF_GLOWS, func(g = null): return JS.eq(g.id, b.get("staffGlow")))
 	var eyeClr = JS.find(Characters.WIZ_EYE_COLORS, func(e = null): return JS.eq(e.id, b.get("eyeColor")))
-	var showBeard = b.get("beardStyle") != "none"
+	var showBeard = not JS.eq(b.get("beardStyle"), "none")
 	return {
 		".": null,
 		"1": (outClr.get("p0") if JS.t(outClr) else "#aa6622"),
@@ -2881,7 +2881,7 @@ func _bfsLobbyPath(from = null, to = null):
 	return [from, to]
 
 func _buildLobbyRoute(destId = null, destX = null, destY = null):
-	var destNode = ("bridge" if destId == "castle" else destId)
+	var destNode = ("bridge" if JS.eq(destId, "castle") else destId)
 	var startNode = _nearestPathNode(_lobbyPlayerX, _lobbyPlayerY)
 	var nodePath = _bfsLobbyPath(startNode, destNode)
 	var _fn36 = func(id = null, i = null, arr = null):
@@ -2931,7 +2931,7 @@ func _lobbyClick(e = null):
 	_lobbyWaypoint = null
 
 func _openLobbyLocation(id = null):
-	if id == "castle":
+	if JS.eq(id, "castle"):
 		# Start castle-enter cinematic — wizard walks slowly into the gate, then it snaps shut
 		_lobbyCinematic = "castle_enter"
 		_lobbyCinematicTick = 0
@@ -2946,7 +2946,7 @@ func _openLobbyLocation(id = null):
 			canvas.onclick = null
 		# disable clicks during cinematic
 		return
-	if id == "tailor":
+	if JS.eq(id, "tailor"):
 		var tailorLoc = JS.find(LOBBY_LOCATIONS, func(l = null): return l.get("id") == "tailor")
 		if JS.t(tailorLoc):
 			_lobbyReturnPos = {"x": tailorLoc.get("x"), "y": tailorLoc.get("y")}
@@ -2962,7 +2962,7 @@ func _openLobbyLocation(id = null):
 	var loc = JS.find(LOBBY_LOCATIONS, func(l = null): return JS.eq(l.id, id))
 	var title = (loc.get("label") if JS.t(loc) else "")
 	var phosLabel = "<div class=\"lobby-phos-bar\">✦ " + JS.s(JS.or_(meta.get("phos"), 0)) + " Phos available</div>"
-	if id == "archive":
+	if JS.eq(id, "archive"):
 		var history = JS.or_(meta.get("runHistory"), [])
 		var html = "<div class=\"lobby-panel-title\">" + JS.s(title) + "</div>"
 		if not JS.t(len(history)):
@@ -2971,24 +2971,24 @@ func _openLobbyLocation(id = null):
 			html += JS.join(JS.arr(history).map(func(r = null): return "\n        <div class=\"brun-hist-row\">\n          <div class=\"brun-hist-el\">" + (JS.or_(r.get("emoji"), "⚔")) + " " + (JS.or_(r.get("element"), "?")) + " <span style=\"color:#4a6a8a;font-size:.6rem;margin-left:.3rem;\">" + ("→ " + JS.s(r.get("zone")) + " Zone" if (JS.t(r.get("zone")) and not JS.eq(r.get("zone"), r.get("element"))) else "") + "</span></div>\n          <div class=\"brun-hist-stats\">\n            <span>" + JS.s(JS.or_(r.get("battles"), 0)) + " battles</span>\n            <span style=\"color:#c8a830\">" + JS.s(JS.or_(r.get("gold"), 0)) + "g</span>\n            <span style=\"color:#a080ff\">" + JS.s(JS.or_(r.get("phos"), 0)) + "✦</span>\n          </div>\n          <div style=\"display:flex;gap:.8rem;font-size:.6rem;color:#555;margin-top:.2rem;\">\n            <span>⚔ " + JS.s(JS.or_(r.get("dmgDealt"), 0)) + " dealt</span><span>🛡 " + JS.s(JS.or_(r.get("dmgTaken"), 0)) + " taken</span>\n          </div>\n          <div class=\"brun-hist-date\">" + (JS.or_(r.get("date"), "")) + "</div>\n        </div>"), "")
 		content.innerHTML = html
 		panel.style.display = "block"
-	elif id == "vault":
+	elif JS.eq(id, "vault"):
 		Artifacts.markArtifactsSeen()
 		BetweenRuns.renderArtifactVaultTab(content, meta, "_openLobbyLocation('vault')")
 		content.insertAdjacentHTML("afterbegin", "<div class=\"lobby-panel-title\">" + JS.s(title) + "</div>")
 		panel.style.display = "block"
-	elif id == "library":
+	elif JS.eq(id, "library"):
 		Artifacts.markBooksSeen()
 		content.innerHTML = "<div class=\"lobby-panel-title\">" + JS.s(title) + "</div>"
 		BetweenRuns.renderBookUpgradesTab(content, meta)
 		panel.style.display = "block"
-	elif id == "talents":
+	elif JS.eq(id, "talents"):
 		content.innerHTML = "<div class=\"lobby-panel-title\">" + JS.s(title) + "</div>"
 		BetweenRuns.renderKnowledgeTreeTab(content, meta)
 		panel.style.display = "block"
-	elif id == "guild":
+	elif JS.eq(id, "guild"):
 		closeLobbyPanel()
 		Library.showLibrary()
-	elif id == "veil":
+	elif JS.eq(id, "veil"):
 		Veil._renderVeilContent(content)
 		panel.style.display = "block"
 

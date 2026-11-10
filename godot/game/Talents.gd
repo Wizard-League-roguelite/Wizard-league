@@ -560,7 +560,7 @@ func TALENT_TREE__Fire__nodes__fire_spell_dmg__apply(lvl = null):
 	State.player._talentFireDmgMult = (JS.or_(State.player.get("_talentFireDmgMult"), 1.0)) + (lvl * 0.05)
 
 func TALENT_TREE__Fire__nodes__fire_basic__apply(lvl = null):
-	if State.playerElement == "Fire":
+	if JS.eq(State.playerElement, "Fire"):
 		State.player._elementalBasicFire = lvl
 
 func TALENT_TREE__Water__nodes__water_heal__apply(lvl = null):
@@ -573,7 +573,7 @@ func TALENT_TREE__Water__nodes__water_spell_dmg__apply(lvl = null):
 	State.player._talentWaterDmgMult = (JS.or_(State.player.get("_talentWaterDmgMult"), 1.0)) + (lvl * 0.05)
 
 func TALENT_TREE__Water__nodes__water_basic__apply(lvl = null):
-	if State.playerElement == "Water":
+	if JS.eq(State.playerElement, "Water"):
 		State.player._elementalBasicWater = lvl
 
 func TALENT_TREE__Ice__nodes__ice_frost_stacks__apply(lvl = null):
@@ -586,7 +586,7 @@ func TALENT_TREE__Ice__nodes__ice_spell_dmg__apply(lvl = null):
 	State.player._talentIceDmgMult = (JS.or_(State.player.get("_talentIceDmgMult"), 1.0)) + (lvl * 0.05)
 
 func TALENT_TREE__Ice__nodes__ice_basic__apply(lvl = null):
-	if State.playerElement == "Ice":
+	if JS.eq(State.playerElement, "Ice"):
 		State.player._elementalBasicIce = lvl
 
 func TALENT_TREE__Lightning__nodes__lightning_shock__apply(lvl = null):
@@ -599,7 +599,7 @@ func TALENT_TREE__Lightning__nodes__lightning_spell_dmg__apply(lvl = null):
 	State.player._talentLightDmgMult = (JS.or_(State.player.get("_talentLightDmgMult"), 1.0)) + (lvl * 0.05)
 
 func TALENT_TREE__Lightning__nodes__lightning_basic__apply(lvl = null):
-	if State.playerElement == "Lightning":
+	if JS.eq(State.playerElement, "Lightning"):
 		State.player._elementalBasicLightning = lvl
 
 func TALENT_TREE__Earth__nodes__earth_armor__apply(lvl = null):
@@ -612,7 +612,7 @@ func TALENT_TREE__Earth__nodes__earth_spell_dmg__apply(lvl = null):
 	State.player._talentEarthDmgMult = (JS.or_(State.player.get("_talentEarthDmgMult"), 1.0)) + (lvl * 0.05)
 
 func TALENT_TREE__Earth__nodes__earth_basic__apply(lvl = null):
-	if State.playerElement == "Earth":
+	if JS.eq(State.playerElement, "Earth"):
 		State.player._elementalBasicEarth = lvl
 
 func TALENT_TREE__Nature__nodes__nature_root__apply(lvl = null):
@@ -625,7 +625,7 @@ func TALENT_TREE__Nature__nodes__nature_spell_dmg__apply(lvl = null):
 	State.player._talentNatureDmgMult = (JS.or_(State.player.get("_talentNatureDmgMult"), 1.0)) + (lvl * 0.05)
 
 func TALENT_TREE__Nature__nodes__nature_basic__apply(lvl = null):
-	if State.playerElement == "Nature":
+	if JS.eq(State.playerElement, "Nature"):
 		State.player._elementalBasicNature = lvl
 
 func TALENT_TREE__Plasma__nodes__plasma_dodge__apply(lvl = null):
@@ -638,7 +638,7 @@ func TALENT_TREE__Plasma__nodes__plasma_spell_dmg__apply(lvl = null):
 	State.player._talentPlasmaDmgMult = (JS.or_(State.player.get("_talentPlasmaDmgMult"), 1.0)) + (lvl * 0.05)
 
 func TALENT_TREE__Plasma__nodes__plasma_basic__apply(lvl = null):
-	if State.playerElement == "Plasma":
+	if JS.eq(State.playerElement, "Plasma"):
 		State.player._elementalBasicPlasma = lvl
 
 func TALENT_TREE__Air__nodes__air_actions__apply(lvl = null):
@@ -651,5 +651,5 @@ func TALENT_TREE__Air__nodes__air_spell_dmg__apply(lvl = null):
 	State.player._talentAirDmgMult = (JS.or_(State.player.get("_talentAirDmgMult"), 1.0)) + (lvl * 0.05)
 
 func TALENT_TREE__Air__nodes__air_basic__apply(lvl = null):
-	if State.playerElement == "Air":
+	if JS.eq(State.playerElement, "Air"):
 		State.player._elementalBasicAir = lvl

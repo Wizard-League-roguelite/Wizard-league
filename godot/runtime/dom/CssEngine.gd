@@ -354,13 +354,13 @@ static func expand(prop: String, val: String, out: Dictionary) -> void:
 				out["flex-grow"] = "1"; out["flex-shrink"] = "1"; out["flex-basis"] = "auto"
 			elif p5.size() == 1:
 				if p5[0].is_valid_float():
-					out["flex-grow"] = p5[0]; out["flex-shrink"] = "1"; out["flex-basis"] = "0px"
+					out["flex-grow"] = p5[0]; out["flex-shrink"] = "1"; out["flex-basis"] = "0%"
 				else:
 					out["flex-grow"] = "1"; out["flex-shrink"] = "1"; out["flex-basis"] = p5[0]
 			elif p5.size() == 2:
 				out["flex-grow"] = p5[0]
 				if p5[1].is_valid_float():
-					out["flex-shrink"] = p5[1]; out["flex-basis"] = "0px"
+					out["flex-shrink"] = p5[1]; out["flex-basis"] = "0%"
 				else:
 					out["flex-shrink"] = "1"; out["flex-basis"] = p5[1]
 			else:
