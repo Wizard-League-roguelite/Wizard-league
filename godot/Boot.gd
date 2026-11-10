@@ -7,6 +7,15 @@ func _ready() -> void:
 	for a in args:
 		if a.begins_with("--driver="): localStorage.memory_only = true   # scripted runs never touch real saves
 		if a.begins_with("--seed="): seed(a.substr(7).to_int())
+	# high-DPI displays: scale the whole UI like a browser does (CSS pixels)
+	var scale := DisplayServer.screen_get_scale()
+	if scale <= 1.0 and OS.get_name() == "Windows": scale = clampf(roundf(DisplayServer.screen_get_dpi() / 96.0 * 4.0) / 4.0, 1.0, 3.0)
+	if DisplayServer.get_name() != "headless":
+		# a bigger window shows more of the page (as in a browser) instead of zooming it
+		var win := get_window()
+		win.content_scale_factor = maxf(scale, 1.0)
+		win.content_scale_size = win.size
+		win.size_changed.connect(func(): win.content_scale_size = win.size)
 	InlineJS.setup(GameModules.GLOBALS)
 	document.load_page("res://web/index.html", ["res://web/styles.css"])
 	for m in GameModules.ORDER:

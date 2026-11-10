@@ -28,6 +28,12 @@ func _gui_input(e: InputEvent) -> void:
 	elif e is InputEventPanGesture:
 		doc.wheel(e.position, e.delta.y * 30.0)
 
+# touch screens: dragging a finger scrolls the list / page under it
+func _input(e: InputEvent) -> void:
+	if e is InputEventScreenDrag:
+		var target: DomNode = doc.element_at(e.position)
+		if target != null and absf(e.relative.y) > 0.0: doc.scroll_by(target, -e.relative.y)
+
 func _unhandled_key_input(e: InputEvent) -> void:
 	if e is InputEventKey:
 		var key := OS.get_keycode_string(e.keycode)

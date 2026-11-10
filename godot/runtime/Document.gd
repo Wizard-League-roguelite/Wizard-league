@@ -222,12 +222,13 @@ func mark_layout(n: DomNode) -> void:
 	if _layout_dirty: return
 	var a: DomNode = n
 	while a != null and a != root:
-		var pos = a.st.get("position")
-		if pos == null: break
-		if (pos == "absolute" or pos == "fixed") and a.in_flow_display != "" and a.st.get("display", "none") != "none" and a.st.has("_xf"):
+		var pos = a.st.get("position")   # null for nodes that were just created
+		if pos != null and (pos == "absolute" or pos == "fixed") and a.in_flow_display != "" and a.st.get("display", "none") != "none" and a.st.has("_xf"):
 			_abs_dirty[a.get_instance_id()] = a
 			return
 		a = a.parentElement
+	if a == null: return      # detached subtree: it is laid out when it gets attached
+	if debug_marks != null: _dbg("GLOBAL", n)
 	_layout_dirty = true
 
 func mark_paint(n: DomNode) -> void:
