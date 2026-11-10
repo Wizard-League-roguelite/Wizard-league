@@ -70,10 +70,10 @@ func sandboxOpenEnemyPicker():
 	var singlesGrid = document.createElement("div")
 	singlesGrid.style.cssText = gridStyle
 	for enc in JS.iter(JS.or_(Encounters.ENCOUNTER_POOL, [])):
-		var meta = (JS.idx(Encounters.CAMP_META, enc.element) if JS.t(JS.idx(Encounters.CAMP_META, enc.element)) else {"color": "#888", "icon": "✦"})
+		var meta = (JS.idx(Encounters.CAMP_META, enc.get("element")) if JS.t(JS.idx(Encounters.CAMP_META, enc.get("element"))) else {"color": "#888", "icon": "✦"})
 		var btn = document.createElement("button")
-		btn.textContent = meta.icon + " " + enc.name
-		btn.style.cssText = btnBase + ("background:" + JS.s(meta.color) + "22;border-color:" + JS.s(meta.color) + "55;color:" + JS.s(meta.color) + ";")
+		btn.textContent = JS.s(meta.get("icon")) + " " + JS.s(enc.get("name"))
+		btn.style.cssText = btnBase + ("background:" + JS.s(meta.get("color")) + "22;border-color:" + JS.s(meta.get("color")) + "55;color:" + JS.s(meta.get("color")) + ";")
 		var _fn3 = func():
 			sandboxLoadEnemy(enc)
 		btn.onclick = _fn3
@@ -90,10 +90,10 @@ func sandboxOpenEnemyPicker():
 	var packsGrid = document.createElement("div")
 	packsGrid.style.cssText = gridStyle
 	for enc in JS.iter(JS.or_(Encounters.PACK_POOL, [])):
-		var meta = (JS.idx(Encounters.CAMP_META, enc.element) if JS.t(JS.idx(Encounters.CAMP_META, enc.element)) else {"color": "#888", "icon": "✦"})
+		var meta = (JS.idx(Encounters.CAMP_META, enc.get("element")) if JS.t(JS.idx(Encounters.CAMP_META, enc.get("element"))) else {"color": "#888", "icon": "✦"})
 		var btn = document.createElement("button")
-		btn.textContent = meta.icon + " " + JS.s(enc.packName) + " (" + JS.s(len(enc.members)) + ")"
-		btn.style.cssText = btnBase + ("background:" + JS.s(meta.color) + "22;border-color:" + JS.s(meta.color) + "55;color:" + JS.s(meta.color) + ";")
+		btn.textContent = JS.s(meta.get("icon")) + " " + JS.s(enc.get("packName")) + " (" + JS.s(len(enc.get("members"))) + ")"
+		btn.style.cssText = btnBase + ("background:" + JS.s(meta.get("color")) + "22;border-color:" + JS.s(meta.get("color")) + "55;color:" + JS.s(meta.get("color")) + ";")
 		var _fn4 = func():
 			sandboxLoadEnemy(enc)
 		btn.onclick = _fn4
@@ -110,31 +110,31 @@ func sandboxOpenEnemyPicker():
 	var gymsGrid = document.createElement("div")
 	gymsGrid.style.cssText = gridStyle
 	for gym in JS.iter(JS.or_(Encounters.GYM_ROSTER, [])):
-		var meta = (JS.idx(Encounters.CAMP_META, gym.element) if JS.t(JS.idx(Encounters.CAMP_META, gym.element)) else {"color": "#888", "icon": "✦"})
+		var meta = (JS.idx(Encounters.CAMP_META, gym.get("element")) if JS.t(JS.idx(Encounters.CAMP_META, gym.get("element"))) else {"color": "#888", "icon": "✦"})
 		var btn = document.createElement("button")
-		btn.textContent = gym.emoji + " " + gym.name
-		btn.style.cssText = btnBase + ("background:" + JS.s(meta.color) + "22;border-color:" + JS.s(meta.color) + "55;color:" + JS.s(meta.color) + ";")
+		btn.textContent = JS.s(gym.get("emoji")) + " " + JS.s(gym.get("name"))
+		btn.style.cssText = btnBase + ("background:" + JS.s(meta.get("color")) + "22;border-color:" + JS.s(meta.get("color")) + "55;color:" + JS.s(meta.get("color")) + ";")
 		var _fn5 = func():
 			sandboxLoadEnemy({
-				"name": gym.name,
-				"emoji": gym.emoji,
-				"element": gym.element,
-				"color": gym.color,
+				"name": gym.get("name"),
+				"emoji": gym.get("emoji"),
+				"element": gym.get("element"),
+				"color": gym.get("color"),
 				"difficulty": "gym",
 				"diffClass": "diff-hard",
 				"enemyMaxHP": Helpers.gymBossHP(),
-				"enemyDmg": gym.baseDmg,
-				"gold": gym.gold,
+				"enemyDmg": gym.get("baseDmg"),
+				"gold": gym.get("gold"),
 				"type": "wizard",
 				"isGym": true,
-				"signature": gym.signature,
-				"gymPassive": gym.passive,
-				"gymPhase2Passive": gym.phase2Passive,
-				"gymEntryEffect": gym.entryEffect,
+				"signature": gym.get("signature"),
+				"gymPassive": gym.get("passive"),
+				"gymPhase2Passive": gym.get("phase2Passive"),
+				"gymEntryEffect": gym.get("entryEffect"),
 				"gymHitCounter": 0,
 				"gymPhase2": false,
-				"gymPhase2Dmg": gym.phase2Dmg,
-				"gymChargeInterval": gym.chargeInterval,
+				"gymPhase2Dmg": gym.get("phase2Dmg"),
+				"gymChargeInterval": gym.get("chargeInterval"),
 			})
 		btn.onclick = _fn5
 		gymsGrid.appendChild(btn)
@@ -164,9 +164,9 @@ func sandboxOpenSpellPicker():
 	var tierLabels = {"primary": "Primary", "secondary": "Secondary", "legendary": "Legendary"}
 	# Current spellbook IDs for quick lookup
 	var book = State.activeBook()
-	var ownedIds = JSSet.new(JS.arr((book.spells if JS.t(book) else State.player.spellbook)).map(func(s = null): return s.id))
+	var ownedIds = JSSet.new(JS.arr((book.get("spells") if JS.t(book) else State.player.get("spellbook"))).map(func(s = null): return s.id))
 	for tier in JS.iter(tiers):
-		var spells = JS.arr(JS.values(Spells.SPELL_CATALOGUE)).filter(func(sp = null): return (JS.eq(sp.element, State.playerElement) and JS.eq(sp.tier, tier)))
+		var spells = JS.arr(JS.values(Spells.SPELL_CATALOGUE)).filter(func(sp = null): return (JS.eq(sp.get("element"), State.playerElement) and JS.eq(sp.get("tier"), tier)))
 		if not JS.t(len(spells)):
 			continue
 		var head = document.createElement("div")
@@ -181,10 +181,10 @@ func sandboxOpenSpellPicker():
 			btn.title = JS.or_(spell.get("desc"), "")
 			if owned:
 				btn.style.cssText = btnBase + "background:#0a2a0a;border-color:#4aaa6a;color:#4aaa6a;"
-				btn.innerHTML = spell.emoji + " " + spell.name + " <span style=\"font-size:.5rem;opacity:.7;\">✓ Remove</span>"
+				btn.innerHTML = JS.s(spell.get("emoji")) + " " + JS.s(spell.get("name")) + " <span style=\"font-size:.5rem;opacity:.7;\">✓ Remove</span>"
 			else:
 				btn.style.cssText = btnBase + "background:#0d0b09;border-color:#2a5a3a;color:#7ac09a;"
-				btn.innerHTML = spell.emoji + " " + spell.name + " <span style=\"font-size:.5rem;opacity:.55;\">+ Add</span>"
+				btn.innerHTML = JS.s(spell.get("emoji")) + " " + JS.s(spell.get("name")) + " <span style=\"font-size:.5rem;opacity:.55;\">+ Add</span>"
 			var _fn6 = func():
 				sandboxToggleSpell(spell.id)
 				sandboxOpenSpellPicker()
@@ -206,10 +206,10 @@ func sandboxOpenSpellPicker():
 			btn.title = JS.or_(spell.get("desc"), "")
 			if owned:
 				btn.style.cssText = btnBase + "background:#0a2a0a;border-color:#4aaa6a;color:#4aaa6a;"
-				btn.innerHTML = spell.emoji + " " + spell.name + " <span style=\"font-size:.5rem;opacity:.7;\">✓ Remove</span>"
+				btn.innerHTML = JS.s(spell.get("emoji")) + " " + JS.s(spell.get("name")) + " <span style=\"font-size:.5rem;opacity:.7;\">✓ Remove</span>"
 			else:
 				btn.style.cssText = btnBase + "background:#0d0b09;border-color:#555;color:#aaa;"
-				btn.innerHTML = spell.emoji + " " + spell.name + " <span style=\"font-size:.5rem;opacity:.55;\">+ Add</span>"
+				btn.innerHTML = JS.s(spell.get("emoji")) + " " + JS.s(spell.get("name")) + " <span style=\"font-size:.5rem;opacity:.55;\">+ Add</span>"
 			var _fn7 = func():
 				sandboxToggleSpell(spell.id)
 				sandboxOpenSpellPicker()
@@ -225,21 +225,21 @@ func sandboxToggleSpell(spellId = null):
 	if not JS.t(spell):
 		return
 	var book = State.activeBook()
-	var spells = (book.spells if JS.t(book) else State.player.spellbook)
+	var spells = (book.get("spells") if JS.t(book) else State.player.get("spellbook"))
 	var idx = JS.findIndex(spells, func(s = null): return JS.eq(s.id, spellId))
 	if idx >= 0:
 		# Remove it
 		JS.splice(spells, idx, 1)
-		if (JS.t(book) and State.player.activeBookIdx == JS.indexOf(JS.or_(State.player.get("spellbooks"), []), book)):
+		if (JS.t(book) and State.player.get("activeBookIdx") == JS.indexOf(JS.or_(State.player.get("spellbooks"), []), book)):
 			State.syncActiveBook()
-		UI.log_("📖 Sandbox: removed " + JS.s(spell.emoji) + " " + JS.s(spell.name) + ".", "system")
+		UI.log_("📖 Sandbox: removed " + JS.s(spell.get("emoji")) + " " + JS.s(spell.get("name")) + ".", "system")
 	else:
 		# Force-add (bypass slot limit in sandbox)
 		var entry = JS.merge([spell, {"currentCD": 0, "dmgMult": 1.0, "rarity": "dim", "incantationLevel": 1}])
 		spells.append(entry)
-		if (JS.t(book) and State.player.activeBookIdx == JS.indexOf(JS.or_(State.player.get("spellbooks"), []), book)):
+		if (JS.t(book) and State.player.get("activeBookIdx") == JS.indexOf(JS.or_(State.player.get("spellbooks"), []), book)):
 			State.syncActiveBook()
-		UI.log_("📖 Sandbox: added " + JS.s(spell.emoji) + " " + JS.s(spell.name) + ".", "system")
+		UI.log_("📖 Sandbox: added " + JS.s(spell.get("emoji")) + " " + JS.s(spell.get("name")) + ".", "system")
 	UI.renderSpellButtons()
 
 func sandboxOpenBookPicker():
@@ -252,7 +252,7 @@ func sandboxOpenBookPicker():
 	var headStyle = "font-family:\"Cinzel\",serif;font-size:.62rem;color:#aa6aff;letter-spacing:.1em;text-transform:uppercase;margin:.7rem 0 .3rem;"
 	var gridStyle = "display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.4rem;"
 	var btnBase = "border-radius:4px;padding:4px 9px;font-size:.6rem;font-family:\"Cinzel\",serif;cursor:pointer;border-width:1px;border-style:solid;text-align:left;"
-	var currentIds = JSSet.new(JS.filter(JS.arr(JS.or_(State.player.get("spellbooks"), [])).map(func(b = null): return b.catalogueId), JS.t))
+	var currentIds = JSSet.new(JS.filter(JS.arr(JS.or_(State.player.get("spellbooks"), [])).map(func(b = null): return b.get("catalogueId")), JS.t))
 	var rarityOrder = ["element", "generic", "legendary"]
 	var rarityLabels = {"element": "Element Books", "generic": "Generic Books", "legendary": "Legendary Books"}
 	var rarityColors = {"element": "#c8a060", "generic": "#80c8ff", "legendary": "#d4a0ff"}
@@ -262,7 +262,7 @@ func sandboxOpenBookPicker():
 	noteEl.textContent = "Active books in your run are highlighted. Max 3 books per run."
 	content.appendChild(noteEl)
 	for rarity in JS.iter(rarityOrder):
-		var books = JS.arr(JS.values(Spellbooks.SPELLBOOK_CATALOGUE)).filter(func(b = null): return JS.eq(b.rarity, rarity))
+		var books = JS.arr(JS.values(Spellbooks.SPELLBOOK_CATALOGUE)).filter(func(b = null): return JS.eq(b.get("rarity"), rarity))
 		if not JS.t(len(books)):
 			continue
 		var head = document.createElement("div")
@@ -277,10 +277,10 @@ func sandboxOpenBookPicker():
 			var btn = document.createElement("button")
 			if active:
 				btn.style.cssText = btnBase + ("background:#1a0a2a;border-color:" + JS.s(col) + ";color:" + JS.s(col) + ";")
-				btn.innerHTML = JS.s(cat.emoji) + " " + JS.s(cat.name) + " <span style=\"font-size:.5rem;opacity:.7;\">✓ Remove</span>"
+				btn.innerHTML = JS.s(cat.get("emoji")) + " " + JS.s(cat.get("name")) + " <span style=\"font-size:.5rem;opacity:.7;\">✓ Remove</span>"
 			else:
 				btn.style.cssText = btnBase + ("background:#0d0b09;border-color:" + JS.s(col) + "55;color:" + JS.s(col) + "88;")
-				btn.innerHTML = JS.s(cat.emoji) + " " + JS.s(cat.name) + " <span style=\"font-size:.5rem;opacity:.55;\">+ Add</span>"
+				btn.innerHTML = JS.s(cat.get("emoji")) + " " + JS.s(cat.get("name")) + " <span style=\"font-size:.5rem;opacity:.55;\">+ Add</span>"
 			var _fn8 = func():
 				sandboxToggleBook(cat.id)
 				sandboxOpenBookPicker()
@@ -293,21 +293,21 @@ func sandboxToggleBook(catalogueId = null):
 	if not JS.t(Constants.sandboxMode):
 		return
 	var books = JS.or_(State.player.get("spellbooks"), [])
-	var idx = JS.findIndex(books, func(b = null): return JS.eq(b.catalogueId, catalogueId))
+	var idx = JS.findIndex(books, func(b = null): return JS.eq(b.get("catalogueId"), catalogueId))
 	if idx >= 0:
 		# Remove — must keep at least 1 book
 		if len(books) <= 1:
 			UI.log_("📚 Sandbox: must keep at least one book.", "system")
 			return
 		# If removing the active book, switch to another first
-		if idx == State.player.activeBookIdx:
+		if idx == State.player.get("activeBookIdx"):
 			State.player.activeBookIdx = (1 if idx == 0 else 0)
 			State.syncActiveBook()
-		elif idx < State.player.activeBookIdx:
+		elif idx < State.player.get("activeBookIdx"):
 			State.player.activeBookIdx -= 1
 		JS.splice(books, idx, 1)
 		var cat = JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, catalogueId)
-		UI.log_("📚 Sandbox: removed " + JS.s((cat.emoji + " " + cat.name if JS.t(cat) else catalogueId)) + ".", "system")
+		UI.log_("📚 Sandbox: removed " + JS.s((JS.s(cat.get("emoji")) + " " + JS.s(cat.get("name")) if JS.t(cat) else catalogueId)) + ".", "system")
 	else:
 		# Add (cap at 3 in sandbox too)
 		if len(books) >= 3:
@@ -320,10 +320,10 @@ func sandboxToggleBook(catalogueId = null):
 		if not JS.t(newBook):
 			return
 		# Copy builtins from first book so new book has Basic Attack + Armor
-		var builtins = JS.arr((JS.idx(books, 0).spells if JS.t(JS.idx(books, 0)) else [])).filter(func(s = null): return JS.t(s.get("isBuiltin")))
+		var builtins = JS.arr((JS.idx(books, 0).get("spells") if JS.t(JS.idx(books, 0)) else [])).filter(func(s = null): return JS.t(s.get("isBuiltin")))
 		newBook.spells = JS.arr(builtins)
 		books.append(newBook)
-		UI.log_("📚 Sandbox: added " + JS.s(cat.emoji) + " " + JS.s(cat.name) + ".", "system")
+		UI.log_("📚 Sandbox: added " + JS.s(cat.get("emoji")) + " " + JS.s(cat.get("name")) + ".", "system")
 	UI.renderSpellButtons()
 
 func sandboxSetCombatZone(element = null):
@@ -337,20 +337,20 @@ func sandboxSetCombatZone(element = null):
 	var badge = document.getElementById("combat-element-badge")
 	if JS.t(badge):
 		var meta = JS.orf(JS.idx(Encounters.CAMP_META, element), func(): return {"icon": "✦", "color": "#aaa"})
-		badge.textContent = JS.s(meta.icon) + " " + JS.s(element) + " Zone"
-		badge.style.color = meta.color
-		badge.style.borderColor = meta.color + "44"
+		badge.textContent = JS.s(meta.get("icon")) + " " + JS.s(element) + " Zone"
+		badge.style.color = meta.get("color")
+		badge.style.borderColor = JS.s(meta.get("color")) + "44"
 	# Refresh the zone bar to highlight the new active zone
 	var combatZoneBar = document.getElementById("sandbox-zone-combat-bar")
 	if JS.t(combatZoneBar):
 		for btn in JS.iter(combatZoneBar.querySelectorAll("button")):
-			var gym = JS.find(JS.or_(Encounters.GYM_ROSTER, []), func(g = null): return JS.includes(btn.textContent, g.element))
+			var gym = JS.find(JS.or_(Encounters.GYM_ROSTER, []), func(g = null): return JS.includes(btn.textContent, g.get("element")))
 			if not JS.t(gym):
 				continue
-			var isActive = JS.eq(element, gym.element)
-			btn.style.background = (gym.color + "33" if isActive else "#111")
-			btn.style.borderColor = (gym.color if isActive else "#333")
-			btn.style.color = (gym.color if isActive else "#888")
+			var isActive = JS.eq(element, gym.get("element"))
+			btn.style.background = (JS.s(gym.get("color")) + "33" if isActive else "#111")
+			btn.style.borderColor = (gym.get("color") if isActive else "#333")
+			btn.style.color = (gym.get("color") if isActive else "#888")
 
 func sandboxUnlockVeil():
 	if not JS.t(Constants.sandboxMode):

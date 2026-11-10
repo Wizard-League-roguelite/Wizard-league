@@ -89,7 +89,7 @@ static func _shape(rid: RID, n: DomNode, xf: Transform2D, inh: Dictionary, doc) 
 		"path":
 			subs = path(str(n.attrs.get("d", "")), scale)
 		"text":
-			var txt := n.textContent
+			var txt = n.textContent
 			if txt == "": return
 			var px := _num(n, "font-size", 16.0)
 			var font: Font = doc.root.st.font

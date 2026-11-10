@@ -17,24 +17,24 @@ func _boot():
 # Both sides resolve action-by-action with a short delay between each pair.
 # Tick player CDs once per round (called at end of round, not start).
 func _tickPlayerCDs():
-	if State.combat.basicCD > 0:
+	if State.combat.get("basicCD") > 0:
 		State.combat.basicCD -= 1
 	# Tick all books' spells so CDs advance regardless of which book is active
 	for book in JS.iter(JS.or_(State.player.get("spellbooks"), [])):
-		for s in JS.iter(book.spells):
-			if s.currentCD > 0:
+		for s in JS.iter(book.get("spells")):
+			if s.get("currentCD") > 0:
 				s.currentCD -= 1
 
 # Apply catalogue book effects after a spell action resolves
 func _applyBookSpellEffect(action = null):
 	if ((not JS.t(action) or not JS.t(action.get("isSpellAction"))) or not JS.t(action.get("bookCatalogueId"))):
 		return
-	var cat = JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, action.bookCatalogueId)
+	var cat = JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, action.get("bookCatalogueId"))
 	if not JS.t(cat):
 		return
-	var book = JS.find(JS.or_(State.player.get("spellbooks"), []), func(b = null): return JS.eq(b.catalogueId, action.bookCatalogueId))
+	var book = JS.find(JS.or_(State.player.get("spellbooks"), []), func(b = null): return JS.eq(b.get("catalogueId"), action.get("bookCatalogueId")))
 	var lvl = (JS.or_(book.get("upgradeLevel"), 0) if JS.t(book) else 0)
-	var spell = action.spellObj
+	var spell = action.get("spellObj")
 	if JS.t(State.combat.get("over")):
 		return
 	# onSpellExecute hook
@@ -46,11 +46,11 @@ func _applyBookSpellEffect(action = null):
 	var aura = (JS.callm(cat, "aura", [lvl]) if JS.t(cat.get("aura")) else {})
 	if (((JS.t(aura.get("echoBonus")) and JS.t(State.combat.get("_echoReady"))) and JS.t(spell)) and not JS.t(spell.get("isBuiltin"))):
 		State.combat._echoReady = false
-		var echoDmg = JS.round((JS.or_(State.player.get("attackPower"), 0)) * aura.echoBonus)
+		var echoDmg = JS.round((JS.or_(State.player.get("attackPower"), 0)) * aura.get("echoBonus"))
 		if (echoDmg > 0 and not JS.t(State.combat.get("over"))):
 			var anyEnemy = (JS.idx(Helpers.aliveEnemies(), 0) if JS.t(Helpers.aliveEnemies) else null)
 			if JS.t(anyEnemy):
-				State.setActiveEnemy(JS.indexOf(State.combat.enemies, anyEnemy))
+				State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), anyEnemy))
 				Hit.applyDirectDamage.call("player", "enemy", echoDmg, "🌀 Echo")
 				UI.log_("🌀 Echo Grimoire: +" + JS.s(echoDmg) + " echo damage!", "player")
 
@@ -66,19 +66,19 @@ func startRound():
 	State.combat._residualCurrentValue = 0
 	# ── Apply pending 1-turn power bonuses (Overcharge/Feedback) ──
 	# Clear last round's bonus first, then promote pending to this-turn bonus.
-	State.status.player.nextTurnPowerBonus = 0
-	if State.status.player.overchargePowerPending > 0:
-		State.status.player.nextTurnPowerBonus = State.status.player.overchargePowerPending
-		UI.log_("⚡ +" + JS.s(State.status.player.overchargePowerPending) + " Power this turn (Overcharge/Feedback)", "status")
-		State.status.player.overchargePowerPending = 0
+	State.status.get("player").nextTurnPowerBonus = 0
+	if State.status.get("player").get("overchargePowerPending") > 0:
+		State.status.get("player").nextTurnPowerBonus = State.status.get("player").get("overchargePowerPending")
+		UI.log_("⚡ +" + JS.s(State.status.get("player").get("overchargePowerPending")) + " Power this turn (Overcharge/Feedback)", "status")
+		State.status.get("player").overchargePowerPending = 0
 	# Note: player.power is NOT mutated — this bonus expires at next round start
 	# ── Charge Shot auto-fire ──
-	if JS.t(State.status.player.get("chargeShotCharging")):
-		State.status.player.chargeShotCharging = false
-		var csDmg = (50 + Helpers.attackPowerFor("player", "enemy")) + (JS.or_(State.status.player.get("chargeShotDmgBonus"), 0))
-		State.status.player.chargeShotDmgBonus = 0
+	if JS.t(State.status.get("player").get("chargeShotCharging")):
+		State.status.get("player").chargeShotCharging = false
+		var csDmg = (50 + Helpers.attackPowerFor("player", "enemy")) + (JS.or_(State.status.get("player").get("chargeShotDmgBonus"), 0))
+		State.status.get("player").chargeShotDmgBonus = 0
 		for e in JS.iter(Helpers.aliveEnemies()):
-			State.setActiveEnemy(JS.indexOf(State.combat.enemies, e))
+			State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), e))
 			Hit.applyDirectDamage.call("player", "enemy", csDmg, "🎯⚡ Charge Shot")
 		UI.log_("🎯⚡ Charge Shot FIRES! " + JS.s(csDmg) + " dmg to all", "player")
 		if JS.t(State.combat.get("over")):
@@ -98,147 +98,147 @@ func startRound():
 	if JS.t(State.combat.get("over")):
 		return
 	# ── Per-enemy round ticks ──
-	var _arr1 = JS.iter(State.combat.enemies)
+	var _arr1 = JS.iter(State.combat.get("enemies"))
 	for i in range(len(_arr1)):
 		var e = _arr1[i]
 		if not JS.t(e.get("alive")):
 			continue
 		State.setActiveEnemy(i)
-		if e.basicCD > 0:
+		if e.get("basicCD") > 0:
 			e.basicCD -= 1
 		# Tick ability cooldowns
 		if JS.t(e.get("abilities")):
-			for a in JS.iter(e.abilities):
-				if a.cd > 0:
+			for a in JS.iter(e.get("abilities")):
+				if a.get("cd") > 0:
 					a.cd -= 1
 		# Tick static field
-		if e._staticFieldTurns > 0:
+		if JS.un(e.get("_staticFieldTurns")) > 0:
 			e._staticFieldTurns -= 1
-			if (e._staticFieldTurns <= 0 and JS.t(e.get("_staticPowerBonus"))):
-				e.statPow = max(0, (JS.or_(e.get("statPow"), 0)) - e._staticPowerBonus)
+			if (JS.un(e.get("_staticFieldTurns")) <= 0 and JS.t(e.get("_staticPowerBonus"))):
+				e.statPow = max(0, (JS.or_(e.get("statPow"), 0)) - JS.un(e.get("_staticPowerBonus")))
 				e._staticPowerBonus = 0
-				UI.log_("🌩️ " + JS.s(e.name) + "'s Static Field fades.", "status")
+				UI.log_("🌩️ " + JS.s(e.get("name")) + "'s Static Field fades.", "status")
 		# Shock: decay 25% each round
-		e.status.shockStacks = floori((JS.or_(e.status.get("shockStacks"), 0)) * 0.75)
+		e.get("status").shockStacks = floori((JS.or_(e.get("status").get("shockStacks"), 0)) * 0.75)
 		# Foam expires
-		if e.status.foamStacks > 0:
-			e.status.foamStacks -= 1
+		if e.get("status").get("foamStacks") > 0:
+			e.get("status").foamStacks -= 1
 		# Gale Bind (Air+Nature duo): temporary root expires before normal decay
-		if e.status._galeBind > 0:
-			e.status.rootStacks = max(0, e.status.rootStacks - e.status._galeBind)
-			e.status._galeBind = 0
+		if JS.un(e.get("status").get("_galeBind")) > 0:
+			e.get("status").rootStacks = max(0, e.get("status").get("rootStacks") - JS.un(e.get("status").get("_galeBind")))
+			e.get("status")._galeBind = 0
 		# Root decay
-		if e.status.rootStacks > 0:
-			e.status.rootStacks -= 1
+		if e.get("status").get("rootStacks") > 0:
+			e.get("status").rootStacks -= 1
 			Seeds._rootedBloomDecay("enemy")
 		# Stone stance reset + decay (25%, skip if Living Mountain enemy)
-		e.status.stoneStanceThisTurn = false
-		if e.status.stoneStacks > 0:
-			var decay = max(1, floori(e.status.stoneStacks * 0.25))
-			e.status.stoneStacks = max(0, e.status.stoneStacks - decay)
+		e.get("status").stoneStanceThisTurn = false
+		if e.get("status").get("stoneStacks") > 0:
+			var decay = max(1, floori(e.get("status").get("stoneStacks") * 0.25))
+			e.get("status").stoneStacks = max(0, e.get("status").get("stoneStacks") - decay)
 		# Wildfire: 33% chance to double enemy burn
-		if ((Main.hasPassive("fire_wildfire") and e.status.burnStacks > 0) and randf() < 0.33):
-			e.status.burnStacks *= 2
-			UI.log_("🌪️ Wildfire! " + JS.s(e.name) + " burn ×2 (×" + JS.s(e.status.burnStacks) + ")", "status")
+		if ((Main.hasPassive("fire_wildfire") and e.get("status").get("burnStacks") > 0) and randf() < 0.33):
+			e.get("status").burnStacks *= 2
+			UI.log_("🌪️ Wildfire! " + JS.s(e.get("name")) + " burn ×2 (×" + JS.s(e.get("status").get("burnStacks")) + ")", "status")
 		# Burn tick (1 or 1.5 per stack; Grease Fire doubles once)
-		if e.status.burnStacks > 0:
-			var grease = State.status.player.greasefirePending
+		if e.get("status").get("burnStacks") > 0:
+			var grease = State.status.get("player").get("greasefirePending")
 			var mult = (2 if JS.t(grease) else 1)
 			if JS.t(grease):
-				State.status.player.greasefirePending = false
+				State.status.get("player").greasefirePending = false
 				UI.log_("🛢️ Grease Fire: burn tick doubled!", "status")
-			var bdmg = ceili((e.status.burnStacks * Helpers.burnDmgPerStack("player", Helpers.effectPowerFor("player"))) * mult)
+			var bdmg = ceili((e.get("status").get("burnStacks") * Helpers.burnDmgPerStack("player", Helpers.effectPowerFor("player"))) * mult)
 			if bdmg > 0:
 				Hit.applyEffectDamage("player", "enemy", bdmg, "🔥 Burn")
 			if JS.t(State.combat.get("over")):
 				continue
 		# Frost tick (1 or 3 per stack; skip while frozen)
-		if (e.status.frostStacks > 0 and not JS.t(e.status.get("frozen"))):
+		if (e.get("status").get("frostStacks") > 0 and not JS.t(e.get("status").get("frozen"))):
 			var frostPer = (3 if Main.hasPassive("ice_permafrost_core") else 1)
-			var fdmg = floori(e.status.frostStacks) * frostPer
+			var fdmg = floori(e.get("status").get("frostStacks")) * frostPer
 			if fdmg > 0:
-				Hit.applyEffectDamage("player", "enemy", fdmg, "❄️ Frost (×" + JS.toFixed(e.status.frostStacks, 1) + ")")
+				Hit.applyEffectDamage("player", "enemy", fdmg, "❄️ Frost (×" + JS.toFixed(e.get("status").get("frostStacks"), 1) + ")")
 			if JS.t(State.combat.get("over")):
 				continue
 		# Frost decay: 1 stack per round regardless of frozen state
-		if e.status.frostStacks > 0:
-			e.status.frostStacks = max(0, e.status.frostStacks - 1)
-			if (JS.t(e.status.get("frozen")) and e.status.frostStacks <= 0):
-				e.status.frozen = false
-				UI.log_("🧊 " + JS.s(e.name) + " thaws out.", "status")
+		if e.get("status").get("frostStacks") > 0:
+			e.get("status").frostStacks = max(0, e.get("status").get("frostStacks") - 1)
+			if (JS.t(e.get("status").get("frozen")) and e.get("status").get("frostStacks") <= 0):
+				e.get("status").frozen = false
+				UI.log_("🧊 " + JS.s(e.get("name")) + " thaws out.", "status")
 		# Frozen Ground: apply 2 Frost to all enemies for N rounds
-		if State.status.player.frozenGroundTurns > 0:
+		if State.status.get("player").get("frozenGroundTurns") > 0:
 			Helpers.applyFrost("player", "enemy", 2)
 	if JS.t(State.combat.get("over")):
 		return
 	# Frozen Ground countdown
-	if State.status.player.frozenGroundTurns > 0:
-		State.status.player.frozenGroundTurns -= 1
-		if JS.eq(State.status.player.get("frozenGroundTurns"), 0):
+	if State.status.get("player").get("frozenGroundTurns") > 0:
+		State.status.get("player").frozenGroundTurns -= 1
+		if JS.eq(State.status.get("player").get("frozenGroundTurns"), 0):
 			UI.log_("❄️ Frozen Ground fades.", "status")
 	# Spreading Vines: 1 root to all enemies + 1 armor for N rounds
-	if State.status.player.spreadingVinesTurns > 0:
+	if State.status.get("player").get("spreadingVinesTurns") > 0:
 		for e in JS.iter(Helpers.aliveEnemies()):
-			State.setActiveEnemy(JS.indexOf(State.combat.enemies, e))
+			State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), e))
 			Helpers.applyRoot("player", "enemy", 1)
 		Helpers.gainBlock("player", 1)
-		State.status.player.spreadingVinesTurns -= 1
-		if JS.eq(State.status.player.get("spreadingVinesTurns"), 0):
+		State.status.get("player").spreadingVinesTurns -= 1
+		if JS.eq(State.status.get("player").get("spreadingVinesTurns"), 0):
 			UI.log_("🌿 Spreading Vines fades.", "status")
 	# ── Player per-round ticks ──
 	# Shock: decay 25% each round
-	State.status.player.shockStacks = floori((JS.or_(State.status.player.get("shockStacks"), 0)) * 0.75)
-	if State.status.player.foamStacks > 0:
-		State.status.player.foamStacks -= 1
-	if State.status.player.rootStacks > 0:
-		State.status.player.rootStacks -= 1
+	State.status.get("player").shockStacks = floori((JS.or_(State.status.get("player").get("shockStacks"), 0)) * 0.75)
+	if State.status.get("player").get("foamStacks") > 0:
+		State.status.get("player").foamStacks -= 1
+	if State.status.get("player").get("rootStacks") > 0:
+		State.status.get("player").rootStacks -= 1
 		Seeds._rootedBloomDecay("player")
-	State.status.player.stoneStanceThisTurn = false
-	if (State.status.player.stoneStacks > 0 and not Main.hasPassive("earth_living_mountain")):
-		var decay = max(1, floori(State.status.player.stoneStacks * 0.25))
-		State.status.player.stoneStacks = max(0, State.status.player.stoneStacks - decay)
-	if State.status.player.debuffImmune > 0:
-		State.status.player.debuffImmune -= 1
-	if State.status.player.rageBoostTurns > 0:
-		State.status.player.rageBoostTurns -= 1
-		if JS.eq(State.status.player.get("rageBoostTurns"), 0):
-			State.status.player.rageBoostPow = 0
+	State.status.get("player").stoneStanceThisTurn = false
+	if (State.status.get("player").get("stoneStacks") > 0 and not Main.hasPassive("earth_living_mountain")):
+		var decay = max(1, floori(State.status.get("player").get("stoneStacks") * 0.25))
+		State.status.get("player").stoneStacks = max(0, State.status.get("player").get("stoneStacks") - decay)
+	if State.status.get("player").get("debuffImmune") > 0:
+		State.status.get("player").debuffImmune -= 1
+	if State.status.get("player").get("rageBoostTurns") > 0:
+		State.status.get("player").rageBoostTurns -= 1
+		if JS.eq(State.status.get("player").get("rageBoostTurns"), 0):
+			State.status.get("player").rageBoostPow = 0
 	# Fortify: convert pending armor into Stone stacks (1 stack per 5 armor)
-	if State.status.player.fortifyPending > 0:
-		var armorLeft = min(State.status.player.fortifyPending, JS.or_(State.status.player.get("block"), 0))
+	if State.status.get("player").get("fortifyPending") > 0:
+		var armorLeft = min(State.status.get("player").get("fortifyPending"), JS.or_(State.status.get("player").get("block"), 0))
 		var stacks = max(1, floori(armorLeft / 5.0))
-		State.status.player.block = max(0, (JS.or_(State.status.player.get("block"), 0)) - armorLeft)
-		State.status.player.fortifyPending = 0
+		State.status.get("player").block = max(0, (JS.or_(State.status.get("player").get("block"), 0)) - armorLeft)
+		State.status.get("player").fortifyPending = 0
 		Helpers.addStoneStacks("player", stacks)
 		UI.log_("🏰 Fortify breaks — " + JS.s(armorLeft) + " Armor → " + JS.s(stacks) + " Stone stacks", "status")
 	# Player burn tick
-	if State.status.player.burnStacks > 0:
-		var anyEnemy = JS.find(State.combat.enemies, func(e = null): return JS.t(e.get("alive")))
+	if State.status.get("player").get("burnStacks") > 0:
+		var anyEnemy = JS.find(State.combat.get("enemies"), func(e = null): return JS.t(e.get("alive")))
 		if JS.t(anyEnemy):
-			State.setActiveEnemy(JS.indexOf(State.combat.enemies, anyEnemy))
-		var bdmg = ceili(State.status.player.burnStacks * Helpers.burnDmgPerStack("enemy", JS.or_(State.status.player.get("burnSourcePower"), 0)))
+			State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), anyEnemy))
+		var bdmg = ceili(State.status.get("player").get("burnStacks") * Helpers.burnDmgPerStack("enemy", JS.or_(State.status.get("player").get("burnSourcePower"), 0)))
 		if bdmg > 0:
 			Hit.applyEffectDamage("enemy", "player", bdmg, "🔥 Burn")
 			if JS.t(State.combat.get("over")):
 				return
 	# Player frost tick
-	if (State.status.player.frostStacks > 0 and not JS.t(State.status.player.get("frozen"))):
+	if (State.status.get("player").get("frostStacks") > 0 and not JS.t(State.status.get("player").get("frozen"))):
 		var frostPer = (3 if Main.enemyHasPassive("ice_permafrost_core") else 1)
-		var fdmg = floori(State.status.player.frostStacks) * frostPer
+		var fdmg = floori(State.status.get("player").get("frostStacks")) * frostPer
 		if fdmg > 0:
-			Hit.applyEffectDamage("enemy", "player", fdmg, "❄️ Frost (×" + JS.toFixed(State.status.player.frostStacks, 1) + ")")
+			Hit.applyEffectDamage("enemy", "player", fdmg, "❄️ Frost (×" + JS.toFixed(State.status.get("player").get("frostStacks"), 1) + ")")
 			if JS.t(State.combat.get("over")):
 				return
 	# Frost decay: 1 stack per round regardless of frozen state
-	if State.status.player.frostStacks > 0:
-		State.status.player.frostStacks = max(0, State.status.player.frostStacks - 1)
-		if (JS.t(State.status.player.get("frozen")) and State.status.player.frostStacks <= 0):
-			State.status.player.frozen = false
+	if State.status.get("player").get("frostStacks") > 0:
+		State.status.get("player").frostStacks = max(0, State.status.get("player").get("frostStacks") - 1)
+		if (JS.t(State.status.get("player").get("frozen")) and State.status.get("player").get("frostStacks") <= 0):
+			State.status.get("player").frozen = false
 			UI.log_("🧊 You thaw out.", "status")
 	# Restore target reference
-	if (not JS.t(JS.idx(State.combat.enemies, State.combat.targetIdx)) or not JS.t(JS.idx(State.combat.enemies, State.combat.targetIdx).get("alive"))):
+	if (not JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("targetIdx"))) or not JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("targetIdx")).get("alive"))):
 		State.combat.targetIdx = Helpers.firstAliveIdx()
-	State.setActiveEnemy(State.combat.targetIdx)
+	State.setActiveEnemy(State.combat.get("targetIdx"))
 	# ── Zone passive tick ──
 	applyZoneTick()
 	if JS.t(State.combat.get("over")):
@@ -248,16 +248,16 @@ func startRound():
 	if JS.t(State.combat.get("over")):
 		return
 	# Player stunned: skip planning, all enemies act
-	if State.status.player.stunned > 0:
+	if State.status.get("player").get("stunned") > 0:
 		var delay = [null]
-		State.status.player.stunned -= 1
+		State.status.get("player").stunned -= 1
 		UI.log_(JS.s(State.playerEmoji) + " You are stunned — skip your turn!", "status")
 		UI.renderStatusTags()
 		UI.setPlayerTurnUI(false)
 		_tickPlayerCDs()
 		# stun = lost turn, still tick CDs
 		delay[0] = 400
-		var _arr2 = JS.iter(State.combat.enemies)
+		var _arr2 = JS.iter(State.combat.get("enemies"))
 		for i in range(len(_arr2)):
 			var e = _arr2[i]
 			if not JS.t(e.get("alive")):
@@ -272,33 +272,33 @@ func startRound():
 		JS.setTimeout(startRound, delay[0] + 200)
 		return
 	# ── Air: Wind Wall delayed damage fires at round start ──
-	if ((State.playerElement == "Air" and (JS.or_(State.status.player.get("windWallPending"), 0)) > 0) and not JS.t(State.combat.get("over"))):
-		var wpDmg = State.status.player.windWallPending
-		State.status.player.windWallPending = 0
-		var anyEnemy = JS.find(State.combat.enemies, func(e = null): return JS.t(e.get("alive")))
+	if ((State.playerElement == "Air" and (JS.or_(State.status.get("player").get("windWallPending"), 0)) > 0) and not JS.t(State.combat.get("over"))):
+		var wpDmg = State.status.get("player").get("windWallPending")
+		State.status.get("player").windWallPending = 0
+		var anyEnemy = JS.find(State.combat.get("enemies"), func(e = null): return JS.t(e.get("alive")))
 		if JS.t(anyEnemy):
-			State.setActiveEnemy(JS.indexOf(State.combat.enemies, anyEnemy))
+			State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), anyEnemy))
 		Hit.applyEffectDamage("enemy", "player", wpDmg, "🌬️ Wind Wall — delayed damage arrives")
 		if JS.t(State.combat.get("over")):
 			return
-		State.setActiveEnemy(State.combat.targetIdx)
+		State.setActiveEnemy(State.combat.get("targetIdx"))
 	State.combat.turnInBattle += 1
 	State.combat.actionQueue = []
 	State.combat._aoPriorityShift = 0
 	State.combat.actionsLeft = Helpers.actionsPerTurnFor("player") + Artifacts.artifactExtraActions()
 	# ── Air: Slipstream talent — bonus action every N turns ──
-	if ((State.playerElement == "Air" and JS.t(State.player.get("_slipstreamInterval"))) and (JS.mod(State.combat.turnInBattle, State.player._slipstreamInterval)) == 0):
+	if ((State.playerElement == "Air" and JS.t(State.player.get("_slipstreamInterval"))) and (JS.mod(State.combat.get("turnInBattle"), State.player.get("_slipstreamInterval"))) == 0):
 		State.combat.actionsLeft += 1
-		UI.log_("💨 Slipstream: +1 bonus action! (turn " + JS.s(State.combat.turnInBattle) + ")", "status")
+		UI.log_("💨 Slipstream: +1 bonus action! (turn " + JS.s(State.combat.get("turnInBattle")) + ")", "status")
 	# ── Air: Sleeper Gust bonus actions ──
-	if (State.playerElement == "Air" and (JS.or_(State.status.player.get("nextTurnBonusActions"), 0)) > 0):
-		var bonus = State.status.player.nextTurnBonusActions
+	if (State.playerElement == "Air" and (JS.or_(State.status.get("player").get("nextTurnBonusActions"), 0)) > 0):
+		var bonus = State.status.get("player").get("nextTurnBonusActions")
 		State.combat.actionsLeft += bonus
 		UI.log_("💨 +" + JS.s(bonus) + " bonus action" + ("s" if bonus > 1 else "") + " from Sleeper Gust!", "status")
-		State.status.player.nextTurnBonusActions = 0
+		State.status.get("player").nextTurnBonusActions = 0
 	# ── Duo: Thermal Draft (Air+Fire) — Momentum from total enemy Burn ──
 	if (Main.hasPassive("duo_thermal_draft") and State.playerElement == "Air"):
-		var totalBurn = JS.reduce(State.combat.enemies, func(s = null, e = null): return s + (JS.or_(e.status.get("burnStacks"), 0) if JS.t(e.get("alive")) else 0), 0)
+		var totalBurn = JS.reduce(State.combat.get("enemies"), func(s = null, e = null): return s + (JS.or_(e.get("status").get("burnStacks"), 0) if JS.t(e.get("alive")) else 0), 0)
 		var momGain = JS.round(totalBurn * 0.15)
 		if momGain > 0:
 			Helpers.addMomentumStacks(momGain)
@@ -308,51 +308,51 @@ func startRound():
 		State.combat._tailwindBonusNextTurn = false
 		State.combat.actionsLeft += 1
 		State.combat._tailwindBonusActionPriority = JS.or_(State.combat.get("_tailwindBonusPriority"), 1)
-		var _tcPri = State.combat._tailwindBonusActionPriority
+		var _tcPri = State.combat.get("_tailwindBonusActionPriority")
 		UI.log_("🌬️ Tailwind Carry: +1 action (first queued spell gets priority " + ("+" if _tcPri > 0 else "") + JS.s(_tcPri) + ").", "status")
-	if (JS.or_(State.status.player.get("nextTurnActionPenalty"), 0)) > 0:
-		var penalty = State.status.player.nextTurnActionPenalty
-		State.combat.actionsLeft = max(0, State.combat.actionsLeft - penalty)
+	if (JS.or_(State.status.get("player").get("nextTurnActionPenalty"), 0)) > 0:
+		var penalty = State.status.get("player").get("nextTurnActionPenalty")
+		State.combat.actionsLeft = max(0, State.combat.get("actionsLeft") - penalty)
 		UI.log_("🧊 Freeze! −" + JS.s(penalty) + " action" + ("s" if penalty > 1 else "") + " this turn.", "status")
-		State.status.player.nextTurnActionPenalty = 0
+		State.status.get("player").nextTurnActionPenalty = 0
 	State.combat.plasmaChargeReserved = 0
 	# reset reserved charge each new round
 	# ── Plasma: round-start charge management ──
 	if State.playerElement == "Plasma":
 		# Stall regain
-		if JS.t(State.status.player.get("stallActive")):
-			State.status.player.stallActive = false
-			var regain = JS.or_(State.status.player.get("stallCharge"), 0)
-			State.status.player.stallCharge = 0
-			State.status.player.plasmaCharge = (JS.or_(State.status.player.get("plasmaCharge"), 0)) + regain
-			UI.log_("🫧 Stall ends — regained " + JS.s(regain) + " Charge (" + JS.s(State.status.player.plasmaCharge) + " total)", "status")
+		if JS.t(State.status.get("player").get("stallActive")):
+			State.status.get("player").stallActive = false
+			var regain = JS.or_(State.status.get("player").get("stallCharge"), 0)
+			State.status.get("player").stallCharge = 0
+			State.status.get("player").plasmaCharge = (JS.or_(State.status.get("player").get("plasmaCharge"), 0)) + regain
+			UI.log_("🫧 Stall ends — regained " + JS.s(regain) + " Charge (" + JS.s(State.status.get("player").get("plasmaCharge")) + " total)", "status")
 		# Borrowed Power penalty
-		if State.status.player.borrowedCharge > 0:
-			var penalty = State.status.player.borrowedCharge * 50
-			State.status.player.borrowedCharge = 0
+		if State.status.get("player").get("borrowedCharge") > 0:
+			var penalty = State.status.get("player").get("borrowedCharge") * 50
+			State.status.get("player").borrowedCharge = 0
 			Hit.applyEffectDamage("enemy", "player", penalty, "⏳ Borrowed Power debt")
 			if JS.t(State.combat.get("over")):
 				return
 		# Stabilized Core: +3 charge per turn start — only if Plasma book is active
 		if Main.hasPassive("plasma_stabilized_core"):
 			var _pIdx = State.plasmaBookIdx()
-			if (_pIdx >= 0 and State.player.activeBookIdx == _pIdx):
-				State.status.player.plasmaCharge = (JS.or_(State.status.player.get("plasmaCharge"), 0)) + 3
-				UI.log_("🔋 Stabilized Core: +3 Charge → " + JS.s(State.status.player.plasmaCharge), "status")
+			if (_pIdx >= 0 and State.player.get("activeBookIdx") == _pIdx):
+				State.status.get("player").plasmaCharge = (JS.or_(State.status.get("player").get("plasmaCharge"), 0)) + 3
+				UI.log_("🔋 Stabilized Core: +3 Charge → " + JS.s(State.status.get("player").get("plasmaCharge")), "status")
 		# Overcharge check: >= 20 at turn start
-		State.combat.plasmaOvercharged = (JS.or_(State.status.player.get("plasmaCharge"), 0)) >= 20
+		State.combat.plasmaOvercharged = (JS.or_(State.status.get("player").get("plasmaCharge"), 0)) >= 20
 		if JS.t(State.combat.get("plasmaOvercharged")):
 			UI.log_("✦ OVERCHARGE! Plasma abilities 1.5× this turn.", "status")
 		# (Plasma Shield reduction persists the whole battle — only reset in loadBattle)
 		# Energy Feedback: power bonus from current charge
 		if Main.hasPassive("plasma_energy_feedback"):
 			# This is applied dynamically in attackPowerFor — just log it
-			UI.log_("⚡ Energy Feedback: +" + JS.s(State.status.player.plasmaCharge) + " Power from Charge", "status")
+			UI.log_("⚡ Energy Feedback: +" + JS.s(State.status.get("player").get("plasmaCharge")) + " Power from Charge", "status")
 		Spells.updateChargeUI()
 	# ── Book onTurnStart hook (e.g. Verdant Codex regen) ──
 	var _abTurn = State.activeBook()
 	if (JS.t(_abTurn) and JS.t(_abTurn.get("catalogueId"))):
-		var _abCat = JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, _abTurn.catalogueId)
+		var _abCat = JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, _abTurn.get("catalogueId"))
 		if (JS.t(_abCat) and JS.t(_abCat.get("onTurnStart"))):
 			JS.callm(_abCat, "onTurnStart", [JS.or_(_abTurn.get("upgradeLevel"), 0)])
 			if JS.t(State.combat.get("over")):
@@ -364,13 +364,13 @@ func startRound():
 		if not JS.t(e.get("alive")):
 			return []
 		var actions = Helpers.actionsPerTurnFor("enemy") + (JS.or_(e.get("bonusActions"), 0))
-		var penalty = JS.or_(e.status.get("nextTurnActionPenalty"), 0)
+		var penalty = JS.or_(e.get("status").get("nextTurnActionPenalty"), 0)
 		if penalty > 0:
 			actions = max(0, actions - penalty)
-			e.status.nextTurnActionPenalty = 0
-			UI.log_("🧊 " + JS.s(e.name) + " frozen! −" + JS.s(penalty) + " action" + ("s" if penalty > 1 else "") + " this turn.", "status")
+			e.get("status").nextTurnActionPenalty = 0
+			UI.log_("🧊 " + JS.s(e.get("name")) + " frozen! −" + JS.s(penalty) + " action" + ("s" if penalty > 1 else "") + " this turn.", "status")
 		return buildEnemyQueueFor(i, actions)
-	State.combat.prebuiltEnemyQueues = JS.map(State.combat.enemies, _fn4)
+	State.combat.prebuiltEnemyQueues = JS.map(State.combat.get("enemies"), _fn4)
 	UI.renderEnemyCards()
 	renderQueue()
 	updateActionUI()
@@ -386,10 +386,10 @@ func _airQueuePriorityBonus():
 		bonus += JS.or_(State.player.get("_prevailingWindPriority"), 0)
 	# Tailwind Carry: first queued action next turn gets the pre-loaded priority
 	if State.combat.get("_tailwindBonusActionPriority") != null:
-		bonus += State.combat._tailwindBonusActionPriority
+		bonus += State.combat.get("_tailwindBonusActionPriority")
 		State.combat._tailwindBonusActionPriority = null
 	# Windfall Seed (Air+Nature duo): +1 priority while any Momentum Seed is germinating
-	if JS.some(JS.or_(State.status.player.get("seeds"), []), func(s = null): return s.get("type") == "momentum"):
+	if JS.some(JS.or_(State.status.get("player").get("seeds"), []), func(s = null): return s.get("type") == "momentum"):
 		bonus += 1
 	return bonus
 
@@ -402,13 +402,13 @@ func queueAction(label = null, fn = null, opts = null):
 	var isFree = (opts.get("isFree") if JS.t(opts) else opts)
 	if not JS.t(isFree):
 		var nonFreeCount = len(JS.arr(JS.or_(State.combat.get("actionQueue"), [])).filter(func(a = null): return not JS.t(a.get("isFree"))))
-		if nonFreeCount >= State.combat.actionsLeft:
+		if nonFreeCount >= State.combat.get("actionsLeft"):
 			return
 	# Immediate effect at queue time (e.g. Storm Rush +3 actions)
 	if (JS.t(opts) and JS.t(opts.get("onQueue"))):
 		JS.callm(opts, "onQueue", [])
-	var snapTarget = State.combat.targetIdx
-	State.combat.actionQueue.append({
+	var snapTarget = State.combat.get("targetIdx")
+	State.combat.get("actionQueue").append({
 		"label": label,
 		"fn": fn,
 		"targetIdx": snapTarget,
@@ -431,12 +431,12 @@ func queueAction(label = null, fn = null, opts = null):
 func queuePlasmaAction(label = null, fn = null, chargeToReserve = null, spellId = null):
 	if (not JS.t(State.combat.get("playerTurn")) or JS.t(State.combat.get("over"))):
 		return
-	var avail = (JS.or_(State.status.player.get("plasmaCharge"), 0)) - (JS.or_(State.combat.get("plasmaChargeReserved"), 0))
+	var avail = (JS.or_(State.status.get("player").get("plasmaCharge"), 0)) - (JS.or_(State.combat.get("plasmaChargeReserved"), 0))
 	if (chargeToReserve > 0 and avail < chargeToReserve):
 		return
-	var snapTarget = State.combat.targetIdx
+	var snapTarget = State.combat.get("targetIdx")
 	State.combat.plasmaChargeReserved = (JS.or_(State.combat.get("plasmaChargeReserved"), 0)) + (JS.or_(chargeToReserve, 0))
-	State.combat.actionQueue.append({
+	State.combat.get("actionQueue").append({
 		"label": label,
 		"fn": fn,
 		"targetIdx": snapTarget,
@@ -451,21 +451,21 @@ func queuePlasmaAction(label = null, fn = null, chargeToReserve = null, spellId 
 func removeFromQueue(idx = null):
 	if (not JS.t(State.combat.get("playerTurn")) or JS.t(State.combat.get("over"))):
 		return
-	var a = JS.idx(State.combat.actionQueue, idx)
+	var a = JS.idx(State.combat.get("actionQueue"), idx)
 	if (JS.t(a) and JS.t(a.get("undoCD"))):
 		JS.callm(a, "undoCD", [])
 	if (JS.t(a) and JS.t(a.get("undoOnQueue"))):
 		JS.callm(a, "undoOnQueue", [])
 	# Refund reserved Plasma charge
-	if ((JS.t(a) and JS.t(a.get("isPlasma"))) and a.chargeReserved > 0):
-		State.combat.plasmaChargeReserved = max(0, (JS.or_(State.combat.get("plasmaChargeReserved"), 0)) - a.chargeReserved)
+	if ((JS.t(a) and JS.t(a.get("isPlasma"))) and a.get("chargeReserved") > 0):
+		State.combat.plasmaChargeReserved = max(0, (JS.or_(State.combat.get("plasmaChargeReserved"), 0)) - a.get("chargeReserved"))
 		Spells.updateChargeUI()
-	JS.splice(State.combat.actionQueue, idx, 1)
+	JS.splice(State.combat.get("actionQueue"), idx, 1)
 	# Storm Rush removed — cascade-remove any spells that were only queueable due to its CD preview
 	if (JS.t(a) and JS.t(a.get("stormRushAction"))):
-		for i in range(len(State.combat.actionQueue) - 1, 0 - 1, -1):
-			if JS.t(State.combat.actionQueue[i].get("stormRushDependent")):
-				JS.splice(State.combat.actionQueue, i, 1)
+		for i in range(len(State.combat.get("actionQueue")) - 1, 0 - 1, -1):
+			if JS.t(State.combat.get("actionQueue")[i].get("stormRushDependent")):
+				JS.splice(State.combat.get("actionQueue"), i, 1)
 	renderQueue()
 	updateActionUI()
 	UI.renderSpellButtons()
@@ -484,14 +484,14 @@ func renderQueue():
 			playedRow.innerHTML = ""
 			# ── Build interleaved preview (same logic as commitEndTurn) ────────────
 			var _fn10 = func():
-				var pq = State.combat.actionQueue
-				var eq = State.combat.prebuiltEnemyQueues
+				var pq = State.combat.get("actionQueue")
+				var eq = State.combat.get("prebuiltEnemyQueues")
 				if (not JS.t(eq) or (len(pq) == 0 and not JS.some(eq, func(q = null): return (JS.t(q) and JS.t(len(q)))))):
 					return JS.map(pq, func(a = null, qi = null): return {"isPlayer": true, "action": a, "qIdx": qi, "eab": 0})
 				var participants = []
 				if len(pq) > 0:
 					participants.append({"id": "player", "queue": pq})
-				var _arr5 = JS.iter(State.combat.enemies)
+				var _arr5 = JS.iter(State.combat.get("enemies"))
 				for i in range(len(_arr5)):
 					var e = _arr5[i]
 					if not JS.t(e.get("alive")):
@@ -500,8 +500,8 @@ func renderQueue():
 					if len(q) > 0:
 						participants.append({"id": "enemy_" + JS.s(i), "idx": i, "queue": q})
 				var _fn6 = func(a = null, b = null):
-					if len(b.queue) != len(a.queue):
-						return len(b.queue) - len(a.queue)
+					if len(b.get("queue")) != len(a.get("queue")):
+						return len(b.get("queue")) - len(a.get("queue"))
 					if a.get("id") == "player":
 						return -1
 					if b.get("id") == "player":
@@ -509,21 +509,21 @@ func renderQueue():
 					return 0
 				JS.sort(participants, _fn6)
 				var flat = []
-				var maxLen = JS.arrMax(JS.arr(JS.arr(participants).map(func(p = null): return len(p.queue))) + [0])
+				var maxLen = JS.arrMax(JS.arr(JS.arr(participants).map(func(p = null): return len(p.get("queue")))) + [0])
 				for slot in range(ceili(maxLen)):
 					for p in JS.iter(participants):
-						if slot < len(p.queue):
-							flat.append({"isPlayer": p.get("id") == "player", "p": p, "action": p.queue[slot], "qIdx": slot, "eab": 0})
+						if slot < len(p.get("queue")):
+							flat.append({"isPlayer": p.get("id") == "player", "p": p, "action": p.get("queue")[slot], "qIdx": slot, "eab": 0})
 				var _arr7 = JS.iter(flat)
 				for i in range(len(_arr7)):
 					var e = _arr7[i]
 					e._nat = i
 				var _fn8 = func(a = null, b = null):
-					var pa = JS.or_((a.action.get("priority") if JS.t(a.get("action")) else a.get("action")), 0)
-					var pb = JS.or_((b.action.get("priority") if JS.t(b.get("action")) else b.get("action")), 0)
+					var pa = JS.or_((a.get("action").get("priority") if JS.t(a.get("action")) else a.get("action")), 0)
+					var pb = JS.or_((b.get("action").get("priority") if JS.t(b.get("action")) else b.get("action")), 0)
 					if pb != pa:
 						return pb - pa
-					return a._nat - b._nat
+					return JS.un(a.get("_nat")) - JS.un(b.get("_nat"))
 				JS.sort(flat, _fn8)
 				var _arr9 = JS.iter(flat)
 				for i in range(len(_arr9)):
@@ -542,7 +542,7 @@ func renderQueue():
 				if JS.t(isPlayer):
 					pc.className = "played-card"
 					pc.draggable = true
-					var _pcIcon = (SpellIcons.spellIconSVG(action.spellObj, 22) if (JS.t(action.get("spellObj")) and true) else "<span>" + (JS.or_(JS.idx(JS.split(JS.or_(action.get("label"), ""), " "), 0), "✦")) + "</span>")
+					var _pcIcon = (SpellIcons.spellIconSVG(action.get("spellObj"), 22) if (JS.t(action.get("spellObj")) and true) else "<span>" + (JS.or_(JS.idx(JS.split(JS.or_(action.get("label"), ""), " "), 0), "✦")) + "</span>")
 					var _pcPri = JS.or_(action.get("priority"), 0)
 					var _priBadge = ("<div class=\"pc-priority\" style=\"font-size:.65rem;color:" + ("#7af" if _pcPri > 0 else "#f97") + ";line-height:1;\">" + ("↑" if _pcPri > 0 else "↓") + JS.s(abs(_pcPri)) + "</div>" if _pcPri != 0 else "")
 					var _eabBadge = ("<div style=\"font-size:.52rem;color:#f97;line-height:1;margin-top:1px;\" title=\"Enemy acts " + JS.s(eab) + "x before this spell\">⚔" + JS.s(eab) + "</div>" if eab > 0 else "")
@@ -568,19 +568,19 @@ func renderQueue():
 						pc.classList.remove("drag-over")
 						if (_dragSrcQIdx[0] == null or JS.eq(_dragSrcQIdx[0], qIdx)):
 							return
-						var moved = JS.idx(JS.splice(State.combat.actionQueue, _dragSrcQIdx[0], 1), 0)
-						JS.splice(State.combat.actionQueue, qIdx, 0, [moved])
+						var moved = JS.idx(JS.splice(State.combat.get("actionQueue"), _dragSrcQIdx[0], 1), 0)
+						JS.splice(State.combat.get("actionQueue"), qIdx, 0, [moved])
 						_dragSrcQIdx[0] = null
 						renderQueue()
 						UI.renderSpellButtons()
 					pc.addEventListener("drop", _fn14)
 				else:
 					# Enemy action card
-					var _eEnemy = JS.idx(State.combat.enemies, entry.p.idx)
-					var _eName = (_eEnemy.name if JS.t(_eEnemy) else "Enemy")
+					var _eEnemy = JS.idx(State.combat.get("enemies"), entry.get("p").get("idx"))
+					var _eName = (_eEnemy.get("name") if JS.t(_eEnemy) else "Enemy")
 					var _pcPri = JS.or_(action.get("priority"), 0)
 					var _priBadge = ("<div class=\"pc-priority\" style=\"font-size:.65rem;color:" + ("#f97" if _pcPri > 0 else "#7af") + ";line-height:1;\">" + ("↑" if _pcPri > 0 else "↓") + JS.s(abs(_pcPri)) + "</div>" if _pcPri != 0 else "")
-					var _ie = action._intentEntry
+					var _ie = action.get("_intentEntry")
 					var _hint = ((JS.callm(_ie, "hintFn", []) if JS.t(_ie.get("hintFn")) else JS.or_(_ie.get("hint"), "")) if JS.t(_ie) else "")
 					var _eElem = (JS.or_(_eEnemy.get("element"), "Neutral") if JS.t(_eEnemy) else "Neutral")
 					var _eRawId = JS.or_((_ie.get("id") if JS.t(_ie) else _ie), "")
@@ -610,31 +610,31 @@ func renderQueue():
 		UI._renderArenaEndTurn(((not JS.t(State.combat.get("over"))) if JS.t(State.combat.get("playerTurn")) else State.combat.get("playerTurn")))
 		# Keep the hidden #end-turn-btn in sync (other code reads its state)
 		if JS.t(endBtn):
-			var hasActions = (len(State.combat.actionQueue) > 0 if JS.t(State.combat.get("actionQueue")) else State.combat.get("actionQueue"))
+			var hasActions = (len(State.combat.get("actionQueue")) > 0 if JS.t(State.combat.get("actionQueue")) else State.combat.get("actionQueue"))
 			endBtn.disabled = JS.or_((not JS.t(State.combat.get("playerTurn"))), State.combat.get("over"))
 			endBtn.className = ("end-turn-btn ready" if JS.t(hasActions) else "end-turn-btn")
 		return
 	# ── Spellbook mode: classic queue list ──────────────────────────────────
 	slots.innerHTML = ""
-	if (not JS.t(State.combat.get("actionQueue")) or len(State.combat.actionQueue) == 0):
+	if (not JS.t(State.combat.get("actionQueue")) or len(State.combat.get("actionQueue")) == 0):
 		slots.innerHTML = "<span class=\"queue-empty\">No actions queued — select actions below</span>"
 	else:
-		var _arr17 = JS.iter(State.combat.actionQueue)
+		var _arr17 = JS.iter(State.combat.get("actionQueue"))
 		for i in range(len(_arr17)):
 			var a = _arr17[i]
 			var s = document.createElement("div")
 			s.className = "queue-slot"
-			var tname = (" → " + JS.s(JS.idx(State.combat.enemies, a.targetIdx).name) if JS.t(JS.idx(State.combat.enemies, a.targetIdx)) else "")
+			var tname = (" → " + JS.s(JS.idx(State.combat.get("enemies"), a.get("targetIdx")).get("name")) if JS.t(JS.idx(State.combat.get("enemies"), a.get("targetIdx"))) else "")
 			var dmgHint = (JS.callm(a, "hintFn", []) if JS.t(a.get("hintFn")) else "")
-			s.innerHTML = JS.s(a.label) + tname + ("<div style=\"font-size:.48rem;color:#8aaa88;opacity:.85;margin-top:1px;\">" + JS.s(dmgHint) + "</div>" if JS.t(dmgHint) else "") + " <span class=\"qs-x\">✕</span>"
+			s.innerHTML = JS.s(a.get("label")) + tname + ("<div style=\"font-size:.48rem;color:#8aaa88;opacity:.85;margin-top:1px;\">" + JS.s(dmgHint) + "</div>" if JS.t(dmgHint) else "") + " <span class=\"qs-x\">✕</span>"
 			s.onclick = func(): return removeFromQueue(i)
 			slots.appendChild(s)
 	UI.renderEnemyCards()
 	if JS.t(endBtn):
-		var hasActions = (len(State.combat.actionQueue) > 0 if JS.t(State.combat.get("actionQueue")) else State.combat.get("actionQueue"))
+		var hasActions = (len(State.combat.get("actionQueue")) > 0 if JS.t(State.combat.get("actionQueue")) else State.combat.get("actionQueue"))
 		endBtn.disabled = JS.or_((not JS.t(State.combat.get("playerTurn"))), State.combat.get("over"))
 		endBtn.className = ("end-turn-btn ready" if JS.t(hasActions) else "end-turn-btn")
-		var totalQ = len(State.combat.actionQueue)
+		var totalQ = len(State.combat.get("actionQueue"))
 		endBtn.textContent = ("⚔ End Turn — Resolve " + JS.s(totalQ) + " Action" + ("s" if totalQ > 1 else "") if JS.t(hasActions) else "⚔ End Turn")
 
 func updateActionUI():
@@ -646,8 +646,8 @@ func updateActionUI():
 		var queued = len(JS.arr(JS.or_(State.combat.get("actionQueue"), [])).filter(func(a = null): return (not JS.t(a.get("isFree")) and not JS.t(a.get("isPlasma")))))
 		var total = JS.or_(State.combat.get("actionsLeft"), 0)
 		var alive = Helpers.aliveEnemies()
-		var tgt = JS.idx(State.combat.enemies, State.combat.targetIdx)
-		el.textContent = "Planning — Target: " + JS.s((tgt.name if JS.t(tgt) else "?")) + " (" + JS.s(len(alive)) + " alive)"
+		var tgt = JS.idx(State.combat.get("enemies"), State.combat.get("targetIdx"))
+		el.textContent = "Planning — Target: " + JS.s((tgt.get("name") if JS.t(tgt) else "?")) + " (" + JS.s(len(alive)) + " alive)"
 		if JS.t(slotsTxt):
 			slotsTxt.textContent = "(" + JS.s(queued) + "/" + JS.s(total) + " queued)"
 	else:
@@ -659,28 +659,28 @@ func updateActionUI():
 func queueSwitchBook(bookIdx = null):
 	if (not JS.t(State.combat.get("playerTurn")) or JS.t(State.combat.get("over"))):
 		return
-	var book = JS.idx(State.player.spellbooks, bookIdx)
-	if (not JS.t(book) or JS.eq(bookIdx, State.player.activeBookIdx)):
+	var book = JS.idx(State.player.get("spellbooks"), bookIdx)
+	if (not JS.t(book) or JS.eq(bookIdx, State.player.get("activeBookIdx"))):
 		return
 	# Check freeSwitch on target book
-	var targetCat = (JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, book.catalogueId) if (JS.t(book.get("catalogueId")) and true) else null)
+	var targetCat = (JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, book.get("catalogueId")) if (JS.t(book.get("catalogueId")) and true) else null)
 	var isFreeSwitch = (not (not (JS.t(targetCat) and JS.t(targetCat.get("freeSwitch")))))
 	# Check stickySwitch on current book (costs extra action to leave)
 	var curBook = State.activeBook()
-	var curCat = (JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, curBook.catalogueId) if ((JS.t(curBook) and JS.t(curBook.get("catalogueId"))) and true) else null)
+	var curCat = (JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, curBook.get("catalogueId")) if ((JS.t(curBook) and JS.t(curBook.get("catalogueId"))) and true) else null)
 	var isSticky = (not (not (JS.t(curCat) and JS.t(curCat.get("stickySwitch")))))
 	var nonFreeCount = len(JS.arr(JS.or_(State.combat.get("actionQueue"), [])).filter(func(a = null): return not JS.t(a.get("isFree"))))
 	if not isFreeSwitch:
 		var needed = (2 if isSticky else 1)
 		if (nonFreeCount + needed) > (JS.or_(State.combat.get("actionsLeft"), 0)):
 			return
-	var prevIdx = State.player.activeBookIdx
+	var prevIdx = State.player.get("activeBookIdx")
 	# Immediately switch the display so the player can see the target book's spells
 	State.switchBook(bookIdx)
 	UI.renderSpellButtons()
 	updateActionUI()
 	var _fn18 = func():
-		if not JS.eq(State.player.activeBookIdx, bookIdx):
+		if not JS.eq(State.player.get("activeBookIdx"), bookIdx):
 			State.switchBook(bookIdx)
 		UI.renderSpellButtons()
 		updateActionUI()
@@ -688,7 +688,7 @@ func queueSwitchBook(bookIdx = null):
 		State.switchBook(prevIdx)
 		UI.renderSpellButtons()
 		updateActionUI()
-	queueAction("📖 " + book.name, _fn18, {"isFree": isFreeSwitch, "undoOnQueue": _fn19})
+	queueAction("📖 " + JS.s(book.get("name")), _fn18, {"isFree": isFreeSwitch, "undoOnQueue": _fn19})
 	# Sticky: consume an extra action slot when leaving the Tome of Time
 	if (isSticky and not isFreeSwitch):
 		var _fn20 = func():
@@ -700,7 +700,7 @@ func commitEndTurn():
 		return
 	UI.setPlayerTurnUI(false)
 	# Split player queue: non-Plasma first, Plasma last
-	var allPlayerActions = JS.arr(State.combat.actionQueue)
+	var allPlayerActions = JS.arr(State.combat.get("actionQueue"))
 	State.combat.actionQueue = []
 	renderQueue()
 	var normalPlayerActions = JS.arr(allPlayerActions).filter(func(a = null): return not JS.t(a.get("isPlasma")))
@@ -710,15 +710,20 @@ func commitEndTurn():
 	State.combat._queueAbsPrioritySum = 0
 	State.combat._turnTotalAbsPrioritySum = JS.reduce(normalPlayerActions, func(s = null, a = null): return s + abs(JS.or_(a.get("priority"), 0)), 0)
 	# Use pre-built enemy queues (built at round start so intents were visible during planning)
-	var allEnemyQueues = (State.combat.get("prebuiltEnemyQueues") if JS.t(State.combat.get("prebuiltEnemyQueues")) else JS.map(State.combat.enemies, func(e = null, i = null): return (buildEnemyQueueFor(i, Helpers.actionsPerTurnFor("enemy") + (JS.or_(e.get("bonusActions"), 0))) if JS.t(e.get("alive")) else [])))
+	var allEnemyQueues = (State.combat.get("prebuiltEnemyQueues") if JS.t(State.combat.get("prebuiltEnemyQueues")) else JS.map(State.combat.get("enemies"), func(e = null, i = null): return (buildEnemyQueueFor(i, Helpers.actionsPerTurnFor("enemy") + (JS.or_(e.get("bonusActions"), 0))) if JS.t(e.get("alive")) else [])))
 	State.combat.prebuiltEnemyQueues = null
 	# Show enemy intents before resolution
 	UI.renderEnemyCards()
 	# Priority sort among non-Plasma participants
 	var participants = []
 	if len(normalPlayerActions) > 0:
-		participants.append({"id": "player", "queue": normalPlayerActions, "hp": State.player.hp, "power": State.player.attackPower})
-	var _arr21 = JS.iter(State.combat.enemies)
+		participants.append({
+			"id": "player",
+			"queue": normalPlayerActions,
+			"hp": State.player.get("hp"),
+			"power": State.player.get("attackPower"),
+		})
+	var _arr21 = JS.iter(State.combat.get("enemies"))
 	for i in range(len(_arr21)):
 		var e = _arr21[i]
 		if not JS.t(e.get("alive")):
@@ -727,12 +732,12 @@ func commitEndTurn():
 			"id": "enemy_" + JS.s(i),
 			"idx": i,
 			"queue": JS.or_(JS.idx(allEnemyQueues, i), []),
-			"hp": e.hp,
+			"hp": e.get("hp"),
 			"power": JS.or_(e.get("statPow"), 0),
 		})
 	var _fn22 = func(a = null, b = null):
-		if len(b.queue) != len(a.queue):
-			return len(b.queue) - len(a.queue)
+		if len(b.get("queue")) != len(a.get("queue")):
+			return len(b.get("queue")) - len(a.get("queue"))
 		# Equal queue length: player always goes first
 		if a.get("id") == "player":
 			return -1
@@ -742,41 +747,41 @@ func commitEndTurn():
 	JS.sort(participants, _fn22)
 	# Log initiative order
 	var _fn23 = func(p = null):
-		var name_ = (State.playerName if p.get("id") == "player" else JS.idx(State.combat.enemies, p.idx).name)
-		return ("🟢" if p.get("id") == "player" else "🔴") + JS.s(name_) + "(" + JS.s(len(p.queue)) + ")"
+		var name_ = (State.playerName if p.get("id") == "player" else JS.idx(State.combat.get("enemies"), p.get("idx")).get("name"))
+		return ("🟢" if p.get("id") == "player" else "🔴") + JS.s(name_) + "(" + JS.s(len(p.get("queue"))) + ")"
 	var names = JS.arr(participants).map(_fn23)
 	if len(plasmaPlayerActions) > 0:
 		names.append("🔮Plasma(" + JS.s(len(plasmaPlayerActions)) + ")")
 	UI.log_("Initiative: " + JS.join(names, " → "), "system")
 	# Weave non-Plasma into flat interleaved list
 	var flatActions = []
-	var maxLen = JS.arrMax(JS.arr(JS.arr(participants).map(func(p = null): return len(p.queue))) + [0])
+	var maxLen = JS.arrMax(JS.arr(JS.arr(participants).map(func(p = null): return len(p.get("queue")))) + [0])
 	for slot in range(ceili(maxLen)):
 		for p in JS.iter(participants):
-			if slot < len(p.queue):
-				flatActions.append({"p": p, "action": p.queue[slot]})
+			if slot < len(p.get("queue")):
+				flatActions.append({"p": p, "action": p.get("queue")[slot]})
 	# Priority sort: stable sort by priority descending, preserving round-robin tiebreak
 	var _arr24 = JS.iter(flatActions)
 	for i in range(len(_arr24)):
 		var entry = _arr24[i]
 		entry._nat = i
 	var _fn25 = func(a = null, b = null):
-		var pa = JS.or_((a.action.get("priority") if JS.t(a.get("action")) else a.get("action")), 0)
-		var pb = JS.or_((b.action.get("priority") if JS.t(b.get("action")) else b.get("action")), 0)
+		var pa = JS.or_((a.get("action").get("priority") if JS.t(a.get("action")) else a.get("action")), 0)
+		var pb = JS.or_((b.get("action").get("priority") if JS.t(b.get("action")) else b.get("action")), 0)
 		if pb != pa:
 			return pb - pa
-		return a._nat - b._nat
+		return JS.un(a.get("_nat")) - JS.un(b.get("_nat"))
 	JS.sort(flatActions, _fn25)
 	# Compute EAB (enemy actions before) for each player action
 	var _arr26 = JS.iter(flatActions)
 	for i in range(len(_arr26)):
 		var entry = _arr26[i]
-		if entry.p.get("id") == "player":
-			entry.enemyActionsBefore = len(JS.arr(JS.slice(flatActions, 0, i)).filter(func(e = null): return e.p.get("id") != "player"))
+		if entry.get("p").get("id") == "player":
+			entry.enemyActionsBefore = len(JS.arr(JS.slice(flatActions, 0, i)).filter(func(e = null): return e.get("p").get("id") != "player"))
 	# Tailwind Carry: track if all player actions resolved first (EAB=0)
-	State.combat._tailwindAllFirst = JS.some(flatActions, func(e = null): return e.p.get("id") == "player")
+	State.combat._tailwindAllFirst = JS.some(flatActions, func(e = null): return e.get("p").get("id") == "player")
 	for e in JS.iter(flatActions):
-		if (e.p.get("id") == "player" and (JS.or_(e.get("enemyActionsBefore"), 0)) > 0):
+		if (e.get("p").get("id") == "player" and (JS.or_(e.get("enemyActionsBefore"), 0)) > 0):
 			State.combat._tailwindAllFirst = false
 	# Plasma actions go at the very end
 	for a in JS.iter(plasmaPlayerActions):
@@ -785,24 +790,24 @@ func commitEndTurn():
 	if JS.t(State.combat.get("_afterburnActive")):
 		_tickAfterburn("before")
 	State.combat._gen = (JS.or_(State.combat.get("_gen"), 0)) + 1
-	resolveFlat(flatActions, 0, State.combat._gen)
+	resolveFlat(flatActions, 0, State.combat.get("_gen"))
 
 func _tickAfterburn(phase = null):
-	var _arr27 = JS.iter(State.combat.enemies)
+	var _arr27 = JS.iter(State.combat.get("enemies"))
 	for i in range(len(_arr27)):
 		var e = _arr27[i]
-		if (not JS.t(e.get("alive")) or not (e.status.burnStacks > 0)):
+		if (not JS.t(e.get("alive")) or not (e.get("status").get("burnStacks") > 0)):
 			continue
 		State.setActiveEnemy(i)
-		var bdmg = ceili(e.status.burnStacks * Helpers.burnDmgPerStack("player", Helpers.effectPowerFor("player")))
+		var bdmg = ceili(e.get("status").get("burnStacks") * Helpers.burnDmgPerStack("player", Helpers.effectPowerFor("player")))
 		if bdmg > 0:
 			Hit.applyEffectDamage("player", "enemy", bdmg, "🔥💨 Afterburn (" + JS.s(phase) + ")")
 	if not JS.t(State.combat.get("over")):
-		State.setActiveEnemy(State.combat.targetIdx)
+		State.setActiveEnemy(State.combat.get("targetIdx"))
 
 func resolveFlat(flatActions = null, idx = null, chainGen = null):
 	# Stale chain guard: abort if a newer chain has started (e.g. post-revive)
-	if not JS.eq(State.combat._gen, chainGen):
+	if not JS.eq(State.combat.get("_gen"), chainGen):
 		return
 	if idx >= len(flatActions):
 		# Afterburn: burn ticks after all actions resolve
@@ -814,18 +819,18 @@ func resolveFlat(flatActions = null, idx = null, chainGen = null):
 			var _tcChoice = JS.or_(State.player.get("_tailwindCarryChoice"), "fast")
 			State.combat._tailwindBonusPriority = (-1 if _tcChoice == "slow" else 1)
 			State.combat._tailwindBonusNextTurn = true
-			UI.log_("🌬️ Tailwind Carry! Bonus action next turn (priority " + ("+" if State.combat._tailwindBonusPriority > 0 else "") + JS.s(State.combat._tailwindBonusPriority) + ").", "status")
+			UI.log_("🌬️ Tailwind Carry! Bonus action next turn (priority " + ("+" if JS.un(State.combat.get("_tailwindBonusPriority")) > 0 else "") + JS.s(State.combat.get("_tailwindBonusPriority")) + ").", "status")
 		# All actions done — now check deferred death
-		if (State.player.hp <= 0 and not JS.t(State.combat.get("over"))):
+		if (State.player.get("hp") <= 0 and not JS.t(State.combat.get("over"))):
 			endBattle(false)
 			return
 		if JS.t(State.combat.get("over")):
 			return
 		_tickPlayerCDs()
 		# round fully resolved — tick CDs now
-		if (not JS.t(JS.idx(State.combat.enemies, State.combat.targetIdx)) or not JS.t(JS.idx(State.combat.enemies, State.combat.targetIdx).get("alive"))):
+		if (not JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("targetIdx"))) or not JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("targetIdx")).get("alive"))):
 			State.combat.targetIdx = Helpers.firstAliveIdx()
-		State.setActiveEnemy(State.combat.targetIdx)
+		State.setActiveEnemy(State.combat.get("targetIdx"))
 		JS.setTimeout(startRound, 650)
 		return
 	var _d28 = JS.idx(flatActions, idx)
@@ -837,13 +842,13 @@ func resolveFlat(flatActions = null, idx = null, chainGen = null):
 			JS.setTimeout(func(): return resolveFlat(flatActions, idx + 1, chainGen), 320)
 	var next = _fn29
 	if p.get("id") == "player":
-		var snapTgt = (action.targetIdx if action.get("targetIdx") != null else State.combat.targetIdx)
+		var snapTgt = (action.get("targetIdx") if action.get("targetIdx") != null else State.combat.get("targetIdx"))
 		State.combat.targetIdx = snapTgt
 		State.setActiveEnemy(snapTgt)
 		State.combat._playerActionIdx = (JS.or_(State.combat.get("_playerActionIdx"), 0)) + 1
-		State.combat.currentQueuePosition = (JS.idx(flatActions, idx).enemyActionsBefore if JS.idx(flatActions, idx).get("enemyActionsBefore") != null else 0)
+		State.combat.currentQueuePosition = (JS.idx(flatActions, idx).get("enemyActionsBefore") if JS.idx(flatActions, idx).get("enemyActionsBefore") != null else 0)
 		# Vortex Strike: consecutive player actions, first in each run
-		var _prevWasPlayer = (idx > 0 and JS.idx(flatActions, idx - 1).p.get("id") == "player")
+		var _prevWasPlayer = (idx > 0 and JS.idx(flatActions, idx - 1).get("p").get("id") == "player")
 		if not _prevWasPlayer:
 			State.combat._vortexUsedThisSequence = false
 		State.combat._vortexStrikeActive = (((Main.hasPassive("air_vortex_strike") and State.playerElement == "Air") and _prevWasPlayer) and not JS.t(State.combat.get("_vortexUsedThisSequence")))
@@ -867,22 +872,22 @@ func resolveFlat(flatActions = null, idx = null, chainGen = null):
 			_applyBookSpellEffect(action)
 		UI.updateHPBars()
 		UI.renderStatusTags()
-		if ((not JS.t(isPlasmaFinal) and State.player.hp <= 0) and not JS.t(State.combat.get("over"))):
+		if ((not JS.t(isPlasmaFinal) and State.player.get("hp") <= 0) and not JS.t(State.combat.get("over"))):
 			UI.log_("💀 You dropped to 0 HP — Plasma heals may save you!", "status")
 		next.call()
 	else:
-		var eIdx = p.idx
-		if (not JS.t(JS.idx(State.combat.enemies, eIdx)) or not JS.t(JS.idx(State.combat.enemies, eIdx).get("alive"))):
+		var eIdx = p.get("idx")
+		if (not JS.t(JS.idx(State.combat.get("enemies"), eIdx)) or not JS.t(JS.idx(State.combat.get("enemies"), eIdx).get("alive"))):
 			next.call()
 			return
 		State.setActiveEnemy(eIdx)
 		# Remove the fired intent from the queue so remaining ones stay visible
-		var enemy = JS.idx(State.combat.enemies, eIdx)
-		if (JS.t(enemy.get("intentQueue")) and len(enemy.intentQueue) > 0):
-			enemy.intentQueue.pop_front()
-		if enemy.status.stunned > 0:
-			enemy.status.stunned -= 1
-			UI.log_(enemy.emoji + " " + enemy.name + " is stunned!", "status")
+		var enemy = JS.idx(State.combat.get("enemies"), eIdx)
+		if (JS.t(enemy.get("intentQueue")) and len(enemy.get("intentQueue")) > 0):
+			enemy.get("intentQueue").pop_front()
+		if enemy.get("status").get("stunned") > 0:
+			enemy.get("status").stunned -= 1
+			UI.log_(JS.s(enemy.get("emoji")) + " " + JS.s(enemy.get("name")) + " is stunned!", "status")
 			UI.renderStatusTags()
 		else:
 			JS.callm(action, "fn", [])
@@ -902,19 +907,19 @@ func _intentHidden():
 func _liveAttackHint(idx = null, baseDmg = null, el = null):
 	if JS.t(State.player.get("_mistBlindDamage")):
 		return ""
-	var e = JS.idx(State.combat.enemies, idx)
+	var e = JS.idx(State.combat.get("enemies"), idx)
 	if (not JS.t(e) or not JS.t(e.get("alive"))):
 		return ""
 	var es = JS.or_(e.get("status"), {})
 	var ps = JS.or_(State.status.get("player"), {})
 	# Read AP with this enemy as active so attackPowerFor uses its status
-	var prevIdx = State.combat.activeEnemyIdx
+	var prevIdx = State.combat.get("activeEnemyIdx")
 	State.combat.activeEnemyIdx = idx
 	var ap = Helpers.attackPowerFor("enemy", "player")
 	State.combat.activeEnemyIdx = prevIdx
 	var dmg = max(0, JS.round(baseDmg + ap))
 	# Zone bonus
-	if ((JS.t(State.combat.get("activeZoneElement")) and dmg > 0) and Helpers.primaryElement(JS.or_(e.get("element"), "")) == State.combat.activeZoneElement):
+	if ((JS.t(State.combat.get("activeZoneElement")) and dmg > 0) and Helpers.primaryElement(JS.or_(e.get("element"), "")) == State.combat.get("activeZoneElement")):
 		dmg = JS.round(dmg * 1.2)
 	# Enemy shock reduces their outgoing damage
 	var shockStacks = JS.or_(es.get("shockStacks"), 0)
@@ -942,7 +947,7 @@ func _liveAttackHint(idx = null, baseDmg = null, el = null):
 	return hint.strip_edges()
 
 func buildEnemyQueueFor(idx = null, count = null):
-	var e = JS.idx(State.combat.enemies, idx)
+	var e = JS.idx(State.combat.get("enemies"), idx)
 	var q = []
 	# Clear previous intent
 	e.intentQueue = []
@@ -950,58 +955,58 @@ func buildEnemyQueueFor(idx = null, count = null):
 	if JS.t(e.get("isTargetDummy")):
 		for j in range(ceili(count)):
 			var _fn30 = func():
-				UI.log_("🎯 " + e.name + " stands still.", "enemy")
+				UI.log_("🎯 " + JS.s(e.get("name")) + " stands still.", "enemy")
 			q.append({"label": "Stand Still", "intentIdx": j, "fn": _fn30})
-			e.intentQueue.append({"label": "Stand Still", "hidden": false})
+			e.get("intentQueue").append({"label": "Stand Still", "hidden": false})
 		return q
 	var cdPenalty = Helpers.enemyCooldownPenaltyFor(idx)
-	var cd = e.basicCD
+	var cd = e.get("basicCD")
 	for j in range(ceili(count)):
 		if cd <= 0:
 			var snapIdx = idx
 			# Try to use an item first (one-time consumable, fires on conditions)
 			var item = EnemyAbilities.pickEnemyItem(e)
 			if JS.t(item):
-				e.items = JS.arr(e.items).filter(func(it = null): return not JS.eq(it.id, item.id))
+				e.items = JS.arr(e.get("items")).filter(func(it = null): return not JS.eq(it.id, item.id))
 				var snapItem = item
 				var snapHint = ("Heals 20% max HP" if snapItem.get("id") == "enemy_healing_draught" else "+15 Block")
-				var intentEntry = {"label": snapItem.emoji + " " + snapItem.name, "hidden": false, "hint": snapHint}
-				e.intentQueue.append(intentEntry)
+				var intentEntry = {"label": JS.s(snapItem.get("emoji")) + " " + JS.s(snapItem.get("name")), "hidden": false, "hint": snapHint}
+				e.get("intentQueue").append(intentEntry)
 				var _fn31 = func():
-					if (JS.t(State.combat.get("over")) or not JS.t(JS.idx(State.combat.enemies, snapIdx).get("alive"))):
+					if (JS.t(State.combat.get("over")) or not JS.t(JS.idx(State.combat.get("enemies"), snapIdx).get("alive"))):
 						return
 					JS.callm(snapItem, "fn", [snapIdx])
 					UI.updateHPBars()
 					UI.renderStatusTags()
 					UI.updateStatsUI()
 				q.append({
-					"label": snapItem.emoji + " " + snapItem.name,
-					"intentIdx": len(e.intentQueue) - 1,
+					"label": JS.s(snapItem.get("emoji")) + " " + JS.s(snapItem.get("name")),
+					"intentIdx": len(e.get("intentQueue")) - 1,
 					"_intentEntry": intentEntry,
 					"fn": _fn31,
 				})
 				cd = cdPenalty
 				continue
-			var isGymEnemy = (not (not JS.t(JS.idx(State.combat.enemies, idx).get("isGym"))))
+			var isGymEnemy = (not (not JS.t(JS.idx(State.combat.get("enemies"), idx).get("isGym"))))
 			if isGymEnemy:
-				var gymE = JS.idx(State.combat.enemies, idx)
-				if (not JS.t(gymE.get("gymPhase2")) and gymE.hp <= (gymE.enemyMaxHP * 0.5)):
+				var gymE = JS.idx(State.combat.get("enemies"), idx)
+				if (not JS.t(gymE.get("gymPhase2")) and gymE.get("hp") <= (gymE.get("enemyMaxHP") * 0.5)):
 					gymE.gymPhase2 = true
-					gymE.enemyDmg = gymE.gymPhase2Dmg
+					gymE.enemyDmg = gymE.get("gymPhase2Dmg")
 					var intentEntry = {"label": "💢 Enrage", "hidden": false}
-					e.intentQueue.append(intentEntry)
+					e.get("intentQueue").append(intentEntry)
 					var _fn32 = func():
-						UI.log_("💢 " + gymE.name + " ENRAGES! Damage surges!", "enemy")
-						gymE.hp = min(gymE.enemyMaxHP, (JS.or_(gymE.get("hp"), 0)) + 40)
+						UI.log_("💢 " + JS.s(gymE.get("name")) + " ENRAGES! Damage surges!", "enemy")
+						gymE.hp = min(gymE.get("enemyMaxHP"), (JS.or_(gymE.get("hp"), 0)) + 40)
 						UI.renderEnemyCards()
-					q.append({"label": "💢 Enrage", "intentIdx": len(e.intentQueue) - 1, "fn": _fn32})
+					q.append({"label": "💢 Enrage", "intentIdx": len(e.get("intentQueue")) - 1, "fn": _fn32})
 					cd = 1 + cdPenalty
 					continue
 				gymE.gymHitCounter = (JS.or_(gymE.get("gymHitCounter"), 0)) + 1
-				var isCharge = ((JS.mod(gymE.gymHitCounter, gymE.gymChargeInterval)) == 0 if JS.t(gymE.get("gymChargeInterval")) else gymE.get("gymChargeInterval"))
+				var isCharge = ((JS.mod(gymE.get("gymHitCounter"), gymE.get("gymChargeInterval"))) == 0 if JS.t(gymE.get("gymChargeInterval")) else gymE.get("gymChargeInterval"))
 				var chargeLabel = ("⚡ Charge" if JS.t(isCharge) else "⚔ Attack")
 				var _gymEl = Helpers.primaryElement(JS.or_(gymE.get("element"), ""))
-				var _gymDmg = (JS.round(gymE.enemyDmg * 2.5) if JS.t(isCharge) else gymE.enemyDmg)
+				var _gymDmg = (JS.round(gymE.get("enemyDmg") * 2.5) if JS.t(isCharge) else gymE.get("enemyDmg"))
 				var _snapGymDmg = _gymDmg
 				var _snapGymEl = _gymEl
 				var intentEntry = {
@@ -1009,13 +1014,13 @@ func buildEnemyQueueFor(idx = null, count = null):
 					"hidden": _intentHidden(),
 					"hintFn": func(): return _liveAttackHint(snapIdx, _snapGymDmg, _snapGymEl),
 				}
-				e.intentQueue.append(intentEntry)
+				e.get("intentQueue").append(intentEntry)
 				var _fn33 = func():
 					State.setActiveEnemy(snapIdx)
-					var gem = JS.idx(State.combat.enemies, snapIdx)
-					var dmg = (JS.round(gem.enemyDmg * 2.5) if JS.t(isCharge) else gem.enemyDmg)
+					var gem = JS.idx(State.combat.get("enemies"), snapIdx)
+					var dmg = (JS.round(gem.get("enemyDmg") * 2.5) if JS.t(isCharge) else gem.get("enemyDmg"))
 					if JS.t(isCharge):
-						UI.log_("💥 " + gem.name + " winds up a CHARGE ATTACK!", "enemy")
+						UI.log_("💥 " + JS.s(gem.get("name")) + " winds up a CHARGE ATTACK!", "enemy")
 					var gemEl = Helpers.primaryElement(JS.or_(gem.get("element"), ""))
 					Hit.performHit("enemy", "player", {
 						"baseDamage": dmg,
@@ -1026,14 +1031,14 @@ func buildEnemyQueueFor(idx = null, count = null):
 					})
 					if not JS.t(State.combat.get("over")):
 						Helpers.applyEnemyElementalProc(gemEl, snapIdx)
-				q.append({"label": chargeLabel, "intentIdx": len(e.intentQueue) - 1, "_intentEntry": intentEntry, "fn": _fn33})
+				q.append({"label": chargeLabel, "intentIdx": len(e.get("intentQueue")) - 1, "_intentEntry": intentEntry, "fn": _fn33})
 			else:
 				# Try to use an ability this action (blocked if silenced)
-				var ability = (null if e._silenced > 0 else EnemyAbilities.pickEnemyAbility(e, State.currentGymIdx))
+				var ability = (null if JS.un(e.get("_silenced")) > 0 else EnemyAbilities.pickEnemyAbility(e, State.currentGymIdx))
 				if JS.t(ability):
-					ability.cd = ability.baseCd
+					ability.cd = ability.get("baseCd")
 					var snapAbility = ability
-					var abilLabel = snapAbility.emoji + " " + snapAbility.name
+					var abilLabel = JS.s(snapAbility.get("emoji")) + " " + JS.s(snapAbility.get("name"))
 					var intentEntry = {
 						"label": abilLabel,
 						"hidden": _intentHidden(),
@@ -1041,35 +1046,35 @@ func buildEnemyQueueFor(idx = null, count = null):
 						"hintFn": (func(): return JS.callm(snapAbility, "hintFn", []) if JS.t(snapAbility.get("hintFn")) else null),
 						"hint": (null if JS.t(snapAbility.get("hintFn")) else JS.or_(JS.idx(EnemyAbilities.ENEMY_ABILITY_HINTS, snapAbility.id), "")),
 					}
-					e.intentQueue.append(intentEntry)
+					e.get("intentQueue").append(intentEntry)
 					var _fn34 = func():
 						if JS.t(State.combat.get("over")):
 							return
-						if not JS.t(JS.idx(State.combat.enemies, snapIdx).get("alive")):
+						if not JS.t(JS.idx(State.combat.get("enemies"), snapIdx).get("alive")):
 							return
 						State.setActiveEnemy(snapIdx)
 						JS.callm(snapAbility, "fn", [snapIdx])
 						UI.updateHPBars()
 						UI.renderStatusTags()
 						UI.updateStatsUI()
-					q.append({"label": abilLabel, "intentIdx": len(e.intentQueue) - 1, "_intentEntry": intentEntry, "fn": _fn34})
+					q.append({"label": abilLabel, "intentIdx": len(e.get("intentQueue")) - 1, "_intentEntry": intentEntry, "fn": _fn34})
 				else:
 					# Basic attack — 1-turn CD so it can't fire twice in one turn
 					var _el2 = Helpers.primaryElement(JS.or_(e.get("element"), ""))
-					var _snapDmg2 = e.enemyDmg
+					var _snapDmg2 = e.get("enemyDmg")
 					var _snapEl2 = _el2
 					var intentEntry = {
 						"label": "⚔ Attack",
 						"hidden": _intentHidden(),
 						"hintFn": func(): return _liveAttackHint(snapIdx, _snapDmg2, _snapEl2),
 					}
-					e.intentQueue.append(intentEntry)
+					e.get("intentQueue").append(intentEntry)
 					var _fn35 = func():
 						State.setActiveEnemy(snapIdx)
-						var e2 = JS.idx(State.combat.enemies, snapIdx)
+						var e2 = JS.idx(State.combat.get("enemies"), snapIdx)
 						var el = Helpers.primaryElement(JS.or_(e2.get("element"), ""))
 						Hit.performHit("enemy", "player", {
-							"baseDamage": e2.enemyDmg,
+							"baseDamage": e2.get("enemyDmg"),
 							"effects": Helpers.enemyElementalEffects(el),
 							"isBasic": true,
 							"isEnemyAttack": true,
@@ -1078,12 +1083,12 @@ func buildEnemyQueueFor(idx = null, count = null):
 						if not JS.t(State.combat.get("over")):
 							Helpers.applyEnemyElementalProc(el, snapIdx)
 						if (JS.t(State.combat.get("activeZoneElement")) and not JS.t(State.combat.get("over"))):
-							var zfx = JS.idx(Encounters.ZONE_EFFECTS, State.combat.activeZoneElement)
+							var zfx = JS.idx(Encounters.ZONE_EFFECTS, State.combat.get("activeZoneElement"))
 							if JS.t(zfx):
 								JS.callm(zfx, "apply", ["player", snapIdx])
 							UI.updateHPBars()
 							UI.renderStatusTags()
-					q.append({"label": "⚔ Attack", "intentIdx": len(e.intentQueue) - 1, "_intentEntry": intentEntry, "fn": _fn35})
+					q.append({"label": "⚔ Attack", "intentIdx": len(e.get("intentQueue")) - 1, "_intentEntry": intentEntry, "fn": _fn35})
 					cd = 1 + cdPenalty
 					# basic attack puts itself on CD — second slot uses ability or waits
 					continue
@@ -1091,11 +1096,11 @@ func buildEnemyQueueFor(idx = null, count = null):
 		else:
 			# Basic attack on cooldown — try to use an ability instead of waiting
 			var snapIdx = idx
-			var ability2 = (null if e._silenced > 0 else EnemyAbilities.pickEnemyAbility(e, State.currentGymIdx))
+			var ability2 = (null if JS.un(e.get("_silenced")) > 0 else EnemyAbilities.pickEnemyAbility(e, State.currentGymIdx))
 			if JS.t(ability2):
-				ability2.cd = ability2.baseCd
+				ability2.cd = ability2.get("baseCd")
 				var snapAbility2 = ability2
-				var abilLabel2 = snapAbility2.emoji + " " + snapAbility2.name
+				var abilLabel2 = JS.s(snapAbility2.get("emoji")) + " " + JS.s(snapAbility2.get("name"))
 				var intentEntry2 = {
 					"label": abilLabel2,
 					"hidden": _intentHidden(),
@@ -1103,18 +1108,18 @@ func buildEnemyQueueFor(idx = null, count = null):
 					"hintFn": (func(): return JS.callm(snapAbility2, "hintFn", []) if JS.t(snapAbility2.get("hintFn")) else null),
 					"hint": (null if JS.t(snapAbility2.get("hintFn")) else JS.or_(JS.idx(EnemyAbilities.ENEMY_ABILITY_HINTS, snapAbility2.id), "")),
 				}
-				e.intentQueue.append(intentEntry2)
+				e.get("intentQueue").append(intentEntry2)
 				var _fn36 = func():
 					if JS.t(State.combat.get("over")):
 						return
-					if not JS.t(JS.idx(State.combat.enemies, snapIdx).get("alive")):
+					if not JS.t(JS.idx(State.combat.get("enemies"), snapIdx).get("alive")):
 						return
 					State.setActiveEnemy(snapIdx)
 					JS.callm(snapAbility2, "fn", [snapIdx])
 					UI.updateHPBars()
 					UI.renderStatusTags()
 					UI.updateStatsUI()
-				q.append({"label": abilLabel2, "intentIdx": len(e.intentQueue) - 1, "_intentEntry": intentEntry2, "fn": _fn36})
+				q.append({"label": abilLabel2, "intentIdx": len(e.get("intentQueue")) - 1, "_intentEntry": intentEntry2, "fn": _fn36})
 			# else: no action available — slot consumed silently (no "Wait" shown)
 			cd -= 1
 	e.basicCD = max(0, cd)
@@ -1123,49 +1128,49 @@ func buildEnemyQueueFor(idx = null, count = null):
 func executeOneEnemyAction(idx = null):
 	if JS.t(State.combat.get("over")):
 		return
-	var e = JS.idx(State.combat.enemies, idx)
+	var e = JS.idx(State.combat.get("enemies"), idx)
 	if (not JS.t(e) or not JS.t(e.get("alive"))):
 		return
 	State.setActiveEnemy(idx)
-	if e.status.stunned > 0:
-		e.status.stunned -= 1
-		UI.log_(JS.s(e.emoji) + " " + JS.s(e.name) + " is stunned!", "status")
+	if e.get("status").get("stunned") > 0:
+		e.get("status").stunned -= 1
+		UI.log_(JS.s(e.get("emoji")) + " " + JS.s(e.get("name")) + " is stunned!", "status")
 		UI.renderStatusTags()
 		return
-	if e.basicCD <= 0:
+	if e.get("basicCD") <= 0:
 		e.basicCD = 1 + Helpers.enemyCooldownPenalty()
 		var el = Helpers.primaryElement(JS.or_(e.get("element"), ""))
 		Hit.performHit("enemy", "player", {
-			"baseDamage": e.enemyDmg,
+			"baseDamage": e.get("enemyDmg"),
 			"effects": Helpers.enemyElementalEffects(el),
 			"isBasic": true,
 			"isEnemyAttack": true,
 			"abilityElement": el,
 		})
 		if not JS.t(State.combat.get("over")):
-			Helpers.applyEnemyElementalProc(el, JS.indexOf(State.combat.enemies, e))
+			Helpers.applyEnemyElementalProc(el, JS.indexOf(State.combat.get("enemies"), e))
 
 func resolveSummonAttacks():
-	if (not JS.t(State.combat.get("summons")) or len(State.combat.summons) == 0):
+	if (not JS.t(State.combat.get("summons")) or len(State.combat.get("summons")) == 0):
 		return
 	var alive = Helpers.aliveEnemies()
 	if len(alive) == 0:
 		return
-	for s in JS.iter(State.combat.summons):
-		if s.hp <= 0:
+	for s in JS.iter(State.combat.get("summons")):
+		if s.get("hp") <= 0:
 			continue
-		if s.cd > 0:
+		if s.get("cd") > 0:
 			s.cd -= 1
 			continue
 		var target = JS.idx(alive, floori(randf() * len(alive)))
-		var tIdx = JS.indexOf(State.combat.enemies, target)
+		var tIdx = JS.indexOf(State.combat.get("enemies"), target)
 		State.setActiveEnemy(tIdx)
-		UI.log_("🌳 " + JS.s(s.name) + " strikes " + JS.s(target.name) + "!", "player")
-		Hit.performHit("player", "enemy", {"baseDamage": s.dmg, "effects": [], "isBasic": false, "abilityElement": "Nature", "isSummon": true})
+		UI.log_("🌳 " + JS.s(s.get("name")) + " strikes " + JS.s(target.get("name")) + "!", "player")
+		Hit.performHit("player", "enemy", {"baseDamage": s.get("dmg"), "effects": [], "isBasic": false, "abilityElement": "Nature", "isSummon": true})
 		if (not JS.t(State.combat.get("over")) and randf() < (JS.or_(s.get("rootChance"), 0.5))):
 			Helpers.applyRoot("player", "enemy", 1)
 	# Remove dead summons
-	State.combat.summons = JS.arr(State.combat.summons).filter(func(s = null): return s.hp > 0)
+	State.combat.summons = JS.arr(State.combat.get("summons")).filter(func(s = null): return s.get("hp") > 0)
 	UI.renderSummonsRow()
 
 func toggleInventory():
@@ -1176,10 +1181,10 @@ func toggleInventory():
 func useItemInCombat(idx = null):
 	if (not JS.t(State.combat.get("playerTurn")) or JS.t(State.combat.get("over"))):
 		return
-	var item = JS.idx(State.player.inventory, idx)
+	var item = JS.idx(State.player.get("inventory"), idx)
 	if not JS.t(item):
 		return
-	if len(JS.or_(State.combat.get("actionQueue"), [])) >= State.combat.actionsLeft:
+	if len(JS.or_(State.combat.get("actionQueue"), [])) >= State.combat.get("actionsLeft"):
 		return
 	document.getElementById("inv-panel").classList.remove("open")
 	# snapshot item, remove from inv immediately to prevent double-queue
@@ -1189,25 +1194,25 @@ func useItemInCombat(idx = null):
 	var _fn37 = func():
 		var result = JS.callm(snapItem, "use", [])
 		if JS.t(result):
-			UI.log_(JS.s(snapItem.emoji) + " " + JS.s(result), "item")
+			UI.log_(JS.s(snapItem.get("emoji")) + " " + JS.s(result), "item")
 		UI.updateHPBars()
 		UI.updateStatsUI()
-	queueAction(JS.s(snapItem.emoji) + " " + JS.s(snapItem.name), _fn37)
+	queueAction(JS.s(snapItem.get("emoji")) + " " + JS.s(snapItem.get("name")), _fn37)
 
 func renderCombatInventory():
 	var panel = document.getElementById("inv-panel")
-	var count = len(State.player.inventory)
+	var count = len(State.player.get("inventory"))
 	document.getElementById("inv-count-label").textContent = JS.s(count) + " item" + ("" if count == 1 else "s")
 	panel.innerHTML = ""
 	if count == 0:
 		panel.innerHTML = "<div class=\"inv-empty\">No items</div>"
 	else:
-		var _arr38 = JS.iter(State.player.inventory)
+		var _arr38 = JS.iter(State.player.get("inventory"))
 		for idx in range(len(_arr38)):
 			var item = _arr38[idx]
 			var b = document.createElement("button")
 			b.className = "inv-item-btn"
-			b.innerHTML = "<span>" + JS.s(item.emoji) + " " + JS.s(item.name) + " <span style=\"color:#666;font-size:.63rem;\">— " + JS.s(item.desc) + "</span></span><span style=\"color:#555;font-size:.63rem;\">USE (1)</span>"
+			b.innerHTML = "<span>" + JS.s(item.get("emoji")) + " " + JS.s(item.get("name")) + " <span style=\"color:#666;font-size:.63rem;\">— " + JS.s(item.get("desc")) + "</span></span><span style=\"color:#555;font-size:.63rem;\">USE (1)</span>"
 			b.onclick = func(): return useItemInCombat(idx)
 			panel.appendChild(b)
 
@@ -1220,20 +1225,20 @@ func endBattle(won = null):
 	State.combat.summons = []
 	if JS.t(won):
 		var _lootItemId = [null]
-		var isGym = JS.some(State.combat.enemies, func(e = null): return JS.t(e.get("isGym")))
+		var isGym = JS.some(State.combat.get("enemies"), func(e = null): return JS.t(e.get("isGym")))
 		UI.log_("⚔ Victory!", "win")
 		if JS.t(State.player.get("_ktRecoveryPct")):
-			Helpers.applyHeal("player", floori(Helpers.maxHPFor("player") * State.player._ktRecoveryPct), "💊 Recovery")
+			Helpers.applyHeal("player", floori(Helpers.maxHPFor("player") * JS.un(State.player.get("_ktRecoveryPct"))), "💊 Recovery")
 		var goldBase = JS.or_(State.combat.get("totalGold"), 0)
 		var gold = JS.round(goldBase * (1 + (JS.or_(State.player.get("_goldBonus"), 0))))
 		State.player.gold += gold
 		if gold > 0:
-			UI.log_("✦ Gained " + JS.s(gold) + " gold" + (" (" + JS.s(JS.round(State.player._goldBonus * 100)) + "% bonus)" if State.player._goldBonus > 0 else "") + ".", "item")
+			UI.log_("✦ Gained " + JS.s(gold) + " gold" + (" (" + JS.s(JS.round(State.player.get("_goldBonus") * 100)) + "% bonus)" if State.player.get("_goldBonus") > 0 else "") + ".", "item")
 		_lootItemId[0] = null
 		if randf() < Constants.ITEM_DROP_CHANCE:
 			_lootItemId[0] = JS.idx(Items.ITEM_DROP_POOL, floori(randf() * len(Items.ITEM_DROP_POOL)))
 			Spells.addItem(_lootItemId[0])
-			UI.log_("✦ Item dropped: " + JS.s(JS.idx(Items.ITEM_CATALOGUE, _lootItemId[0]).emoji) + " " + JS.s(JS.idx(Items.ITEM_CATALOGUE, _lootItemId[0]).name) + "!", "item")
+			UI.log_("✦ Item dropped: " + JS.s(JS.idx(Items.ITEM_CATALOGUE, _lootItemId[0]).get("emoji")) + " " + JS.s(JS.idx(Items.ITEM_CATALOGUE, _lootItemId[0]).get("name")) + "!", "item")
 		UI.updateHPBars()
 		UI.updateStatsUI()
 		var isRival = (not (not JS.t(State.combat.get("_isRival"))))
@@ -1247,13 +1252,13 @@ func endBattle(won = null):
 			var beatenGym = Encounters.currentGymDef()
 			var gymIdx = State.currentGymIdx
 			if JS.t(beatenGym):
-				UI.log_("🏆 Gym " + JS.s(JS.add(State.currentGymIdx, 1)) + " — " + beatenGym.name + " defeated!", "win")
+				UI.log_("🏆 Gym " + JS.s(JS.add(State.currentGymIdx, 1)) + " — " + JS.s(beatenGym.get("name")) + " defeated!", "win")
 			# Artifact discovery (65% chance)
 			var newArt = Artifacts.onGymDefeated(gymIdx)
 			if JS.t(newArt):
 				var def = JS.idx(Artifacts.ARTIFACT_CATALOGUE, newArt.id)
 				if JS.t(def):
-					UI.log_("🏺 Artifact Discovered: " + def.emoji + " " + def.name + " — check the Vault!", "item")
+					UI.log_("🏺 Artifact Discovered: " + JS.s(def.get("emoji")) + " " + JS.s(def.get("name")) + " — check the Vault!", "item")
 			var _beatenGymIdx = State.currentGymIdx
 			# capture before advancing
 			# Gauntlet boss victory — not a zone gym
@@ -1280,7 +1285,7 @@ func endBattle(won = null):
 				State.battleNumber += 1
 		elif isRival:
 			# Fall through to showPostBattleLoot — showMap() will load gauntlet after rewards
-			UI.log_("⚔ Rival " + Encounters.RIVAL.name + " defeated! Passive reward incoming...", "win")
+			UI.log_("⚔ Rival " + JS.s(Encounters.RIVAL.get("name")) + " defeated! Passive reward incoming...", "win")
 			State._zoneRivalDefeated = true
 			State.battleNumber += 1
 			State._runRoomsCompleted += 1
@@ -1301,28 +1306,28 @@ func endBattle(won = null):
 			if JS.t(artUpgrade):
 				var def = JS.idx(Artifacts.ARTIFACT_CATALOGUE, artUpgrade.id)
 				if JS.t(def):
-					UI.log_("🏺 " + JS.s(def.emoji) + " " + JS.s(def.name) + " " + "★".repeat(artUpgrade.star) + " — Artifact leveled up!", "item")
+					UI.log_("🏺 " + JS.s(def.get("emoji")) + " " + JS.s(def.get("name")) + " " + "★".repeat(artUpgrade.get("star")) + " — Artifact leveled up!", "item")
 		var _fn39 = func():
 			BattleReward.showPostBattleLoot(isGym, JS.or_(State.combat.get("_isSpellBattle"), false), isRival, gold, _lootItemId[0])
 		JS.setTimeout(_fn39, 900)
 	else:
-		if State.player.revives > 0:
+		if State.player.get("revives") > 0:
 			State.player.revives -= 1
 			var revivePct = min(1.0, 0.75 + (JS.or_(State.player.get("_talentReviveBonus"), 0)))
 			var reviveHP = floori(Helpers.maxHPFor("player") * revivePct)
 			State.player.hp = reviveHP + (JS.or_(State.player.get("_gritHealOnRevive"), 0))
-			State.player.hp = min(State.player.hp, Helpers.maxHPFor("player"))
+			State.player.hp = min(State.player.get("hp"), Helpers.maxHPFor("player"))
 			# Clear all negative debuffs on revive
-			State.status.player.burnStacks = 0
-			State.status.player.foamStacks = 0
-			State.status.player.frostStacks = 0
-			State.status.player.frozen = false
-			State.status.player.shockStacks = 0
-			State.status.player.rootStacks = 0
-			State.status.player.stunned = 0
-			State.status.player.frozenGroundTurns = 0
+			State.status.get("player").burnStacks = 0
+			State.status.get("player").foamStacks = 0
+			State.status.get("player").frostStacks = 0
+			State.status.get("player").frozen = false
+			State.status.get("player").shockStacks = 0
+			State.status.get("player").rootStacks = 0
+			State.status.get("player").stunned = 0
+			State.status.get("player").frozenGroundTurns = 0
 			State.combat.over = false
-			UI.log_("💀 Fatal blow! ❤️ Life lost — reviving to " + JS.s(State.player.hp) + " HP. (" + JS.s(State.player.revives) + " lives left)", "win")
+			UI.log_("💀 Fatal blow! ❤️ Life lost — reviving to " + JS.s(State.player.get("hp")) + " HP. (" + JS.s(State.player.get("revives")) + " lives left)", "win")
 			UI.updateHPBars()
 			UI.updateStatsUI()
 			JS.setTimeout(startRound, 1400)
@@ -1335,12 +1340,12 @@ func endBattle(won = null):
 func applyZoneTick():
 	if (not JS.t(State.combat.get("activeZoneElement")) or JS.t(State.combat.get("over"))):
 		return
-	var el = State.combat.activeZoneElement
+	var el = State.combat.get("activeZoneElement")
 	match el:
 		"Fire":
 			# +2 burn on player from the scorched environment
-			State.status.player.burnStacks = (JS.or_(State.status.player.get("burnStacks"), 0)) + 2
-			State.status.player.burnSourcePower = max(JS.or_(State.status.player.get("burnSourcePower"), 0), floori(State.battleNumber * 1.5))
+			State.status.get("player").burnStacks = (JS.or_(State.status.get("player").get("burnStacks"), 0)) + 2
+			State.status.get("player").burnSourcePower = max(JS.or_(State.status.get("player").get("burnSourcePower"), 0), floori(State.battleNumber * 1.5))
 			UI.log_("🔥 Zone: searing heat applies +2 Burn.", "status")
 		"Ice":
 			# +2 frost on player from the frozen air
@@ -1348,12 +1353,12 @@ func applyZoneTick():
 			UI.log_("❄️ Zone: biting cold applies +2 Frost.", "status")
 		"Lightning":
 			# +1 shock on player from static in the air
-			State.status.player.shockStacks = (JS.or_(State.status.player.get("shockStacks"), 0)) + 1
+			State.status.get("player").shockStacks = (JS.or_(State.status.get("player").get("shockStacks"), 0)) + 1
 			UI.log_("⚡ Zone: static charge applies +1 Shock.", "status")
 		"Earth":
 			# All alive enemies gain +1 stone stack — they're on home turf
 			for e in JS.iter(Helpers.aliveEnemies()):
-				e.status.stoneStacks = (JS.or_(e.status.get("stoneStacks"), 0)) + 1
+				e.get("status").stoneStacks = (JS.or_(e.get("status").get("stoneStacks"), 0)) + 1
 			UI.log_("🪨 Zone: earthen power grants enemies +1 Stone.", "status")
 		"Nature":
 			# 40% chance to root player — vines creep in
@@ -1367,12 +1372,12 @@ func applyZoneTick():
 		"Plasma":
 			# All alive enemies gain +3% dodge this round from phasing reality
 			for e in JS.iter(Helpers.aliveEnemies()):
-				e.status.battleDodgeBonus = min(0.3, (JS.or_(e.status.get("battleDodgeBonus"), 0)) + 0.03)
+				e.get("status").battleDodgeBonus = min(0.3, (JS.or_(e.get("status").get("battleDodgeBonus"), 0)) + 0.03)
 			UI.log_("🔮 Zone: reality flickers — enemies +3% dodge.", "status")
 		"Air":
 			# 25% chance to stun player 1t from battering winds
 			if randf() < 0.25:
-				State.status.player.stunned = max(JS.or_(State.status.player.get("stunned"), 0), 1)
+				State.status.get("player").stunned = max(JS.or_(State.status.get("player").get("stunned"), 0), 1)
 				UI.log_("🌀 Zone: battering winds stun you for 1 turn!", "status")
 	UI.renderStatusTags()
 	UI.renderEnemyCards()

@@ -120,7 +120,7 @@ func _mp3Play(key = null):
 		el.currentTime = JS.or_(JS.idx(_mp3Paused, key), el.get("currentTime"))
 	el.volume = 0
 	var _fn3 = func(err = null):
-		JS.console_warn(["[mp3audio] play() blocked:", err.message, "— path:", JS.idx(_MP3_PATHS, key)])
+		JS.console_warn(["[mp3audio] play() blocked:", err.get("message"), "— path:", JS.idx(_MP3_PATHS, key)])
 	el.play().catch(_fn3)
 	_mp3FadeIn(el)
 

@@ -17,7 +17,7 @@ func _getSurgeThreshold():
 		threshold -= 10
 	# Galestrike (Air+Lightning duo): Momentum reduces threshold by floor(momentum/2)
 	if Main.hasPassive("duo_galestrike"):
-		threshold -= floori((JS.or_(State.status.player.get("momentumStacks"), 0)) / 2.0)
+		threshold -= floori((JS.or_(State.status.get("player").get("momentumStacks"), 0)) / 2.0)
 	return max(10, threshold)
 
 # Apply Surge to a target. Creates new Surge or handles stacking per passives.
@@ -26,21 +26,21 @@ func _getSurgeThreshold():
 func _applySurge(targetSide = null, value = null, label = null):
 	var tStatus = null
 	if targetSide == "enemy":
-		var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+		var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 		if (not JS.t(e) or not JS.t(e.get("alive"))):
 			return
-		tStatus = e.status
+		tStatus = e.get("status")
 	else:
-		tStatus = State.status.player
+		tStatus = State.status.get("player")
 	label = JS.or_(label, "⚡ Surge")
 	if JS.t(tStatus.get("surgeActive")):
 		# Amplified: adding Surge to already-Surged target adds 25% of new value
 		if Main.hasPassive("lightning_amplified"):
 			var bonus = JS.round(value * 0.25)
 			tStatus.surgeValue = (JS.or_(tStatus.get("surgeValue"), 0)) + bonus
-			UI.log_("⚡ Amplified: Surge +" + JS.s(bonus) + " → " + JS.s(tStatus.surgeValue) + " stored", "status")
+			UI.log_("⚡ Amplified: Surge +" + JS.s(bonus) + " → " + JS.s(tStatus.get("surgeValue")) + " stored", "status")
 		else:
-			UI.log_("⚡ Surge already active (" + JS.s(tStatus.surgeValue) + " dmg, " + JS.s(JS.round(JS.or_(tStatus.get("surgeMeter"), 0))) + "/" + JS.s(_getSurgeThreshold()) + " charged)", "status")
+			UI.log_("⚡ Surge already active (" + JS.s(tStatus.get("surgeValue")) + " dmg, " + JS.s(JS.round(JS.or_(tStatus.get("surgeMeter"), 0))) + "/" + JS.s(_getSurgeThreshold()) + " charged)", "status")
 		return
 	tStatus.surgeActive = true
 	tStatus.surgeValue = value
@@ -54,17 +54,17 @@ func _addToSurgeMeter(targetSide = null, dmgAmt = null):
 		return
 	var tStatus = null
 	if targetSide == "enemy":
-		var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+		var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 		if (not JS.t(e) or not JS.t(e.get("alive"))):
 			return
-		tStatus = e.status
+		tStatus = e.get("status")
 	else:
-		tStatus = State.status.player
+		tStatus = State.status.get("player")
 	if (not JS.t(tStatus) or not JS.t(tStatus.get("surgeActive"))):
 		return
 	tStatus.surgeMeter = (JS.or_(tStatus.get("surgeMeter"), 0)) + dmgAmt
 	# Check if threshold reached
-	if tStatus.surgeMeter >= _getSurgeThreshold():
+	if tStatus.get("surgeMeter") >= _getSurgeThreshold():
 		_triggerSurge(targetSide)
 
 # Trigger a Surge on the target — deal damage, apply passives, consume Surge.
@@ -73,13 +73,13 @@ func _triggerSurge(targetSide = null):
 	var targetName = null
 	var targetObj = null
 	if targetSide == "enemy":
-		targetObj = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+		targetObj = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 		if (not JS.t(targetObj) or not JS.t(targetObj.get("alive"))):
 			return
-		tStatus = targetObj.status
-		targetName = targetObj.name
+		tStatus = targetObj.get("status")
+		targetName = targetObj.get("name")
 	else:
-		tStatus = State.status.player
+		tStatus = State.status.get("player")
 		targetName = "you"
 	if (not JS.t(tStatus) or not JS.t(tStatus.get("surgeActive"))):
 		return
@@ -94,38 +94,38 @@ func _triggerSurge(targetSide = null):
 	if (hasLiveWire and targetSide == "enemy"):
 		var alive = Helpers.aliveEnemies()
 		for e in JS.iter(alive):
-			State.setActiveEnemy(JS.indexOf(State.combat.enemies, e))
+			State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), e))
 			Hit.applyDirectDamage.call("player", "enemy", surgeValue, "⚡ Surge (Live Wire)")
 			if JS.t(State.combat.get("over")):
 				continue
 		# Restore active enemy
 		if not JS.t(State.combat.get("over")):
-			State.setActiveEnemy(State.combat.targetIdx)
+			State.setActiveEnemy(State.combat.get("targetIdx"))
 	else:
 		Hit.applyDirectDamage.call("player", targetSide, surgeValue, "⚡ Surge")
 	if JS.t(State.combat.get("over")):
 		return
 	# Galestrike (Air+Lightning duo): triggering Surge costs 5 Momentum
 	if (Main.hasPassive("duo_galestrike") and State.playerElement == "Air"):
-		var lost = min(5, floori(JS.or_(State.status.player.get("momentumStacks"), 0)))
+		var lost = min(5, floori(JS.or_(State.status.get("player").get("momentumStacks"), 0)))
 		if lost > 0:
-			State.status.player.momentumStacks = max(0, (JS.or_(State.status.player.get("momentumStacks"), 0)) - lost)
-			UI.log_("⚡💨 Galestrike: Surge triggered — −" + JS.s(lost) + " Momentum (×" + JS.toFixed(State.status.player.momentumStacks, 1) + ")", "status")
+			State.status.get("player").momentumStacks = max(0, (JS.or_(State.status.get("player").get("momentumStacks"), 0)) - lost)
+			UI.log_("⚡💨 Galestrike: Surge triggered — −" + JS.s(lost) + " Momentum (×" + JS.toFixed(State.status.get("player").get("momentumStacks"), 1) + ")", "status")
 	# Mark that Surge triggered this turn (for Residual Current)
 	State.combat._surgeTriggeredThisTurn = true
 	# Overcharged passive: +3 Shock to target on trigger
 	if (Main.hasPassive("lightning_overcharged") and targetSide == "enemy"):
-		var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+		var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 		if (JS.t(e) and JS.t(e.get("alive"))):
-			e.status.shockStacks = (JS.or_(e.status.get("shockStacks"), 0)) + 3
-			UI.log_("⚡ Overcharged! +3 Shock (×" + JS.toFixed(e.status.shockStacks, 1) + ")", "status")
+			e.get("status").shockStacks = (JS.or_(e.get("status").get("shockStacks"), 0)) + 3
+			UI.log_("⚡ Overcharged! +3 Shock (×" + JS.toFixed(e.get("status").get("shockStacks"), 1) + ")", "status")
 	# Cascade: all player CDs −1
 	if Main.hasPassive("lightning_cascade"):
 		for book in JS.iter(JS.or_(State.player.get("spellbooks"), [])):
-			for s in JS.iter(book.spells):
+			for s in JS.iter(book.get("spells")):
 				if (JS.or_(s.get("currentCD"), 0)) > 0:
 					s.currentCD -= 1
-		if State.combat.basicCD > 0:
+		if State.combat.get("basicCD") > 0:
 			State.combat.basicCD -= 1
 		UI.log_("⚡ Cascade! All cooldowns −1", "status")
 	# Storm Core: threshold permanently +15 this battle per trigger
@@ -134,42 +134,42 @@ func _triggerSurge(targetSide = null):
 		UI.log_("⚡ Storm Core: threshold now " + JS.s(_getSurgeThreshold()) + " (+15)", "status")
 	# Chain Surge: auto-reapply Surge with the same value
 	if (Main.hasPassive("lightning_chain_surge") and targetSide == "enemy"):
-		var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+		var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 		if (JS.t(e) and JS.t(e.get("alive"))):
-			e.status.surgeActive = true
-			e.status.surgeValue = surgeValue
-			e.status.surgeMeter = 0
+			e.get("status").surgeActive = true
+			e.get("status").surgeValue = surgeValue
+			e.get("status").surgeMeter = 0
 			UI.log_("⚡ Chain Surge: Surge " + JS.s(surgeValue) + " re-applied!", "status")
 	# ── Duo: Flashfire (Lightning+Fire) — Burn = 25% of surge damage ──
 	if (Main.hasPassive("duo_flashfire") and targetSide == "enemy"):
-		var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+		var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 		if (JS.t(e) and JS.t(e.get("alive"))):
 			var burnAmt = max(1, floori(surgeValue * 0.25))
-			e.status.burnStacks = (JS.or_(e.status.get("burnStacks"), 0)) + burnAmt
+			e.get("status").burnStacks = (JS.or_(e.get("status").get("burnStacks"), 0)) + burnAmt
 			UI.log_("⚡🔥 Flashfire! +" + JS.s(burnAmt) + " Burn from Surge", "status")
 	# ── Duo: Stormseed (Lightning+Nature) — all Seed timers −1 ──
 	if Main.hasPassive("duo_stormseed"):
-		var allEnemies = ([JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)] if targetSide == "enemy" else [])
+		var allEnemies = ([JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))] if targetSide == "enemy" else [])
 		for e in JS.iter(allEnemies):
 			if (not JS.t(e) or not JS.t(e.get("alive"))):
 				continue
-			for seed_ in JS.iter(JS.or_(e.status.get("seeds"), [])):
-				seed_.timer = max(0, seed_.timer - 1)
+			for seed_ in JS.iter(JS.or_(e.get("status").get("seeds"), [])):
+				seed_.timer = max(0, seed_.get("timer") - 1)
 			UI.log_("⚡🌱 Stormseed! All Seed timers −1", "status")
 		# Also tick player seeds if any
 		if targetSide == "player":
-			for seed_ in JS.iter(JS.or_(State.status.player.get("seeds"), [])):
-				seed_.timer = max(0, seed_.timer - 1)
+			for seed_ in JS.iter(JS.or_(State.status.get("player").get("seeds"), [])):
+				seed_.timer = max(0, seed_.get("timer") - 1)
 			UI.log_("⚡🌱 Stormseed! All Seed timers −1", "status")
 	# Residual Current pending: apply stored surge value to target
 	if (JS.t(State.combat.get("_residualCurrentPending")) and targetSide == "enemy"):
 		State.combat._residualCurrentPending = false
 		var rcVal = JS.or_(State.combat.get("_residualCurrentValue"), 30)
-		var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+		var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 		if (JS.t(e) and JS.t(e.get("alive"))):
-			e.status.surgeActive = true
-			e.status.surgeValue = rcVal
-			e.status.surgeMeter = 0
+			e.get("status").surgeActive = true
+			e.get("status").surgeValue = rcVal
+			e.get("status").surgeMeter = 0
 			UI.log_("⚡ Residual Current: Surge " + JS.s(rcVal) + " applied!", "status")
 	UI.renderStatusTags()
 
@@ -181,43 +181,43 @@ func _tickSurgeBuilds():
 	var hasConductivity = Main.hasPassive("lightning_conductivity")
 	var hasMoltenCurrent = Main.hasPassive("duo_molten_current")
 	var hasChargedRoots = Main.hasPassive("duo_charged_roots")
-	var _arr1 = JS.iter(State.combat.enemies)
+	var _arr1 = JS.iter(State.combat.get("enemies"))
 	for i in range(len(_arr1)):
 		var e = _arr1[i]
 		if not JS.t(e.get("alive")):
 			continue
 		State.setActiveEnemy(i)
 		# Molten Current (Lightning+Fire): Burn stacks count 1 each toward Surge meter
-		if (hasMoltenCurrent and JS.t(e.status.get("surgeActive"))):
-			var burnContrib = JS.or_(e.status.get("burnStacks"), 0)
+		if (hasMoltenCurrent and JS.t(e.get("status").get("surgeActive"))):
+			var burnContrib = JS.or_(e.get("status").get("burnStacks"), 0)
 			if burnContrib > 0:
 				UI.log_("🌊🔥 Molten Current: +" + JS.s(burnContrib) + " Surge meter from " + JS.s(burnContrib) + " Burn", "status")
 				_addToSurgeMeter("enemy", burnContrib)
 				if JS.t(State.combat.get("over")):
 					continue
 		# Charged Roots (Lightning+Nature): Root stacks count 3 each toward Surge meter
-		if ((not JS.t(State.combat.get("over")) and hasChargedRoots) and JS.t(e.status.get("surgeActive"))):
-			var rootContrib = (JS.or_(e.status.get("rootStacks"), 0)) * 3
+		if ((not JS.t(State.combat.get("over")) and hasChargedRoots) and JS.t(e.get("status").get("surgeActive"))):
+			var rootContrib = (JS.or_(e.get("status").get("rootStacks"), 0)) * 3
 			if rootContrib > 0:
-				UI.log_("⚡🌿 Charged Roots: +" + JS.s(rootContrib) + " Surge meter from " + JS.s(e.status.rootStacks) + " Root", "status")
+				UI.log_("⚡🌿 Charged Roots: +" + JS.s(rootContrib) + " Surge meter from " + JS.s(e.get("status").get("rootStacks")) + " Root", "status")
 				_addToSurgeMeter("enemy", rootContrib)
 				if JS.t(State.combat.get("over")):
 					continue
-		if not JS.t(e.status.get("surgeActive")):
+		if not JS.t(e.get("status").get("surgeActive")):
 			continue
 		# may have triggered above
 		# Conductivity: Shock stacks count as 2 dmg each toward meter
 		if hasConductivity:
-			var shockContrib = (JS.or_(e.status.get("shockStacks"), 0)) * 2
+			var shockContrib = (JS.or_(e.get("status").get("shockStacks"), 0)) * 2
 			if shockContrib > 0:
-				UI.log_("⚡ Conductivity: +" + JS.s(shockContrib) + " Surge meter from " + JS.s(JS.round(e.status.shockStacks)) + " Shock", "status")
+				UI.log_("⚡ Conductivity: +" + JS.s(shockContrib) + " Surge meter from " + JS.s(JS.round(e.get("status").get("shockStacks"))) + " Shock", "status")
 				_addToSurgeMeter("enemy", shockContrib)
 				if JS.t(State.combat.get("over")):
 					continue
 		# Static Build: +20 surge value per turn it didn't trigger
-		if ((not JS.t(State.combat.get("over")) and JS.t(e.status.get("surgeActive"))) and hasStaticBuild):
-			e.status.surgeValue = (JS.or_(e.status.get("surgeValue"), 0)) + 20
-			UI.log_("⚡ Static Build: Surge value → " + JS.s(e.status.surgeValue), "status")
+		if ((not JS.t(State.combat.get("over")) and JS.t(e.get("status").get("surgeActive"))) and hasStaticBuild):
+			e.get("status").surgeValue = (JS.or_(e.get("status").get("surgeValue"), 0)) + 20
+			UI.log_("⚡ Static Build: Surge value → " + JS.s(e.get("status").get("surgeValue")), "status")
 	# Restore active enemy
 	if not JS.t(State.combat.get("over")):
-		State.setActiveEnemy(State.combat.targetIdx)
+		State.setActiveEnemy(State.combat.get("targetIdx"))

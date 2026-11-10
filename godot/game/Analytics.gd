@@ -38,7 +38,7 @@ func sendRunAnalytics(outcome = null):
 		"headers": {
 			"Content-Type": "application/json",
 			"apikey": _ANALYTICS_KEY,
-			"Authorization": "Bearer " + JS.s(_ANALYTICS_KEY),
+			"Authorization": "Bearer " + _ANALYTICS_KEY,
 			"Prefer": "return=minimal",
 		},
 		"body": JS.jsonStringify(payload),

@@ -121,16 +121,16 @@ func fadeCurve(t = null, inDur = null, outStart = null):
 	if t < inDur:
 		return t / float(inDur)
 	if t > outStart:
-		return 1 - ((t - outStart) / float(1 - outStart))
+		return 1 - ((t - outStart) / float((1 - outStart)))
 	return 1
 
 func drawNarration(lines = null, t = null):
 	var text = ""
 	for l in JS.iter(lines):
-		if (t >= l.t0 and t <= l.t1):
-			var mid = (l.t0 + l.t1) * 0.5
-			var fade = (clamp_((t - l.t0) / 0.06, 0, 1) if t < mid else clamp_((l.t1 - t) / 0.06, 0, 1))
-			text = l.text
+		if (t >= l.get("t0") and t <= l.get("t1")):
+			var mid = (l.get("t0") + l.get("t1")) * 0.5
+			var fade = (clamp_((t - l.get("t0")) / 0.06, 0, 1) if t < mid else clamp_((l.get("t1") - t) / 0.06, 0, 1))
+			text = l.get("text")
 			# bar
 			var barH = H() * 0.115
 			var barGrd = _ctx.createLinearGradient(0, H() - (barH * 1.6), 0, H())
@@ -166,8 +166,8 @@ func spawnP(x = null, y = null, o = null):
 	_particles.append({
 		"x": x,
 		"y": y,
-		"vx": (o.vx if o.get("vx") != null else (randf() - 0.5) * 2),
-		"vy": (o.vy if o.get("vy") != null else (-randf()) * 1.5),
+		"vx": (o.get("vx") if o.get("vx") != null else (randf() - 0.5) * 2),
+		"vy": (o.get("vy") if o.get("vy") != null else (-randf()) * 1.5),
 		"life": 1,
 		"decay": JS.or_(o.get("decay"), 0.011),
 		"size": (o.get("size") if JS.t(o.get("size")) else (randf() * 2) + 1),
@@ -177,16 +177,16 @@ func spawnP(x = null, y = null, o = null):
 	})
 
 func tickP():
-	_particles = JS.arr(_particles).filter(func(p = null): return p.life > 0)
+	_particles = JS.arr(_particles).filter(func(p = null): return p.get("life") > 0)
 	for p in JS.iter(_particles):
-		p.x += p.vx
-		p.y += p.vy
-		p.life -= p.decay
+		p.x += p.get("vx")
+		p.y += p.get("vy")
+		p.life -= p.get("decay")
 		_ctx.save()
-		_ctx.globalAlpha = p.life * 0.8
-		_ctx.fillStyle = "rgb(" + JS.s(p.r) + "," + JS.s(p.g) + "," + JS.s(p.b) + ")"
+		_ctx.globalAlpha = p.get("life") * 0.8
+		_ctx.fillStyle = "rgb(" + JS.s(p.get("r")) + "," + JS.s(p.get("g")) + "," + JS.s(p.get("b")) + ")"
 		_ctx.beginPath()
-		_ctx.arc(p.x, p.y, p.size, 0, PI * 2)
+		_ctx.arc(p.get("x"), p.get("y"), p.size, 0, PI * 2)
 		_ctx.fill()
 		_ctx.restore()
 
@@ -201,21 +201,21 @@ func maybeSpawnStar(sec = null):
 			"life": 1,
 			"len": lerp_(60, 140, randf()),
 		})
-	_shootingStars = JS.arr(_shootingStars).filter(func(s = null): return s.life > 0)
+	_shootingStars = JS.arr(_shootingStars).filter(func(s = null): return s.get("life") > 0)
 	for s in JS.iter(_shootingStars):
-		s.x += s.vx
-		s.y += s.vy
+		s.x += s.get("vx")
+		s.y += s.get("vy")
 		s.life -= 0.016
 		_ctx.save()
-		_ctx.globalAlpha = s.life * 0.8
-		var grd = _ctx.createLinearGradient(s.x, s.y, s.x - ((s.vx * s.len) / float(JS.hypot([s.vx, s.vy]))), s.y - ((s.vy * s.len) / float(JS.hypot([s.vx, s.vy]))))
+		_ctx.globalAlpha = s.get("life") * 0.8
+		var grd = _ctx.createLinearGradient(s.get("x"), s.get("y"), s.get("x") - ((s.get("vx") * s.get("len")) / float(JS.hypot([s.get("vx"), s.get("vy")]))), s.get("y") - ((s.get("vy") * s.get("len")) / float(JS.hypot([s.get("vx"), s.get("vy")]))))
 		grd.addColorStop(0, "rgba(220,210,255,0.9)")
 		grd.addColorStop(1, "rgba(200,180,255,0)")
 		_ctx.strokeStyle = grd
 		_ctx.lineWidth = 1.5
 		_ctx.beginPath()
-		_ctx.moveTo(s.x, s.y)
-		_ctx.lineTo(s.x - (s.vx * 8), s.y - (s.vy * 8))
+		_ctx.moveTo(s.get("x"), s.get("y"))
+		_ctx.lineTo(s.get("x") - (s.get("vx") * 8), s.get("y") - (s.get("vy") * 8))
 		_ctx.stroke()
 		_ctx.restore()
 
@@ -406,7 +406,7 @@ func drawVeilPortal(cx = null, cy = null, span = null, height = null, sec = null
 	ctx.textAlign = "center"
 	ctx.textBaseline = "middle"
 	for i in range(ceili(numR)):
-		var ang = PI * (i / float(numR - 1))
+		var ang = PI * (i / float((numR - 1)))
 		# left(π) → top(π/2) → right(0)
 		var runeR = archR
 		# on the stone face
@@ -564,7 +564,7 @@ func sceneWoods(t = null, sec = null):
 		spawnP(randf() * W(), gY - ((randf() * H()) * 0.25), {"vx": (randf() - 0.5) * 0.4, "vy": -0.2, "decay": 0.004, "size": 1.4, "r": 130, "g": 90, "b": 200})
 	tickP()
 	drawBars(1)
-	drawNarration(NAR.woods, t)
+	drawNarration(NAR.get("woods"), t)
 	var ov = 1 - fadeCurve(t, 0.1, 0.88)
 	if ov > 0:
 		_ctx.fillStyle = "rgba(0,0,0," + JS.s(ov) + ")"
@@ -603,7 +603,7 @@ func scenePortal(t = null, sec = null):
 	_ctx.restore()
 	tickP()
 	drawBars(1)
-	drawNarration(NAR.portal, t)
+	drawNarration(NAR.get("portal"), t)
 	var ov = 1 - fadeCurve(t, 0.08, 0.88)
 	if ov > 0:
 		_ctx.fillStyle = "rgba(0,0,0," + JS.s(ov) + ")"
@@ -650,7 +650,7 @@ func sceneReflect(t = null, sec = null):
 			_ctx.fillText(r, cx + ((cos(a) * H()) * 0.26), cy + ((sin(a) * H()) * 0.2))
 		_ctx.restore()
 	drawBars(1)
-	drawNarration(NAR.reflect, t)
+	drawNarration(NAR.get("reflect"), t)
 	var ov = 1 - fadeCurve(t, 0.18, 0.78)
 	if ov > 0:
 		_ctx.fillStyle = "rgba(0,0,0," + JS.s(ov) + ")"
@@ -687,7 +687,7 @@ func sceneFall(t = null, sec = null):
 		spawnP(W() * 0.5, H() * 0.5, {"vx": cos(a) * sp, "vy": sin(a) * sp, "decay": 0.022, "size": 2.8, "r": 215, "g": 145, "b": 255})
 	tickP()
 	drawBars(1)
-	drawNarration(NAR.fall, t)
+	drawNarration(NAR.get("fall"), t)
 	if t > 0.72:
 		_ctx.fillStyle = "rgba(0,0,0," + JS.s((t - 0.72) / 0.28) + ")"
 		_ctx.fillRect(0, 0, W(), H())
@@ -722,7 +722,7 @@ func sceneLobby(t = null, sec = null):
 			})
 	tickP()
 	drawBars(1)
-	drawNarration(NAR.lobby, t)
+	drawNarration(NAR.get("lobby"), t)
 	var ov = 1 - fadeCurve(t, 0.07, 0.9)
 	if ov > 0:
 		_ctx.fillStyle = "rgba(0,0,0," + JS.s(ov) + ")"
@@ -752,7 +752,7 @@ func sceneStaff(t = null, sec = null):
 		})
 	tickP()
 	drawBars(1)
-	drawNarration(NAR.staff, t)
+	drawNarration(NAR.get("staff"), t)
 	var ov = 1 - fadeCurve(t, 0.12, 0.8)
 	if ov > 0:
 		_ctx.fillStyle = "rgba(0,0,0," + JS.s(ov) + ")"
@@ -814,7 +814,7 @@ func scenePanDown(t = null, sec = null):
 	_ctx.restore()
 	# un-translate so bars/fade are screen-aligned
 	drawBars(1)
-	drawNarration(NAR.panDown, t)
+	drawNarration(NAR.get("panDown"), t)
 	# Fade out at the very end
 	if t > 0.78:
 		_ctx.fillStyle = "rgba(0,0,0," + JS.s((t - 0.78) / 0.22) + ")"
@@ -831,22 +831,22 @@ func tick(ts = null):
 	var el = ts - _startTime
 	var sec = el / 1000.0
 	_ctx.clearRect(0, 0, W(), H())
-	if el < T.woodsEnd:
-		sceneWoods(el / float(T.woodsEnd), sec)
-	elif el < T.portalEnd:
-		scenePortal((el - T.woodsEnd) / float(T.portalEnd - T.woodsEnd), sec)
-	elif el < T.reflectEnd:
-		sceneReflect((el - T.portalEnd) / float(T.reflectEnd - T.portalEnd), sec)
-	elif el < T.fallEnd:
-		sceneFall((el - T.reflectEnd) / float(T.fallEnd - T.reflectEnd), sec)
-	elif el < T.lobbyEnd:
-		sceneLobby((el - T.fallEnd) / float(T.lobbyEnd - T.fallEnd), sec)
-	elif el < T.staffEnd:
-		sceneStaff((el - T.lobbyEnd) / float(T.staffEnd - T.lobbyEnd), sec)
-	elif el < T.titleEnd:
-		sceneTitleCard((el - T.staffEnd) / float(T.titleEnd - T.staffEnd))
-	elif el < T.panEnd:
-		scenePanDown((el - T.titleEnd) / float(T.panEnd - T.titleEnd), sec)
+	if el < T.get("woodsEnd"):
+		sceneWoods(el / float(T.get("woodsEnd")), sec)
+	elif el < T.get("portalEnd"):
+		scenePortal((el - T.get("woodsEnd")) / float((T.get("portalEnd") - T.get("woodsEnd"))), sec)
+	elif el < T.get("reflectEnd"):
+		sceneReflect((el - T.get("portalEnd")) / float((T.get("reflectEnd") - T.get("portalEnd"))), sec)
+	elif el < T.get("fallEnd"):
+		sceneFall((el - T.get("reflectEnd")) / float((T.get("fallEnd") - T.get("reflectEnd"))), sec)
+	elif el < T.get("lobbyEnd"):
+		sceneLobby((el - T.get("fallEnd")) / float((T.get("lobbyEnd") - T.get("fallEnd"))), sec)
+	elif el < T.get("staffEnd"):
+		sceneStaff((el - T.get("lobbyEnd")) / float((T.get("staffEnd") - T.get("lobbyEnd"))), sec)
+	elif el < T.get("titleEnd"):
+		sceneTitleCard((el - T.get("staffEnd")) / float((T.get("titleEnd") - T.get("staffEnd"))))
+	elif el < T.get("panEnd"):
+		scenePanDown((el - T.get("titleEnd")) / float((T.get("panEnd") - T.get("titleEnd"))), sec)
 	else:
 		endCutscene()
 		return

@@ -1452,13 +1452,13 @@ func _boot():
 # ── Plasma Charge Helpers ─────────────────────────────────────────────────────
 func _plasmaSpend():
 	# At execution time reserved is a planning artifact — use raw charge as ceiling
-	return max(1, min(JS.or_(State.combat.get("plasmaCurrentSpend"), 1), JS.or_(State.status.player.get("plasmaCharge"), 0)))
+	return max(1, min(JS.or_(State.combat.get("plasmaCurrentSpend"), 1), JS.or_(State.status.get("player").get("plasmaCharge"), 0)))
 
 func _plasmaConsumeHeal(amount = null, s = null):
 	if amount <= 0:
 		return
-	State.status.player.plasmaCharge = max(0, State.status.player.plasmaCharge - amount)
-	State.combat.plasmaChargeReserved = max(0, State.combat.plasmaChargeReserved - amount)
+	State.status.get("player").plasmaCharge = max(0, State.status.get("player").get("plasmaCharge") - amount)
+	State.combat.plasmaChargeReserved = max(0, State.combat.get("plasmaChargeReserved") - amount)
 	var overMult = (1.5 if JS.t(State.combat.get("plasmaOvercharged")) else 1.0)
 	# Reactive Field: only fires when NOT overcharged
 	# When active: self-damage partially offsets the heal + damages all enemies
@@ -1468,7 +1468,7 @@ func _plasmaConsumeHeal(amount = null, s = null):
 		var reactDmg = amount * 5
 		Hit.applyDirectDamage.call("enemy", "player", selfDmg, "💥 Reactive Sacrifice")
 		for e in JS.iter(Helpers.aliveEnemies()):
-			State.setActiveEnemy(JS.indexOf(State.combat.enemies, e))
+			State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), e))
 			Hit.applyDirectDamage.call("player", "enemy", reactDmg, "💥 Reactive Field")
 	# Heal (always — Reactive Field self-damage offsets it when not overcharged)
 	var healPer = JS.round(3 * overMult)
@@ -1483,13 +1483,13 @@ func _plasmaConsume(amount = null, s = null):
 		JS.callm(s, "log", ["⚠ No Charge to spend!", "status"])
 		return false
 	# At execution time, reserved is a planning artifact — check raw charge
-	if amount > State.status.player.plasmaCharge:
-		JS.callm(s, "log", ["⚠ Not enough Charge (have " + JS.s(State.status.player.plasmaCharge) + ")", "status"])
+	if amount > State.status.get("player").get("plasmaCharge"):
+		JS.callm(s, "log", ["⚠ Not enough Charge (have " + JS.s(State.status.get("player").get("plasmaCharge")) + ")", "status"])
 		return false
 	# Singularity: double amount
-	if JS.t(State.status.player.get("singularityActive")):
-		State.status.player.singularityActive = false
-		amount = min(amount * 2, State.status.player.plasmaCharge)
+	if JS.t(State.status.get("player").get("singularityActive")):
+		State.status.get("player").singularityActive = false
+		amount = min(amount * 2, State.status.get("player").get("plasmaCharge"))
 		State.combat.plasmaCurrentSpend = floori(amount / 2.0)
 		JS.callm(s, "log", ["🌌 Singularity! Charge doubled.", "status"])
 	_plasmaConsumeHeal(amount, s)
@@ -1509,7 +1509,7 @@ func updateChargeUI():
 		return
 	wrap_.style.display = "block"
 	var cap = 20
-	var c = JS.or_(State.status.player.get("plasmaCharge"), 0)
+	var c = JS.or_(State.status.get("player").get("plasmaCharge"), 0)
 	if JS.t(bar):
 		bar.style.width = JS.s(min(100, (c / float(cap)) * 100)) + "%"
 		bar.style.background = ("#da70d6" if c >= cap else ("#a04ab0" if c >= 15 else "#6a2a8a"))
@@ -1522,7 +1522,7 @@ func giveStarterSpell():
 		# Plasma starts with all primary abilities — check all books to avoid duplicates
 		for s in JS.iter(JS.values(SPELL_CATALOGUE)):
 			if (s.get("element") == "Plasma" and s.get("tier") == "primary"):
-				var alreadyOwned = JS.some(JS.or_(State.player.get("spellbooks"), []), func(b = null): return JS.some(b.spells, func(x = null): return JS.eq(x.id, s.id)))
+				var alreadyOwned = JS.some(JS.or_(State.player.get("spellbooks"), []), func(b = null): return JS.some(b.get("spells"), func(x = null): return JS.eq(x.id, s.id)))
 				if not alreadyOwned:
 					addSpellById(s.id)
 
@@ -1531,20 +1531,20 @@ func addSpellById(id = null, skipBookCheck = null, rarity = null, bookIdx = null
 	if not JS.t(def):
 		return null
 	var rarityKey = JS.or_(rarity, "dim")
-	var incantationLevel = (JS.idx(Incantations.SPELL_RARITY, rarityKey).level if (true and JS.t(JS.idx(Incantations.SPELL_RARITY, rarityKey))) else 1)
+	var incantationLevel = (JS.idx(Incantations.SPELL_RARITY, rarityKey).get("level") if (true and JS.t(JS.idx(Incantations.SPELL_RARITY, rarityKey))) else 1)
 	var spell = JS.merge([def, {"currentCD": 0, "upgradeLevel": 0, "dmgMult": 1.0, "rarity": rarityKey, "incantationLevel": incantationLevel}])
 	Library.markSpellSeen(id)
-	if ((not JS.t(skipBookCheck) and JS.t(State.player.get("spellbooks"))) and JS.t(len(State.player.spellbooks))):
+	if ((not JS.t(skipBookCheck) and JS.t(State.player.get("spellbooks"))) and JS.t(len(State.player.get("spellbooks")))):
 		State.addSpellToBook(spell, bookIdx)
 	else:
-		State.player.spellbook.append(spell)
+		State.player.get("spellbook").append(spell)
 	return spell
 
 func addItem(id = null):
-	State.player.inventory.append(JS.merge([JS.idx(Items.ITEM_CATALOGUE, id)]))
+	State.player.get("inventory").append(JS.merge([JS.idx(Items.ITEM_CATALOGUE, id)]))
 
 func removeItemAt(idx = null):
-	JS.splice(State.player.inventory, idx, 1)
+	JS.splice(State.player.get("inventory"), idx, 1)
 
 func SPELL_CATALOGUE__ignite__execute(s = null):
 	var this = JS._this
@@ -1566,38 +1566,38 @@ func SPELL_CATALOGUE__flame_wave__execute(s = null):
 	var dmg = 10 + bonus
 	var _arr1 = JS.iter(Helpers.aliveEnemies())
 	for i in range(len(_arr1)):
-		State.setActiveEnemy(JS.indexOf(State.combat.enemies, JS.idx(Helpers.aliveEnemies(), i)))
+		State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
 		JS.callm(s, "hit", [{"baseDamage": dmg, "effects": [{"type": "burn", "stacks": burn}], "abilityElement": "Fire", "isAOE": true}])
 	JS.callm(s, "log", ["🌊🔥 Flame Wave!", "player"])
 
 func SPELL_CATALOGUE__firewall__execute(s = null):
 	var this = JS._this
 	var stacks = JS.round(3 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 0.9))
-	State.status.player.firewallStacks = (JS.or_(State.status.player.get("firewallStacks"), 0)) + stacks
+	State.status.get("player").firewallStacks = (JS.or_(State.status.get("player").get("firewallStacks"), 0)) + stacks
 	JS.callm(s, "log", ["🔥 Firewall raised! +" + JS.s(stacks) + " stacks", "player"])
 
 func SPELL_CATALOGUE__grease_fire__execute(s = null):
 	var this = JS._this
 	# Secondary
 	var burn = JS.round(4 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 0.9))
-	State.status.enemy.burnStacks = (JS.or_(State.status.enemy.get("burnStacks"), 0)) + burn
-	State.status.player.greasefirePending = true
+	State.status.get("enemy").burnStacks = (JS.or_(State.status.get("enemy").get("burnStacks"), 0)) + burn
+	State.status.get("player").greasefirePending = true
 	JS.callm(s, "log", ["🛢️ Grease Fire! +" + JS.s(burn) + " Burn, double burn tick next round", "player"])
 
 func SPELL_CATALOGUE__extinguish__execute(s = null):
 	var this = JS._this
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	# Trigger enemy burn tick now
-	if (JS.t(e) and e.status.burnStacks > 0):
-		var tickDmg = JS.round(e.status.burnStacks * Helpers.burnDmgPerStack("player", Helpers.effectPowerFor("player")))
+	if (JS.t(e) and e.get("status").get("burnStacks") > 0):
+		var tickDmg = JS.round(e.get("status").get("burnStacks") * Helpers.burnDmgPerStack("player", Helpers.effectPowerFor("player")))
 		Hit.applyDirectDamage.call("player", "enemy", tickDmg, "🔥 Burn (triggered)")
 		if JS.t(State.combat.get("over")):
 			return
-	var eRemoved = (ceili((JS.or_(e.status.get("burnStacks"), 0)) / 2.0) if JS.t(e) else 0)
-	var pRemoved = ceili((JS.or_(State.status.player.get("burnStacks"), 0)) / 2.0)
+	var eRemoved = (ceili((JS.or_(e.get("status").get("burnStacks"), 0)) / 2.0) if JS.t(e) else 0)
+	var pRemoved = ceili((JS.or_(State.status.get("player").get("burnStacks"), 0)) / 2.0)
 	if JS.t(e):
-		e.status.burnStacks = max(0, (JS.or_(e.status.get("burnStacks"), 0)) - eRemoved)
-	State.status.player.burnStacks = max(0, (JS.or_(State.status.player.get("burnStacks"), 0)) - pRemoved)
+		e.get("status").burnStacks = max(0, (JS.or_(e.get("status").get("burnStacks"), 0)) - eRemoved)
+	State.status.get("player").burnStacks = max(0, (JS.or_(State.status.get("player").get("burnStacks"), 0)) - pRemoved)
 	var dmgMult = JS.round(2 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 0.9))
 	var bonusDmg = ((eRemoved + pRemoved) * dmgMult) + JS.callm(s, "attackPow", [])
 	if bonusDmg > 0:
@@ -1606,7 +1606,7 @@ func SPELL_CATALOGUE__extinguish__execute(s = null):
 
 func SPELL_CATALOGUE__fire_heal__execute(s = null):
 	var this = JS._this
-	var total = Helpers.totalEnemyBurnStacks.call() + (JS.or_(State.status.player.get("burnStacks"), 0))
+	var total = Helpers.totalEnemyBurnStacks.call() + (JS.or_(State.status.get("player").get("burnStacks"), 0))
 	var healPer = 1 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 0.2, 0.95)
 	var healed = max(1, JS.round(total * healPer))
 	JS.callm(s, "healSelf", [healed])
@@ -1614,20 +1614,20 @@ func SPELL_CATALOGUE__fire_heal__execute(s = null):
 
 func SPELL_CATALOGUE__fire_rage__execute(s = null):
 	var this = JS._this
-	var total = Helpers.totalEnemyBurnStacks.call() + (JS.or_(State.status.player.get("burnStacks"), 0))
+	var total = Helpers.totalEnemyBurnStacks.call() + (JS.or_(State.status.get("player").get("burnStacks"), 0))
 	var boost = floori(total / 2.0)
 	var rageTurns = 1 + JS.round(Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 1.0))
-	State.status.player.rageBoostPow = boost
-	State.status.player.rageBoostTurns = rageTurns
+	State.status.get("player").rageBoostPow = boost
+	State.status.get("player").rageBoostTurns = rageTurns
 	JS.callm(s, "log", ["😤 Fire Rage! +" + JS.s(boost) + " Power for " + JS.s(rageTurns) + " turn" + ("s" if rageTurns > 1 else ""), "player"])
 
 func SPELL_CATALOGUE__brave_burn__execute(s = null):
-	var maxStacks = JS.arrMax(JS.arr(State.combat.enemies).map(func(e = null): return (JS.or_(e.status.get("burnStacks"), 0) if JS.t(e.get("alive")) else 0)))
+	var maxStacks = JS.arrMax(JS.arr(State.combat.get("enemies")).map(func(e = null): return (JS.or_(e.get("status").get("burnStacks"), 0) if JS.t(e.get("alive")) else 0)))
 	if maxStacks > 0:
-		State.status.player.burnStacks = (JS.or_(State.status.player.get("burnStacks"), 0)) + maxStacks
+		State.status.get("player").burnStacks = (JS.or_(State.status.get("player").get("burnStacks"), 0)) + maxStacks
 		JS.callm(s, "log", ["🔥💀 Brave Burn! +" + JS.s(maxStacks) + " burn to self", "player"])
 	var immuneTurns = 1
-	State.status.player.debuffImmune = (JS.or_(State.status.player.get("debuffImmune"), 0)) + immuneTurns
+	State.status.get("player").debuffImmune = (JS.or_(State.status.get("player").get("debuffImmune"), 0)) + immuneTurns
 	JS.callm(s, "log", ["🛡️ Debuff immune for " + JS.s(immuneTurns) + " turn" + ("s" if immuneTurns > 1 else ""), "player"])
 
 func SPELL_CATALOGUE__melt_strike__execute(s = null):
@@ -1652,15 +1652,15 @@ func SPELL_CATALOGUE__forge_blast__execute(s = null):
 
 func SPELL_CATALOGUE__crucible__execute(s = null):
 	var this = JS._this
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if (not JS.t(e) or not JS.t(e.get("alive"))):
 		return
-	var baseArmor = JS.or_(e.status.get("block"), 0)
+	var baseArmor = JS.or_(e.get("status").get("block"), 0)
 	var armorMult = 2 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 0.5, 0.9)
 	var boosted = floori(baseArmor * armorMult)
 	if boosted > 0:
-		e.status._armorPeak = max(JS.or_(e.status.get("_armorPeak"), 0), boosted)
-		e.status.block = boosted
+		e.get("status")._armorPeak = max(JS.or_(e.get("status").get("_armorPeak"), 0), boosted)
+		e.get("status").block = boosted
 		JS.callm(s, "log", ["🌡️ Crucible! Armor " + JS.s(baseArmor) + " → " + JS.s(boosted), "player"])
 	var pts = floori((boosted * 0.5) + (JS.callm(s, "attackPow", []) * 0.25))
 	if pts > 0:
@@ -1671,10 +1671,10 @@ func SPELL_CATALOGUE__crucible__execute(s = null):
 func SPELL_CATALOGUE__scorch_through__execute(s = null):
 	var this = JS._this
 	var pts = floori((8 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 0.9)) + (JS.callm(s, "attackPow", []) * 0.5))
-	var origTarget = State.combat.targetIdx
+	var origTarget = State.combat.get("targetIdx")
 	var _arr2 = JS.iter(Helpers.aliveEnemies())
 	for i in range(len(_arr2)):
-		State.setActiveEnemy(JS.indexOf(State.combat.enemies, JS.idx(Helpers.aliveEnemies(), i)))
+		State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
 		Hit.applyMelt.call("player", "enemy", pts, "🌊 Scorch Through")
 		if JS.t(State.combat.get("over")):
 			continue
@@ -1684,27 +1684,27 @@ func SPELL_CATALOGUE__scorch_through__execute(s = null):
 
 func SPELL_CATALOGUE__slag__execute(s = null):
 	var this = JS._this
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if (not JS.t(e) or not JS.t(e.get("alive"))):
 		return
-	var armorBefore = JS.or_(e.status.get("block"), 0)
+	var armorBefore = JS.or_(e.get("status").get("block"), 0)
 	var pts = floori((6 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 0.9)) + (JS.callm(s, "attackPow", []) * 0.5))
 	Hit.applyMelt.call("player", "enemy", pts, "🔶 Slag")
 	if JS.t(State.combat.get("over")):
 		return
-	var armorConsumed = armorBefore - (JS.or_(e.status.get("block"), 0))
+	var armorConsumed = armorBefore - (JS.or_(e.get("status").get("block"), 0))
 	if (armorConsumed > 0 and not Main.hasPassive("fire_slag_trail")):
 		# Slag Trail passive handles this globally; Slag spell does it independently
-		e.status.burnStacks = (JS.or_(e.status.get("burnStacks"), 0)) + armorConsumed
+		e.get("status").burnStacks = (JS.or_(e.get("status").get("burnStacks"), 0)) + armorConsumed
 		JS.callm(s, "log", ["🔶 Slag: +" + JS.s(armorConsumed) + " Burn from melted armor!", "player"])
 
 func SPELL_CATALOGUE__heat_surge__execute(s = null):
 	var this = JS._this
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if (not JS.t(e) or not JS.t(e.get("alive"))):
 		return
 	var pts = floori((16 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 3, 0.9)) + (JS.callm(s, "attackPow", []) * 0.5))
-	var hpBefore = e.hp
+	var hpBefore = e.get("hp")
 	Hit.applyMelt.call("player", "enemy", pts, "❤️‍🔥 Heat Surge")
 	if JS.t(State.combat.get("over")):
 		return
@@ -1718,20 +1718,20 @@ func SPELL_CATALOGUE__heat_surge__execute(s = null):
 func SPELL_CATALOGUE__smelt__execute(s = null):
 	var this = JS._this
 	# Secondary Melt
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if (not JS.t(e) or not JS.t(e.get("alive"))):
 		return
 	var pts = floori((8 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 0.9)) + (JS.callm(s, "attackPow", []) * 0.5))
-	var burn = JS.or_(e.status.get("burnStacks"), 0)
+	var burn = JS.or_(e.get("status").get("burnStacks"), 0)
 	if (burn > 0 and pts > 0):
 		var burnCost = ceili(burn / 3.0)
 		if pts >= burnCost:
 			pts -= burnCost
-			e.status.burnStacks = 0
+			e.get("status").burnStacks = 0
 			JS.callm(s, "log", ["⚗️ Smelt: burns out all " + JS.s(burn) + " Burn! (" + JS.s(burnCost) + " pts used, " + JS.s(pts) + " remain)", "player"])
 		else:
-			e.status.burnStacks = max(0, burn - (pts * 3))
-			JS.callm(s, "log", ["⚗️ Smelt: chips " + JS.s(pts * 3) + " Burn (" + JS.s(e.status.burnStacks) + " remain)", "player"])
+			e.get("status").burnStacks = max(0, burn - (pts * 3))
+			JS.callm(s, "log", ["⚗️ Smelt: chips " + JS.s(pts * 3) + " Burn (" + JS.s(e.get("status").get("burnStacks")) + " remain)", "player"])
 			pts = 0
 	if pts > 0:
 		Hit.applyMelt.call("player", "enemy", pts, "⚗️ Smelt")
@@ -1740,9 +1740,9 @@ func SPELL_CATALOGUE__smelt__execute(s = null):
 
 func SPELL_CATALOGUE__overheat__execute(s = null):
 	var this = JS._this
-	var selfBurn = JS.or_(State.status.player.get("burnStacks"), 0)
+	var selfBurn = JS.or_(State.status.get("player").get("burnStacks"), 0)
 	if selfBurn > 0:
-		State.status.player.burnStacks = 0
+		State.status.get("player").burnStacks = 0
 	var pts = floori((selfBurn + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 0.9)) + (JS.callm(s, "attackPow", []) * 0.5))
 	JS.callm(s, "log", ["🌡️ Overheat! " + JS.s(selfBurn) + " Burn consumed → " + JS.s(pts) + " Melt pts", "player"])
 	if pts > 0:
@@ -1750,10 +1750,10 @@ func SPELL_CATALOGUE__overheat__execute(s = null):
 
 func SPELL_CATALOGUE__crucible_burst__execute(s = null):
 	var this = JS._this
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if (not JS.t(e) or not JS.t(e.get("alive"))):
 		return
-	var armor = JS.or_(e.status.get("block"), 0)
+	var armor = JS.or_(e.get("status").get("block"), 0)
 	var pts = (floori((30 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 5, 0.9)) + (JS.callm(s, "attackPow", []) * 0.5)) if armor >= 15 else floori((10 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 0.9)) + (JS.callm(s, "attackPow", []) * 0.5)))
 	JS.callm(s, "log", ["💥 Crucible Burst! " + ("Heavy" if armor >= 15 else "Light") + " armor — " + JS.s(pts) + " Melt pts", "player"])
 	Hit.applyMelt.call("player", "enemy", pts, "💥 Crucible Burst")
@@ -1764,26 +1764,26 @@ func SPELL_CATALOGUE__molten_surge__execute(s = null):
 
 func SPELL_CATALOGUE__melt_down__execute(s = null):
 	var this = JS._this
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if (not JS.t(e) or not JS.t(e.get("alive"))):
 		return
-	var armor = JS.or_(e.status.get("block"), 0)
+	var armor = JS.or_(e.get("status").get("block"), 0)
 	var mult = 1.5 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 0.2, 0.9)
 	var pts = null
 	if armor > 0:
-		e.status._armorPeak = max(JS.or_(e.status.get("_armorPeak"), 0), armor)
+		e.get("status")._armorPeak = max(JS.or_(e.get("status").get("_armorPeak"), 0), armor)
 		pts = floori(armor * mult)
 		# Trigger Meltdown legendary manually (bypassing applyMelt's armor path)
 		if Main.hasPassive("fire_meltdown"):
-			var peak = e.status._armorPeak
+			var peak = e.get("status").get("_armorPeak")
 			pts += JS.round(peak)
 			JS.callm(s, "log", ["🌋 Meltdown! +" + JS.s(JS.round(peak)) + " from peak armor!", "player"])
-		e.status._armorPeak = 0
-		e.status.block = 0
+		e.get("status")._armorPeak = 0
+		e.get("status").block = 0
 		JS.callm(s, "log", ["🫠 Melt Down! " + JS.s(armor) + " armor broken → " + JS.s(pts) + " Melt pts", "player"])
 		# Slag Trail (manually, since block is already 0 when applyMelt runs)
 		if Main.hasPassive("fire_slag_trail"):
-			e.status.burnStacks = (JS.or_(e.status.get("burnStacks"), 0)) + armor
+			e.get("status").burnStacks = (JS.or_(e.get("status").get("burnStacks"), 0)) + armor
 			JS.callm(s, "log", ["🔥 Slag Trail: +" + JS.s(armor) + " Burn from Melt Down!", "player"])
 	else:
 		pts = floori(12 + (JS.callm(s, "attackPow", []) * 0.5))
@@ -1821,7 +1821,7 @@ func SPELL_CATALOGUE__whirlpool__execute(s = null):
 	var foam = JS.round(3 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 0.9))
 	var _arr3 = JS.iter(Helpers.aliveEnemies())
 	for i in range(len(_arr3)):
-		State.setActiveEnemy(JS.indexOf(State.combat.enemies, JS.idx(Helpers.aliveEnemies(), i)))
+		State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
 		JS.callm(s, "hit", [Helpers.applyFlowToWaterPkg({"baseDamage": 25, "effects": [], "abilityElement": "Water", "isAOE": true, "apMult": 1.25})])
 		Helpers.applyFoam("player", "enemy", foam)
 	JS.callm(s, "log", ["🌀 Whirlpool! +" + JS.s(foam) + " Foam to all", "player"])
@@ -1841,25 +1841,25 @@ func SPELL_CATALOGUE__riptide__execute(s = null):
 func SPELL_CATALOGUE__drown__execute(s = null):
 	var this = JS._this
 	# Secondary
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
-	var foam = (JS.or_(e.status.get("foamStacks"), 0) if JS.t(e) else 0)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
+	var foam = (JS.or_(e.get("status").get("foamStacks"), 0) if JS.t(e) else 0)
 	# Adjust CD based on branch: override after the fact
-	var self_ = JS.find(State.player.spellbook, func(sp = null): return sp.get("id") == "drown")
+	var self_ = JS.find(State.player.get("spellbook"), func(sp = null): return sp.get("id") == "drown")
 	if foam >= 6:
 		if JS.t(self_):
 			self_.currentCD = 3
 		# big branch costs more
-		State.status.enemy.stunned = max(JS.or_(State.status.enemy.get("stunned"), 0), 1)
+		State.status.get("enemy").stunned = max(JS.or_(State.status.get("enemy").get("stunned"), 0), 1)
 		if ((JS.t(e) and Main.hasPassive("water_abyssal_pain")) and foam > 0):
 			var reapply = floori(foam / 2.0)
-			e.status.foamStacks = reapply
+			e.get("status").foamStacks = reapply
 			var abyssalDmg = (reapply * 15) + JS.callm(s, "attackPow", [])
 			if reapply > 0:
 				Hit.applyDirectDamage.call("player", "enemy", abyssalDmg, "🌊 Abyssal Pain")
 			JS.callm(s, "log", ["🌊 Drown stuns! Abyssal Pain: " + JS.s(reapply) + " Foam reapplied, " + JS.s(abyssalDmg) + " dmg", "player"])
 		else:
 			if JS.t(e):
-				e.status.foamStacks = 0
+				e.get("status").foamStacks = 0
 			JS.callm(s, "log", ["🌊💀 Drown! Stunned + all Foam removed", "player"])
 	else:
 		if JS.t(self_):
@@ -1875,13 +1875,13 @@ func SPELL_CATALOGUE__tidal_shield__execute(s = null):
 	var base = JS.round(20 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 4, 0.95))
 	var amt = base + floori(JS.callm(s, "defStat", []) / 2.0)
 	Helpers.gainBlock("player", amt)
-	State.status.player.tidalShieldActive = true
+	State.status.get("player").tidalShieldActive = true
 	JS.callm(s, "log", ["🌊🛡 Tidal Shield! +" + JS.s(amt) + " Armor, reactive active", "player"])
 
 func SPELL_CATALOGUE__deep_current__execute(s = null):
 	var this = JS._this
 	var armor = JS.round(Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 5, 0.95))
-	State.status.player.deepCurrentActive = true
+	State.status.get("player").deepCurrentActive = true
 	if armor > 0:
 		Helpers.gainBlock("player", armor)
 	JS.callm(s, "log", ["💠 Deep Current — next Water spell fires twice!" + (" +" + JS.s(armor) + " Armor" if armor > 0 else ""), "player"])
@@ -1898,10 +1898,10 @@ func SPELL_CATALOGUE__tsunami__execute(s = null):
 	var this = JS._this
 	var dmgPerFoam = JS.round(10 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 0.95))
 	for e in JS.iter(Helpers.aliveEnemies()):
-		var foam = JS.or_(e.status.get("foamStacks"), 0)
+		var foam = JS.or_(e.get("status").get("foamStacks"), 0)
 		if foam <= 0:
 			continue
-		var idx = JS.indexOf(State.combat.enemies, e)
+		var idx = JS.indexOf(State.combat.get("enemies"), e)
 		State.setActiveEnemy(idx)
 		for i in range(ceili(foam)):
 			if JS.t(State.combat.get("over")):
@@ -1912,11 +1912,11 @@ func SPELL_CATALOGUE__tsunami__execute(s = null):
 		if not JS.t(State.combat.get("over")):
 			if Main.hasPassive("water_abyssal_pain"):
 				var reapply = floori(foam / 2.0)
-				e.status.foamStacks = reapply
+				e.get("status").foamStacks = reapply
 				if reapply > 0:
 					Hit.applyDirectDamage.call("player", "enemy", (reapply * 15) + JS.callm(s, "attackPow", []), "🌊 Abyssal Pain")
 			else:
-				e.status.foamStacks = 0
+				e.get("status").foamStacks = 0
 	if not JS.t(State.combat.get("over")):
 		JS.callm(s, "log", ["🌊🌊 Tsunami! All Foam consumed", "player"])
 
@@ -1931,13 +1931,13 @@ func SPELL_CATALOGUE__frost_bolt__execute(s = null):
 func SPELL_CATALOGUE__ice_block__execute(s = null):
 	var this = JS._this
 	var frost = 2.0 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 0.4, 0.9)
-	State.status.player.phaseTurns = 1
+	State.status.get("player").phaseTurns = 1
 	for e in JS.iter(Helpers.aliveEnemies()):
-		var idx = JS.indexOf(State.combat.enemies, e)
+		var idx = JS.indexOf(State.combat.get("enemies"), e)
 		State.setActiveEnemy(idx)
 		Helpers.applyFrost("player", "enemy", frost)
-	if JS.t(JS.idx(State.combat.enemies, State.combat.targetIdx)):
-		State.setActiveEnemy(State.combat.targetIdx)
+	if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("targetIdx"))):
+		State.setActiveEnemy(State.combat.get("targetIdx"))
 	JS.callm(s, "log", ["🧊 Ice Block! Immune this round, " + JS.toFixed(frost, 1) + " Frost to all enemies", "player"])
 
 func SPELL_CATALOGUE__glacial_spike__execute(s = null):
@@ -1952,7 +1952,7 @@ func SPELL_CATALOGUE__snowstorm__execute(s = null):
 	var frost = 2.0 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 0.4, 0.9)
 	var _arr4 = JS.iter(Helpers.aliveEnemies())
 	for i in range(len(_arr4)):
-		State.setActiveEnemy(JS.indexOf(State.combat.enemies, JS.idx(Helpers.aliveEnemies(), i)))
+		State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
 		JS.callm(s, "hit", [{"baseDamage": 8, "effects": [], "abilityElement": "Ice", "isAOE": true}])
 		Helpers.applyFrost("player", "enemy", frost)
 	JS.callm(s, "log", ["🌨️ Snowstorm!", "player"])
@@ -1966,11 +1966,11 @@ func SPELL_CATALOGUE__flash_freeze__execute(s = null):
 
 func SPELL_CATALOGUE__shatter__execute(s = null):
 	var this = JS._this
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if not JS.t(e):
 		return
-	var stacks = floori(JS.or_(e.status.get("frostStacks"), 0))
-	e.status.frostStacks = 0
+	var stacks = floori(JS.or_(e.get("status").get("frostStacks"), 0))
+	e.get("status").frostStacks = 0
 	var mult = 4.0 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 0.5, 0.9)
 	var dmg = JS.round(stacks * mult)
 	JS.callm(s, "hit", [{"baseDamage": dmg, "effects": [], "abilityElement": "Ice", "_noAtk": true}])
@@ -1979,34 +1979,34 @@ func SPELL_CATALOGUE__shatter__execute(s = null):
 func SPELL_CATALOGUE__frozen_ground__execute(s = null):
 	var this = JS._this
 	var turns = JS.round(3 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 1.0))
-	State.status.player.frozenGroundTurns = turns
+	State.status.get("player").frozenGroundTurns = turns
 	JS.callm(s, "log", ["🌍❄️ Frozen Ground! " + JS.s(turns) + " rounds of frost", "player"])
 
 func SPELL_CATALOGUE__cryostasis__execute(s = null):
 	var this = JS._this
 	var heal = JS.round(30 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 6, 0.95))
-	State.status.player.stunned = max(JS.or_(State.status.player.get("stunned"), 0), 1)
+	State.status.get("player").stunned = max(JS.or_(State.status.get("player").get("stunned"), 0), 1)
 	JS.callm(s, "healSelf", [heal])
 	Helpers.gainBlock("player", 20)
-	State.status.player.cryostasisActive = true
+	State.status.get("player").cryostasisActive = true
 	JS.callm(s, "log", ["🧊💤 Cryostasis! +" + JS.s(heal) + " HP while frozen", "player"])
 
 func SPELL_CATALOGUE__ice_age__execute(s = null):
 	var this = JS._this
 	var frostAmt = 5 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 0.9)
 	for e in JS.iter(Helpers.aliveEnemies()):
-		var idx = JS.indexOf(State.combat.enemies, e)
+		var idx = JS.indexOf(State.combat.get("enemies"), e)
 		State.setActiveEnemy(idx)
-		var prev = JS.or_(e.status.get("frostStacks"), 0)
+		var prev = JS.or_(e.get("status").get("frostStacks"), 0)
 		Helpers.applyFrost("player", "enemy", frostAmt)
 		# If this triggered a freeze, stun extra
 		var frostWithPassive = frostAmt + (1 if Main.hasPassive("ice_stay_frosty") else 0)
-		if (not JS.t(e.status.get("frozen")) and (prev + frostWithPassive) >= 10):
-			e.status.stunned = (JS.or_(e.status.get("stunned"), 0)) + 1
-		elif (JS.t(e.status.get("frozen")) and e.status.stunned <= 1):
-			e.status.stunned = max(JS.or_(e.status.get("stunned"), 0), 2)
-	if JS.t(JS.idx(State.combat.enemies, State.combat.targetIdx)):
-		State.setActiveEnemy(State.combat.targetIdx)
+		if (not JS.t(e.get("status").get("frozen")) and (prev + frostWithPassive) >= 10):
+			e.get("status").stunned = (JS.or_(e.get("status").get("stunned"), 0)) + 1
+		elif (JS.t(e.get("status").get("frozen")) and e.get("status").get("stunned") <= 1):
+			e.get("status").stunned = max(JS.or_(e.get("status").get("stunned"), 0), 2)
+	if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("targetIdx"))):
+		State.setActiveEnemy(State.combat.get("targetIdx"))
 	JS.callm(s, "log", ["❄️🌍 Ice Age! " + JS.toFixed(frostAmt, 1) + " Frost to all enemies", "player"])
 
 func SPELL_CATALOGUE__zap__execute(s = null):
@@ -2021,10 +2021,10 @@ func SPELL_CATALOGUE__zap__execute(s = null):
 		if Main.hasPassive("lightning_conduction"):
 			shockAmt += 1
 		shockAmt += JS.or_(State.player.get("_talentShockBonus"), 0)
-		var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+		var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 		if (JS.t(e) and JS.t(e.get("alive"))):
-			e.status.shockStacks = (JS.or_(e.status.get("shockStacks"), 0)) + shockAmt
-			UI.log_("⚡ Shock +" + JS.toFixed(shockAmt, 1) + " (×" + JS.toFixed(e.status.shockStacks, 1) + ")", "status")
+			e.get("status").shockStacks = (JS.or_(e.get("status").get("shockStacks"), 0)) + shockAmt
+			UI.log_("⚡ Shock +" + JS.toFixed(shockAmt, 1) + " (×" + JS.toFixed(e.get("status").get("shockStacks"), 1) + ")", "status")
 			Hit._plasmaChargeOnDebuff("enemy")
 	JS.callm(s, "log", ["⚡ Zap!", "player"])
 
@@ -2035,7 +2035,7 @@ func SPELL_CATALOGUE__chain_lightning__execute(s = null):
 		return
 	var maxBounces = JS.round(4 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 1.0))
 	var hitSet = JSSet.new()
-	var lastIdx = State.combat.activeEnemyIdx
+	var lastIdx = State.combat.get("activeEnemyIdx")
 	for i in range(ceili(maxBounces)):
 		var unhit = JS.arr(alive).filter(func(e = null): return not hitSet.has(e))
 		if not JS.t(len(unhit)):
@@ -2045,14 +2045,14 @@ func SPELL_CATALOGUE__chain_lightning__execute(s = null):
 				stacksPerBounce += 1
 			stacksPerBounce += JS.or_(State.player.get("_talentShockBonus"), 0)
 			var shockToApply = remaining * stacksPerBounce
-			var e = JS.idx(State.combat.enemies, lastIdx)
+			var e = JS.idx(State.combat.get("enemies"), lastIdx)
 			if (JS.t(e) and JS.t(e.get("alive"))):
-				e.status.shockStacks = (JS.or_(e.status.get("shockStacks"), 0)) + shockToApply
-				UI.log_("⚡ Chain fizzles — +" + JS.s(shockToApply) + " Shock to " + JS.s(e.name) + "!", "status")
+				e.get("status").shockStacks = (JS.or_(e.get("status").get("shockStacks"), 0)) + shockToApply
+				UI.log_("⚡ Chain fizzles — +" + JS.s(shockToApply) + " Shock to " + JS.s(e.get("name")) + "!", "status")
 			break
 		var target = JS.idx(unhit, floori(randf() * len(unhit)))
 		hitSet.add(target)
-		lastIdx = JS.indexOf(State.combat.enemies, target)
+		lastIdx = JS.indexOf(State.combat.get("enemies"), target)
 		State.setActiveEnemy(lastIdx)
 		JS.callm(s, "hit", [{"baseDamage": 11, "effects": [], "abilityElement": "Lightning", "apMult": 1.25}])
 		if JS.t(State.combat.get("over")):
@@ -2063,43 +2063,43 @@ func SPELL_CATALOGUE__overcharge__execute(s = null):
 	var this = JS._this
 	var shock = JS.round(3 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 0.9))
 	var powerBonus = JS.round(30 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 3, 0.9))
-	State.status.enemy.shockStacks = (JS.or_(State.status.enemy.get("shockStacks"), 0)) + shock
-	State.status.player.overchargePowerPending = (JS.or_(State.status.player.get("overchargePowerPending"), 0)) + powerBonus
+	State.status.get("enemy").shockStacks = (JS.or_(State.status.get("enemy").get("shockStacks"), 0)) + shock
+	State.status.get("player").overchargePowerPending = (JS.or_(State.status.get("player").get("overchargePowerPending"), 0)) + powerBonus
 	JS.callm(s, "log", ["⚡💪 Overcharge! +" + JS.s(shock) + " Shock, +" + JS.s(powerBonus) + " Power next turn", "player"])
 
 func SPELL_CATALOGUE__blitz__execute(s = null):
 	# Secondary
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
-	var stacks = (JS.or_(e.status.get("shockStacks"), 0) if JS.t(e) else 0)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
+	var stacks = (JS.or_(e.get("status").get("shockStacks"), 0) if JS.t(e) else 0)
 	if stacks > 0:
 		var perStack = max(1, ceili(JS.callm(s, "attackPow", []) / 3.0))
 		var dmg = stacks * perStack
 		if JS.t(e):
-			e.status.shockStacks = 0
+			e.get("status").shockStacks = 0
 		Hit.applyDirectDamage.call("player", "enemy", dmg, "💥 Blitz (" + JS.s(stacks) + " Shock)")
 		JS.callm(s, "log", ["💥⚡ Blitz! " + JS.s(stacks) + "×" + JS.s(perStack) + " = " + JS.s(dmg) + " dmg", "player"])
 	else:
 		JS.callm(s, "log", ["💥 Blitz — no Shock to detonate", "player"])
 
 func SPELL_CATALOGUE__recharge__execute(s = null):
-	State.status.player.lightningMult = 2.0
+	State.status.get("player").lightningMult = 2.0
 	JS.callm(s, "log", ["🔋 Recharge! Overload reset to 200%", "player"])
 
 func SPELL_CATALOGUE__electrocute__execute(s = null):
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if JS.t(e):
-		var prev = JS.or_(e.status.get("shockStacks"), 0)
-		e.status.shockStacks = JS.round(prev * 2)
-		JS.callm(s, "log", ["☠️⚡ Electrocute! Shock ×2 (" + JS.s(e.status.shockStacks) + ")", "player"])
+		var prev = JS.or_(e.get("status").get("shockStacks"), 0)
+		e.get("status").shockStacks = JS.round(prev * 2)
+		JS.callm(s, "log", ["☠️⚡ Electrocute! Shock ×2 (" + JS.s(e.get("status").get("shockStacks")) + ")", "player"])
 	Helpers.applySelfDamage(10, "☠️ Electrocute")
 
 func SPELL_CATALOGUE__feedback__execute(s = null):
 	var this = JS._this
 	var shock = JS.round(2 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 0.9))
 	var powerBonus = JS.round(15 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 0.9))
-	State.status.enemy.shockStacks = (JS.or_(State.status.enemy.get("shockStacks"), 0)) + shock
+	State.status.get("enemy").shockStacks = (JS.or_(State.status.get("enemy").get("shockStacks"), 0)) + shock
 	Helpers.applySelfDamage(5, "🔄 Feedback")
-	State.status.player.overchargePowerPending = (JS.or_(State.status.player.get("overchargePowerPending"), 0)) + powerBonus
+	State.status.get("player").overchargePowerPending = (JS.or_(State.status.get("player").get("overchargePowerPending"), 0)) + powerBonus
 	JS.callm(s, "log", ["🔄⚡ Feedback! +" + JS.s(shock) + " Shock, 5 self dmg, +" + JS.s(powerBonus) + " Power next turn", "player"])
 
 func SPELL_CATALOGUE__short_circuit__execute(s = null):
@@ -2108,23 +2108,23 @@ func SPELL_CATALOGUE__short_circuit__execute(s = null):
 	if not JS.t(len(alive)):
 		return
 	var target = JS.idx(alive, floori(randf() * len(alive)))
-	var tIdx = JS.indexOf(State.combat.enemies, target)
+	var tIdx = JS.indexOf(State.combat.get("enemies"), target)
 	State.setActiveEnemy(tIdx)
 	# Randomly determine what action was "cancelled"
 	var roll = randf()
 	if roll < 0.33:
 		# Buff action cancelled → player gains it (simulate as a power boost)
 		var pow_ = floori(10 + (JS.callm(s, "effectPow", []) * 0.1))
-		State.status.player.nextTurnPowerBonus = (JS.or_(State.status.player.get("nextTurnPowerBonus"), 0)) + pow_
-		JS.callm(s, "log", ["💡 Short Circuit! Cancelled " + JS.s(target.name) + "'s buff — you gain +" + JS.s(pow_) + " Power next turn!", "player"])
+		State.status.get("player").nextTurnPowerBonus = (JS.or_(State.status.get("player").get("nextTurnPowerBonus"), 0)) + pow_
+		JS.callm(s, "log", ["💡 Short Circuit! Cancelled " + JS.s(target.get("name")) + "'s buff — you gain +" + JS.s(pow_) + " Power next turn!", "player"])
 	elif roll < 0.66:
 		# Damage action cancelled → enemy hits themselves
 		var selfDmg = JS.or_(target.get("enemyDmg"), 10)
-		JS.callm(s, "log", ["💡 Short Circuit! " + JS.s(target.name) + "'s attack backfires — " + JS.s(selfDmg) + " self damage!", "player"])
-		target.hp = max(0, target.hp - selfDmg)
-		if target.hp <= 0:
+		JS.callm(s, "log", ["💡 Short Circuit! " + JS.s(target.get("name")) + "'s attack backfires — " + JS.s(selfDmg) + " self damage!", "player"])
+		target.hp = max(0, target.get("hp") - selfDmg)
+		if target.get("hp") <= 0:
 			target.alive = false
-			UI.log_("💀 " + JS.s(target.name) + " defeated by own attack!", "win")
+			UI.log_("💀 " + JS.s(target.get("name")) + " defeated by own attack!", "win")
 			UI.renderEnemyCards()
 			if (len(Helpers.aliveEnemies()) == 0 and not JS.t(State.combat.get("over"))):
 				Combat.endBattle(true)
@@ -2133,11 +2133,11 @@ func SPELL_CATALOGUE__short_circuit__execute(s = null):
 			UI.renderEnemyCards()
 	else:
 		# Debuff cancelled → enemy applies it to themselves (simulate as stun)
-		target.status.stunned = max(JS.or_(target.status.get("stunned"), 0), 1)
-		JS.callm(s, "log", ["💡 Short Circuit! " + JS.s(target.name) + "'s debuff reflects — they are stunned!", "player"])
+		target.get("status").stunned = max(JS.or_(target.get("status").get("stunned"), 0), 1)
+		JS.callm(s, "log", ["💡 Short Circuit! " + JS.s(target.get("name")) + "'s debuff reflects — they are stunned!", "player"])
 	# Also apply Shock to target regardless
 	var _scShock = JS.round(1 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 1.0))
-	target.status.shockStacks = (JS.or_(target.status.get("shockStacks"), 0)) + _scShock
+	target.get("status").shockStacks = (JS.or_(target.get("status").get("shockStacks"), 0)) + _scShock
 	UI.renderEnemyCards()
 	if (len(Helpers.aliveEnemies()) == 0 and not JS.t(State.combat.get("over"))):
 		Combat.endBattle(true)
@@ -2147,13 +2147,13 @@ func SPELL_CATALOGUE__static_cleanse__execute(s = null):
 	Helpers.clearPlayerDebuffs()
 	Helpers.clearPlayerBuffs()
 	if n > 0:
-		State.status.enemy.shockStacks = (JS.or_(State.status.enemy.get("shockStacks"), 0)) + (n * 2)
+		State.status.get("enemy").shockStacks = (JS.or_(State.status.get("enemy").get("shockStacks"), 0)) + (n * 2)
 		JS.callm(s, "log", ["🧹⚡ Static Cleanse! " + JS.s(n) + " effects cleared → +" + JS.s(n * 2) + " Shock", "player"])
 	else:
 		JS.callm(s, "log", ["🧹 Static Cleanse — nothing to clear", "player"])
 
 func SPELL_CATALOGUE__charge_shot__execute(s = null):
-	State.status.player.chargeShotCharging = true
+	State.status.get("player").chargeShotCharging = true
 	JS.callm(s, "log", ["🎯⚡ Charge Shot charging — fires next round!", "player"])
 
 func SPELL_CATALOGUE__bolt__execute(s = null):
@@ -2172,10 +2172,10 @@ func SPELL_CATALOGUE__thunder_strike__execute(s = null):
 	var dmgBonus = JS.round(Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 4, 0.9))
 	JS.callm(s, "hit", [{"baseDamage": 35 + dmgBonus, "effects": [], "abilityElement": "Lightning"}])
 	if not JS.t(State.combat.get("over")):
-		var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+		var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 		if (JS.t(e) and JS.t(e.get("alive"))):
-			e.status.shockStacks = (JS.or_(e.status.get("shockStacks"), 0)) + shockAmt
-			UI.log_("⚡ Thunder Strike! +" + JS.s(shockAmt) + " Shock (×" + JS.toFixed(e.status.shockStacks, 1) + ")", "status")
+			e.get("status").shockStacks = (JS.or_(e.get("status").get("shockStacks"), 0)) + shockAmt
+			UI.log_("⚡ Thunder Strike! +" + JS.s(shockAmt) + " Shock (×" + JS.toFixed(e.get("status").get("shockStacks"), 1) + ")", "status")
 		JS.callm(s, "log", ["🌩️ Thunder Strike!", "player"])
 
 func SPELL_CATALOGUE__ball_lightning__execute(s = null):
@@ -2184,7 +2184,7 @@ func SPELL_CATALOGUE__ball_lightning__execute(s = null):
 	var dmgBonus = JS.round(Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 5, 0.9))
 	var _arr5 = JS.iter(Helpers.aliveEnemies())
 	for i in range(len(_arr5)):
-		State.setActiveEnemy(JS.indexOf(State.combat.enemies, JS.idx(Helpers.aliveEnemies(), i)))
+		State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
 		JS.callm(s, "hit", [{"baseDamage": 10 + dmgBonus, "effects": [], "abilityElement": "Lightning", "isAOE": true}])
 		if JS.t(State.combat.get("over")):
 			continue
@@ -2209,26 +2209,26 @@ func SPELL_CATALOGUE__supercharge__execute(s = null):
 	# ── Lightning / Surge secondaries ────────────────────────────────────────────
 	var largeBon = JS.round(Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 10, 0.9))
 	var smallBon = JS.round(Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 5, 0.9))
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if (not JS.t(e) or not JS.t(e.get("alive"))):
 		return
-	if JS.t(e.status.get("surgeActive")):
-		e.status.surgeValue += 40 + smallBon
-		JS.callm(s, "log", ["⚡⚡ Supercharge! Surge +" + JS.s(40 + smallBon) + " → " + JS.s(e.status.surgeValue), "player"])
+	if JS.t(e.get("status").get("surgeActive")):
+		e.get("status").surgeValue += 40 + smallBon
+		JS.callm(s, "log", ["⚡⚡ Supercharge! Surge +" + JS.s(40 + smallBon) + " → " + JS.s(e.get("status").get("surgeValue")), "player"])
 	else:
-		e.status.surgeActive = true
-		e.status.surgeValue = 80 + largeBon
-		e.status.surgeMeter = 0
-		JS.callm(s, "log", ["⚡⚡ Supercharge! Surge " + JS.s(e.status.surgeValue) + " loaded.", "player"])
+		e.get("status").surgeActive = true
+		e.get("status").surgeValue = 80 + largeBon
+		e.get("status").surgeMeter = 0
+		JS.callm(s, "log", ["⚡⚡ Supercharge! Surge " + JS.s(e.get("status").get("surgeValue")) + " loaded.", "player"])
 	UI.renderStatusTags()
 
 func SPELL_CATALOGUE__overclock__execute(s = null):
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if (not JS.t(e) or not JS.t(e.get("alive"))):
 		return
-	if JS.t(e.status.get("surgeActive")):
-		e.status.surgeValue = JS.round(e.status.surgeValue * 2)
-		JS.callm(s, "log", ["⏫⚡ Overclock! Surge doubled → " + JS.s(e.status.surgeValue), "player"])
+	if JS.t(e.get("status").get("surgeActive")):
+		e.get("status").surgeValue = JS.round(e.get("status").get("surgeValue") * 2)
+		JS.callm(s, "log", ["⏫⚡ Overclock! Surge doubled → " + JS.s(e.get("status").get("surgeValue")), "player"])
 	else:
 		JS.callm(s, "log", ["⏫ Overclock — no Surge active to double", "player"])
 	UI.renderStatusTags()
@@ -2248,11 +2248,11 @@ func SPELL_CATALOGUE__residual_current__execute(s = null):
 		JS.callm(s, "log", ["🔄⚡ Residual Current primed — Surge " + JS.s(surgeVal) + " fires on next trigger.", "player"])
 
 func SPELL_CATALOGUE__detonator__execute(s = null):
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if (not JS.t(e) or not JS.t(e.get("alive"))):
 		return
-	if JS.t(e.status.get("surgeActive")):
-		JS.callm(s, "log", ["💣⚡ Detonator! Triggering Surge (" + JS.s(e.status.surgeValue) + " dmg)!", "player"])
+	if JS.t(e.get("status").get("surgeActive")):
+		JS.callm(s, "log", ["💣⚡ Detonator! Triggering Surge (" + JS.s(e.get("status").get("surgeValue")) + " dmg)!", "player"])
 		Surge._triggerSurge("enemy")
 	else:
 		JS.callm(s, "log", ["💣 Detonator — no Surge active to detonate", "player"])
@@ -2264,16 +2264,16 @@ func SPELL_CATALOGUE__grounded__execute(s = null):
 	var n = Helpers.countPlayerDebuffs()
 	Helpers.clearPlayerDebuffs()
 	if n > 0:
-		var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+		var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 		if (JS.t(e) and JS.t(e.get("alive"))):
-			if JS.t(e.status.get("surgeActive")):
-				e.status.surgeValue += n * surgePerDebuff
-				UI.log_("🌱⚡ Grounded! " + JS.s(n) + " debuffs cleared → Surge +" + JS.s(n * surgePerDebuff) + " (" + JS.s(e.status.surgeValue) + ")", "player")
+			if JS.t(e.get("status").get("surgeActive")):
+				e.get("status").surgeValue += n * surgePerDebuff
+				UI.log_("🌱⚡ Grounded! " + JS.s(n) + " debuffs cleared → Surge +" + JS.s(n * surgePerDebuff) + " (" + JS.s(e.get("status").get("surgeValue")) + ")", "player")
 			else:
-				e.status.surgeActive = true
-				e.status.surgeValue = n * surgePerDebuff
-				e.status.surgeMeter = 0
-				UI.log_("🌱⚡ Grounded! " + JS.s(n) + " debuffs cleared → Surge " + JS.s(e.status.surgeValue) + " loaded", "player")
+				e.get("status").surgeActive = true
+				e.get("status").surgeValue = n * surgePerDebuff
+				e.get("status").surgeMeter = 0
+				UI.log_("🌱⚡ Grounded! " + JS.s(n) + " debuffs cleared → Surge " + JS.s(e.get("status").get("surgeValue")) + " loaded", "player")
 			UI.renderStatusTags()
 	else:
 		JS.callm(s, "log", ["🌱 Grounded — no debuffs to clear", "player"])
@@ -2283,7 +2283,7 @@ func SPELL_CATALOGUE__thunderclap__execute(s = null):
 	var surgeVal = 100
 	var _arr6 = JS.iter(Helpers.aliveEnemies())
 	for i in range(len(_arr6)):
-		State.setActiveEnemy(JS.indexOf(State.combat.enemies, JS.idx(Helpers.aliveEnemies(), i)))
+		State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
 		JS.callm(s, "hit", [{"baseDamage": 60, "effects": [], "abilityElement": "Lightning", "isAOE": true}])
 		if JS.t(State.combat.get("over")):
 			continue
@@ -2303,17 +2303,17 @@ func SPELL_CATALOGUE__seismic_wave__execute(s = null):
 	JS.callm(s, "hit", [{"baseDamage": 20, "effects": [], "abilityElement": "Earth"}])
 	if not JS.t(State.combat.get("over")):
 		var stripAmt = JS.round(5 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 1.0))
-		var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+		var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 		if JS.t(e):
-			e.status.block = max(0, (JS.or_(e.status.get("block"), 0)) - stripAmt)
-		State.status.player.block = (JS.or_(State.status.player.get("block"), 0)) + stripAmt
+			e.get("status").block = max(0, (JS.or_(e.get("status").get("block"), 0)) - stripAmt)
+		State.status.get("player").block = (JS.or_(State.status.get("player").get("block"), 0)) + stripAmt
 		JS.callm(s, "log", ["🌊🪨 Seismic Wave! Armor Strip −" + JS.s(stripAmt) + " enemy, +" + JS.s(stripAmt) + " yours", "player"])
 
 func SPELL_CATALOGUE__fortify__execute(s = null):
 	var this = JS._this
 	var amt = JS.round(15 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 3, 0.95))
 	Helpers.gainBlock("player", amt)
-	State.status.player.fortifyPending = (JS.or_(State.status.player.get("fortifyPending"), 0)) + amt
+	State.status.get("player").fortifyPending = (JS.or_(State.status.get("player").get("fortifyPending"), 0)) + amt
 	JS.callm(s, "log", ["🏰 Fortify! +" + JS.s(amt) + " Armor (converts to Stone at end of turn)", "player"])
 
 func SPELL_CATALOGUE__echo_slam__execute(s = null):
@@ -2323,7 +2323,7 @@ func SPELL_CATALOGUE__echo_slam__execute(s = null):
 	var dmgPerEnemy = dmgBase * count
 	var _arr7 = JS.iter(Helpers.aliveEnemies())
 	for i in range(len(_arr7)):
-		State.setActiveEnemy(JS.indexOf(State.combat.enemies, JS.idx(Helpers.aliveEnemies(), i)))
+		State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
 		JS.callm(s, "hit", [{"baseDamage": dmgPerEnemy, "effects": [], "abilityElement": "Earth", "isAOE": true}])
 	JS.callm(s, "log", ["🌍 Echo Slam! " + JS.s(count) + " enemies × " + JS.s(dmgBase) + " = " + JS.s(dmgPerEnemy) + " each", "player"])
 
@@ -2331,17 +2331,17 @@ func SPELL_CATALOGUE__stone_stance__execute(s = null):
 	var this = JS._this
 	# Secondary
 	var powBonus = JS.round(Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 5, 0.9))
-	State.status.player.stoneStanceThisTurn = true
+	State.status.get("player").stoneStanceThisTurn = true
 	if powBonus > 0:
-		State.status.player.battlePowerBonus = (JS.or_(State.status.player.get("battlePowerBonus"), 0)) + powBonus
+		State.status.get("player").battlePowerBonus = (JS.or_(State.status.get("player").get("battlePowerBonus"), 0)) + powBonus
 		UI.updateStatsUI()
 	JS.callm(s, "log", ["🪨💪 Stone Stance! Stone effects doubled this turn" + (" +" + JS.s(powBonus) + " Power" if powBonus > 0 else ""), "player"])
 
 func SPELL_CATALOGUE__stone_sanctuary__execute(s = null):
 	var this = JS._this
 	var mult = 2 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 0.5, 0.9)
-	State.status.player.stoneStacks = JS.round((JS.or_(State.status.player.get("stoneStacks"), 0)) * mult)
-	JS.callm(s, "log", ["🏔️ Stone Sanctuary! ×" + JS.toFixed(mult, 2) + " Stone (" + JS.s(State.status.player.stoneStacks) + ")", "player"])
+	State.status.get("player").stoneStacks = JS.round((JS.or_(State.status.get("player").get("stoneStacks"), 0)) * mult)
+	JS.callm(s, "log", ["🏔️ Stone Sanctuary! ×" + JS.toFixed(mult, 2) + " Stone (" + JS.s(State.status.get("player").get("stoneStacks")) + ")", "player"])
 
 func SPELL_CATALOGUE__earthshaker__execute(s = null):
 	var this = JS._this
@@ -2360,14 +2360,14 @@ func SPELL_CATALOGUE__dig__execute(s = null):
 
 func SPELL_CATALOGUE__cataclysm__execute(s = null):
 	var this = JS._this
-	var stacks = JS.or_(State.status.player.get("stoneStacks"), 0)
-	State.status.player.stoneStacks = 0
+	var stacks = JS.or_(State.status.get("player").get("stoneStacks"), 0)
+	State.status.get("player").stoneStacks = 0
 	var perStack = JS.round(25 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 5, 0.9))
 	var dmg = (stacks * perStack) + JS.callm(s, "attackPow", [])
 	if dmg > 0:
 		var _arr8 = JS.iter(Helpers.aliveEnemies())
 		for i in range(len(_arr8)):
-			State.setActiveEnemy(JS.indexOf(State.combat.enemies, JS.idx(Helpers.aliveEnemies(), i)))
+			State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
 			Hit.applyDirectDamage.call("player", "enemy", dmg, "💥 Cataclysm (" + JS.s(stacks) + " Stone)")
 	JS.callm(s, "log", ["💥🪨 Cataclysm! " + JS.s(stacks) + " Stone × " + JS.s(perStack) + " = " + JS.s(dmg) + " dmg to all", "player"])
 
@@ -2393,7 +2393,7 @@ func SPELL_CATALOGUE__thornwall__execute(s = null):
 
 func SPELL_CATALOGUE__natures_call__execute(s = null):
 	var this = JS._this
-	if len(State.combat.summons) >= 4:
+	if len(State.combat.get("summons")) >= 4:
 		JS.callm(s, "log", ["🌳 Max summons reached!", "status"])
 		return
 	var isLegendary = Main.hasPassive("nature_verdant_legion")
@@ -2402,7 +2402,7 @@ func SPELL_CATALOGUE__natures_call__execute(s = null):
 	var dmgBonus = JS.round(Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 0.9))
 	State.combat._treantDmgBonus = max(JS.or_(State.combat.get("_treantDmgBonus"), 0), dmgBonus)
 	var dmg = (15 if isLegendary else 5) + (JS.or_(State.combat.get("_treantDmgBonus"), 0))
-	State.combat.summons.append({
+	State.combat.get("summons").append({
 		"name": "Treant",
 		"emoji": "🌳",
 		"hp": hp,
@@ -2420,7 +2420,7 @@ func SPELL_CATALOGUE__bramble_burst__execute(s = null):
 	var dmg = JS.round(15 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 8, 0.9))
 	var _arr9 = JS.iter(Helpers.aliveEnemies())
 	for i in range(len(_arr9)):
-		State.setActiveEnemy(JS.indexOf(State.combat.enemies, JS.idx(Helpers.aliveEnemies(), i)))
+		State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
 		JS.callm(s, "hit", [{"baseDamage": dmg, "effects": [], "abilityElement": "Nature", "isAOE": true}])
 		if (not JS.t(State.combat.get("over")) and randf() < 0.5):
 			Helpers.applyRoot("player", "enemy", 1)
@@ -2428,46 +2428,46 @@ func SPELL_CATALOGUE__bramble_burst__execute(s = null):
 
 func SPELL_CATALOGUE__wild_growth__execute(s = null):
 	# Secondary
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if JS.t(e):
-		e.status.rootStacks = JS.round((JS.or_(e.status.get("rootStacks"), 0)) * 2)
-		JS.callm(s, "log", ["🌿🌿 Wild Growth! Root ×2 (" + JS.s(e.status.rootStacks) + ")", "player"])
+		e.get("status").rootStacks = JS.round((JS.or_(e.get("status").get("rootStacks"), 0)) * 2)
+		JS.callm(s, "log", ["🌿🌿 Wild Growth! Root ×2 (" + JS.s(e.get("status").get("rootStacks")) + ")", "player"])
 
 func SPELL_CATALOGUE__living_forest__execute(s = null):
 	var alive = Helpers.aliveEnemies()
-	if (not JS.t(len(alive)) or not JS.t(len(State.combat.summons))):
+	if (not JS.t(len(alive)) or not JS.t(len(State.combat.get("summons")))):
 		JS.callm(s, "log", ["🌲 No Treants to command!", "player"])
 		return
 	var attacks = 2
-	for t in JS.iter(State.combat.summons):
-		if t.hp <= 0:
+	for t in JS.iter(State.combat.get("summons")):
+		if t.get("hp") <= 0:
 			continue
 		for i in range(ceili(attacks)):
 			var target = JS.idx(alive, floori(randf() * len(alive)))
-			var idx = JS.indexOf(State.combat.enemies, target)
+			var idx = JS.indexOf(State.combat.get("enemies"), target)
 			State.setActiveEnemy(idx)
-			Hit.applyDirectDamage.call("player", "enemy", t.dmg, "🌲 " + JS.s(t.name))
-			if (not JS.t(State.combat.get("over")) and randf() < t.rootChance):
+			Hit.applyDirectDamage.call("player", "enemy", t.get("dmg"), "🌲 " + JS.s(t.get("name")))
+			if (not JS.t(State.combat.get("over")) and randf() < t.get("rootChance")):
 				Helpers.applyRoot("player", "enemy", 1)
 			if JS.t(State.combat.get("over")):
 				continue
-	if JS.t(JS.idx(State.combat.enemies, State.combat.targetIdx)):
-		State.setActiveEnemy(State.combat.targetIdx)
+	if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("targetIdx"))):
+		State.setActiveEnemy(State.combat.get("targetIdx"))
 	JS.callm(s, "log", ["🌲 Living Forest! All treants strike " + JS.s(attacks) + "×", "player"])
 
 func SPELL_CATALOGUE__spreading_vines__execute(s = null):
 	var this = JS._this
 	var turns = JS.round(3 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 1.0))
-	State.status.player.spreadingVinesTurns = turns
+	State.status.get("player").spreadingVinesTurns = turns
 	JS.callm(s, "log", ["🌿🌍 Spreading Vines! " + JS.s(turns) + " rounds of root to all", "player"])
 
 func SPELL_CATALOGUE__nourish__execute(s = null):
 	var this = JS._this
 	var heal = JS.round(15 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 3, 0.95))
 	var dmgGain = JS.round(3 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 0.9))
-	for t in JS.iter(State.combat.summons):
+	for t in JS.iter(State.combat.get("summons")):
 		t.maxHP += heal
-		t.hp = min(t.maxHP, t.hp + heal)
+		t.hp = min(t.get("maxHP"), t.get("hp") + heal)
 		t.dmg += dmgGain
 	Helpers.gainBlock("player", 1)
 	UI.renderSummonsRow()
@@ -2476,11 +2476,11 @@ func SPELL_CATALOGUE__nourish__execute(s = null):
 func SPELL_CATALOGUE__natures_wrath__execute(s = null):
 	var perStack = 20
 	for e in JS.iter(Helpers.aliveEnemies()):
-		var idx = JS.indexOf(State.combat.enemies, e)
+		var idx = JS.indexOf(State.combat.get("enemies"), e)
 		State.setActiveEnemy(idx)
-		var stacks = (JS.or_(e.status.get("rootStacks"), 0)) + (JS.or_(e.status.get("overgrowthStacks"), 0))
-		e.status.rootStacks = 0
-		e.status.overgrowthStacks = 0
+		var stacks = (JS.or_(e.get("status").get("rootStacks"), 0)) + (JS.or_(e.get("status").get("overgrowthStacks"), 0))
+		e.get("status").rootStacks = 0
+		e.get("status").overgrowthStacks = 0
 		var dmg = (stacks * perStack) + JS.callm(s, "attackPow", [])
 		if dmg > 0:
 			Hit.applyDirectDamage.call("player", "enemy", dmg, "🌿 Nature's Wrath (" + JS.s(stacks) + "×" + JS.s(perStack) + ")")
@@ -2532,15 +2532,15 @@ func SPELL_CATALOGUE__accelerate__execute(s = null):
 	JS.callm(s, "log", ["⚡ Accelerate! All Seed timers −1.", "player"])
 
 func SPELL_CATALOGUE__overgrow__execute(s = null):
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if (not JS.t(e) or not JS.t(e.get("alive"))):
 		return
-	if (not JS.t(e.status.get("seeds")) or not JS.t(len(e.status.seeds))):
+	if (not JS.t(e.get("status").get("seeds")) or not JS.t(len(e.get("status").get("seeds")))):
 		JS.callm(s, "log", ["🌿 Overgrow: no Seeds on target.", "player"])
 		return
-	for seed_ in JS.iter(e.status.seeds):
-		seed_.stacks = seed_.stacks * 2
-	JS.callm(s, "log", ["🌿 Overgrow! All Seeds on " + JS.s(e.name) + " ×2.", "player"])
+	for seed_ in JS.iter(e.get("status").get("seeds")):
+		seed_.stacks = seed_.get("stacks") * 2
+	JS.callm(s, "log", ["🌿 Overgrow! All Seeds on " + JS.s(e.get("name")) + " ×2.", "player"])
 	UI.renderStatusTags()
 
 func SPELL_CATALOGUE__cross_pollinate__execute(s = null):
@@ -2549,18 +2549,18 @@ func SPELL_CATALOGUE__cross_pollinate__execute(s = null):
 	if len(enemies) < 2:
 		JS.callm(s, "log", ["🌼 Cross Pollinate: need 2+ alive enemies.", "player"])
 		return
-	var source = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
-	if ((not JS.t(source) or not JS.t(source.status.get("seeds"))) or not JS.t(len(source.status.seeds))):
+	var source = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
+	if ((not JS.t(source) or not JS.t(source.get("status").get("seeds"))) or not JS.t(len(source.get("status").get("seeds")))):
 		JS.callm(s, "log", ["🌼 Cross Pollinate: no Seeds on target.", "player"])
 		return
 	copied[0] = 0
 	for e in JS.iter(enemies):
 		if JS.eq(e, source):
 			continue
-		if not JS.t(e.status.get("seeds")):
-			e.status.seeds = []
-		for seed_ in JS.iter(source.status.seeds):
-			e.status.seeds.append(JS.merge([seed_]))
+		if not JS.t(e.get("status").get("seeds")):
+			e.get("status").seeds = []
+		for seed_ in JS.iter(source.get("status").get("seeds")):
+			e.get("status").get("seeds").append(JS.merge([seed_]))
 			copied[0] += 1
 	JS.callm(s, "log", ["🌼 Cross Pollinate! " + JS.s(copied[0]) + " Seed" + ("s" if copied[0] != 1 else "") + " copied to " + JS.s(len(enemies) - 1) + " other enem" + ("ies" if (len(enemies) - 1) != 1 else "y") + ".", "player"])
 	UI.renderStatusTags()
@@ -2575,15 +2575,15 @@ func SPELL_CATALOGUE__deep_soil__execute(s = null):
 	var count = [null]
 	var bonusStacks = JS.round(1 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 1.0))
 	count[0] = 0
-	for e in JS.iter(State.combat.enemies):
-		if (not JS.t(e.get("alive")) or not JS.t(e.status.get("seeds"))):
+	for e in JS.iter(State.combat.get("enemies")):
+		if (not JS.t(e.get("alive")) or not JS.t(e.get("status").get("seeds"))):
 			continue
-		for seed_ in JS.iter(e.status.seeds):
+		for seed_ in JS.iter(e.get("status").get("seeds")):
 			seed_.timer = 4
 			seed_.stacks += bonusStacks
 			count[0] += 1
-	if JS.t(State.status.player.get("seeds")):
-		for seed_ in JS.iter(State.status.player.seeds):
+	if JS.t(State.status.get("player").get("seeds")):
+		for seed_ in JS.iter(State.status.get("player").get("seeds")):
 			seed_.timer = 4
 			seed_.stacks += bonusStacks
 			count[0] += 1
@@ -2592,41 +2592,41 @@ func SPELL_CATALOGUE__deep_soil__execute(s = null):
 
 func SPELL_CATALOGUE__reap__execute(s = null):
 	var results = []
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	# Enemy seeds
-	if (((JS.t(e) and JS.t(e.get("alive"))) and JS.t(e.status.get("seeds"))) and JS.t(len(e.status.seeds))):
-		var consumed = JS.arr(e.status.seeds)
-		e.status.seeds = []
+	if (((JS.t(e) and JS.t(e.get("alive"))) and JS.t(e.get("status").get("seeds"))) and JS.t(len(e.get("status").get("seeds")))):
+		var consumed = JS.arr(e.get("status").get("seeds"))
+		e.get("status").seeds = []
 		for seed_ in JS.iter(consumed):
 			if JS.t(State.combat.get("over")):
 				continue
-			Seeds._bloomSeed("enemy", seed_, State.combat.activeEnemyIdx, {"powerMult": 0.5})
-			results.append(JS.s(Seeds._seedLabel(seed_.type)) + " ×" + JS.s(seed_.stacks))
+			Seeds._bloomSeed("enemy", seed_, State.combat.get("activeEnemyIdx"), {"powerMult": 0.5})
+			results.append(JS.s(Seeds._seedLabel(seed_.type)) + " ×" + JS.s(seed_.get("stacks")))
 	# Player seeds
-	if ((not JS.t(State.combat.get("over")) and JS.t(State.status.player.get("seeds"))) and JS.t(len(State.status.player.seeds))):
-		var consumed = JS.arr(State.status.player.seeds)
-		State.status.player.seeds = []
+	if ((not JS.t(State.combat.get("over")) and JS.t(State.status.get("player").get("seeds"))) and JS.t(len(State.status.get("player").get("seeds")))):
+		var consumed = JS.arr(State.status.get("player").get("seeds"))
+		State.status.get("player").seeds = []
 		for seed_ in JS.iter(consumed):
 			if JS.t(State.combat.get("over")):
 				continue
 			Seeds._bloomSeed("player", seed_, null, {"powerMult": 0.5})
-			results.append(JS.s(Seeds._seedLabel(seed_.type)) + " ×" + JS.s(seed_.stacks))
+			results.append(JS.s(Seeds._seedLabel(seed_.type)) + " ×" + JS.s(seed_.get("stacks")))
 	JS.callm(s, "log", ["🌾 Reap! " + (JS.or_(JS.join(results, ", "), "no Seeds")) + " (weakened)", "player"])
 	UI.renderStatusTags()
 
 func SPELL_CATALOGUE__bloom_storm__execute(s = null):
 	var anySeeds = [null]
 	# Legendary Seed spells
-	var prevActive = State.combat.activeEnemyIdx
+	var prevActive = State.combat.get("activeEnemyIdx")
 	anySeeds[0] = false
-	var _arr10 = JS.iter(State.combat.enemies)
+	var _arr10 = JS.iter(State.combat.get("enemies"))
 	for i in range(len(_arr10)):
 		var e = _arr10[i]
-		if ((not JS.t(e.get("alive")) or not JS.t(e.status.get("seeds"))) or not JS.t(len(e.status.seeds))):
+		if ((not JS.t(e.get("alive")) or not JS.t(e.get("status").get("seeds"))) or not JS.t(len(e.get("status").get("seeds")))):
 			continue
 		anySeeds[0] = true
-		var toBloom = JS.arr(e.status.seeds)
-		e.status.seeds = []
+		var toBloom = JS.arr(e.get("status").get("seeds"))
+		e.get("status").seeds = []
 		State.setActiveEnemy(i)
 		for seed_ in JS.iter(toBloom):
 			if not JS.t(State.combat.get("over")):
@@ -2636,7 +2636,7 @@ func SPELL_CATALOGUE__bloom_storm__execute(s = null):
 
 func SPELL_CATALOGUE__world_tree__execute(s = null):
 	var this = JS._this
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if (not JS.t(e) or not JS.t(e.get("alive"))):
 		return
 	var il = JS.or_(this.get("incantationLevel"), 1)
@@ -2659,7 +2659,7 @@ func SPELL_CATALOGUE__plasma_lance__execute(s = null):
 		return
 	var dmgPerCharge = JS.round(5 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 0.9))
 	var dmg = ((spend * dmgPerCharge) + JS.callm(s, "attackPow", [])) + JS.callm(s, "effectPow", [])
-	var tgt = State.combat.targetIdx
+	var tgt = State.combat.get("targetIdx")
 	State.setActiveEnemy(tgt)
 	JS.callm(s, "hit", [{"baseDamage": dmg, "effects": [], "abilityElement": "Plasma", "_noAtk": true}])
 	Hit.applyDirectDamage.call("enemy", "player", 1, "🔮 Recoil")
@@ -2672,8 +2672,8 @@ func SPELL_CATALOGUE__energy_infusion__execute(s = null):
 		return
 	var powPerCharge = 1 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 0.5, 0.9)
 	var gained = JS.round(spend * powPerCharge)
-	State.status.player.battlePowerBonus = (JS.or_(State.status.player.get("battlePowerBonus"), 0)) + gained
-	JS.callm(s, "log", ["⚡ Energy Infusion! " + JS.s(spend) + " Charge → +" + JS.s(gained) + " Power (total bonus: +" + JS.s(State.status.player.battlePowerBonus) + ")", "player"])
+	State.status.get("player").battlePowerBonus = (JS.or_(State.status.get("player").get("battlePowerBonus"), 0)) + gained
+	JS.callm(s, "log", ["⚡ Energy Infusion! " + JS.s(spend) + " Charge → +" + JS.s(gained) + " Power (total bonus: +" + JS.s(State.status.get("player").get("battlePowerBonus")) + ")", "player"])
 	UI.updateStatsUI()
 
 func SPELL_CATALOGUE__plasma_shield__execute(s = null):
@@ -2684,8 +2684,8 @@ func SPELL_CATALOGUE__plasma_shield__execute(s = null):
 	var mult = (1.5 if JS.t(State.combat.get("plasmaOvercharged")) else 1)
 	var pctPerCharge = 1 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 0.2, 0.9)
 	var pct = min(75, JS.round((spend * mult) * pctPerCharge))
-	State.status.player.plasmaShieldReduction = min(75, (JS.or_(State.status.player.get("plasmaShieldReduction"), 0)) + pct)
-	JS.callm(s, "log", ["🛡️ Plasma Shield! " + JS.s(spend) + " Charge → " + JS.s(pct) + "% dmg reduction (" + JS.s(State.status.player.plasmaShieldReduction) + "% total)", "player"])
+	State.status.get("player").plasmaShieldReduction = min(75, (JS.or_(State.status.get("player").get("plasmaShieldReduction"), 0)) + pct)
+	JS.callm(s, "log", ["🛡️ Plasma Shield! " + JS.s(spend) + " Charge → " + JS.s(pct) + "% dmg reduction (" + JS.s(State.status.get("player").get("plasmaShieldReduction")) + "% total)", "player"])
 	UI.renderStatusTags()
 
 func SPELL_CATALOGUE__self_sacrifice__execute(s = null):
@@ -2694,10 +2694,10 @@ func SPELL_CATALOGUE__self_sacrifice__execute(s = null):
 	if spend <= 0:
 		return
 	# Consume charge WITHOUT healing (it's a sacrifice)
-	if State.status.player.plasmaCharge < spend:
+	if State.status.get("player").get("plasmaCharge") < spend:
 		JS.callm(s, "log", ["Not enough Charge!", "status"])
 		return
-	State.status.player.plasmaCharge -= spend
+	State.status.get("player").plasmaCharge -= spend
 	_plasmaChargeReserveAdjust(-spend)
 	# damage instances per charge consumed — each generates Charge naturally
 	var hitsPerCharge = JS.round(2 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 1.0))
@@ -2710,8 +2710,8 @@ func SPELL_CATALOGUE__self_sacrifice__execute(s = null):
 func SPELL_CATALOGUE__borrowed_power__execute(s = null):
 	var this = JS._this
 	var borrow = JS.round(10 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 1.0))
-	State.status.player.plasmaCharge += borrow
-	State.status.player.borrowedCharge = (JS.or_(State.status.player.get("borrowedCharge"), 0)) + borrow
+	State.status.get("player").plasmaCharge += borrow
+	State.status.get("player").borrowedCharge = (JS.or_(State.status.get("player").get("borrowedCharge"), 0)) + borrow
 	_plasmaConsumeHeal(0, s)
 	# No charge consumed, no heal — just a log
 	JS.callm(s, "log", ["⏳ Borrowed Power! +" + JS.s(borrow) + " Charge now. " + JS.s(borrow * 50) + " dmg next turn if unpaid.", "player"])
@@ -2719,14 +2719,14 @@ func SPELL_CATALOGUE__borrowed_power__execute(s = null):
 
 func SPELL_CATALOGUE__plasma_stall__execute(s = null):
 	var this = JS._this
-	var stored = State.status.player.plasmaCharge
-	State.status.player.stallCharge = stored
-	State.status.player.stallActive = true
-	State.status.player.plasmaCharge = 0
+	var stored = State.status.get("player").get("plasmaCharge")
+	State.status.get("player").stallCharge = stored
+	State.status.get("player").stallActive = true
+	State.status.get("player").plasmaCharge = 0
 	State.combat.plasmaChargeReserved = 0
 	var powGained = JS.round(Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 3, 0.9))
 	if powGained > 0:
-		State.status.player.battlePowerBonus = (JS.or_(State.status.player.get("battlePowerBonus"), 0)) + powGained
+		State.status.get("player").battlePowerBonus = (JS.or_(State.status.get("player").get("battlePowerBonus"), 0)) + powGained
 		UI.updateStatsUI()
 	JS.callm(s, "log", ["🫧 Stall! " + JS.s(stored) + " Charge stored. Immune this turn. Regain next turn." + (" +" + JS.s(powGained) + " Power" if powGained > 0 else ""), "player"])
 	UI.renderStatusTags()
@@ -2739,7 +2739,7 @@ func SPELL_CATALOGUE__obliteration__execute(s = null):
 	var baseDmg = JS.round(5 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 0.9))
 	var hitDmg = (baseDmg + JS.callm(s, "attackPow", [])) + JS.callm(s, "effectPow", [])
 	var totalHits = spend * 2
-	var tgt = State.combat.targetIdx
+	var tgt = State.combat.get("targetIdx")
 	for i in range(ceili(spend)):
 		if JS.t(State.combat.get("over")):
 			return
@@ -2750,9 +2750,9 @@ func SPELL_CATALOGUE__obliteration__execute(s = null):
 func SPELL_CATALOGUE__singularity__execute(s = null):
 	var this = JS._this
 	var bonusCharge = JS.round(Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 3, 0.9))
-	State.status.player.singularityActive = true
+	State.status.get("player").singularityActive = true
 	if bonusCharge > 0:
-		State.status.player.plasmaCharge = (JS.or_(State.status.player.get("plasmaCharge"), 0)) + bonusCharge
+		State.status.get("player").plasmaCharge = (JS.or_(State.status.get("player").get("plasmaCharge"), 0)) + bonusCharge
 	JS.callm(s, "log", ["🌌 Singularity! Next Plasma ability has doubled effects." + (" +" + JS.s(bonusCharge) + " Charge" if bonusCharge > 0 else ""), "player"])
 	UI.renderStatusTags()
 
@@ -2762,15 +2762,15 @@ func SPELL_CATALOGUE__quintuple_hit__execute(s = null):
 	# Helper: applies s.hit with optional Tornado AoE expansion
 	# ── Primary ──────────────────────────────────────────────────────────────────
 	var hits = JS.round(5 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 1.0))
-	if JS.t(State.status.player.get("tornadoAoENext")):
-		State.status.player.tornadoAoENext = false
+	if JS.t(State.status.get("player").get("tornadoAoENext")):
+		State.status.get("player").tornadoAoENext = false
 		UI.log_("🌪️ Tornado boost — AoE!", "status")
 		var _arr11 = JS.iter(Helpers.aliveEnemies())
 		for i in range(len(_arr11)):
-			State.setActiveEnemy(JS.indexOf(State.combat.enemies, JS.idx(Helpers.aliveEnemies(), i)))
+			State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
 			JS.callm(s, "hit", [{"baseDamage": 3, "effects": [], "hits": hits, "abilityElement": "Air", "apMult": 0.3}])
-		if JS.t(JS.idx(State.combat.enemies, State.combat.targetIdx)):
-			State.setActiveEnemy(State.combat.targetIdx)
+		if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("targetIdx"))):
+			State.setActiveEnemy(State.combat.get("targetIdx"))
 	else:
 		JS.callm(s, "hit", [{"baseDamage": 3, "effects": [], "hits": hits, "abilityElement": "Air", "apMult": 0.3}])
 	JS.callm(s, "log", ["💨 Quintuple Hit!", "player"])
@@ -2779,14 +2779,14 @@ func SPELL_CATALOGUE__become_wind__execute(s = null):
 	var this = JS._this
 	var gain = JS.round(10 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 0.95))
 	Helpers.addMomentumStacks(gain)
-	State.status.player.momentumNoDecayNext = true
-	JS.callm(s, "log", ["🌬️ Become Wind! +" + JS.s(gain) + " Momentum (×" + JS.toFixed(State.status.player.momentumStacks, 1) + "). Next dodge: no decay.", "player"])
+	State.status.get("player").momentumNoDecayNext = true
+	JS.callm(s, "log", ["🌬️ Become Wind! +" + JS.s(gain) + " Momentum (×" + JS.toFixed(State.status.get("player").get("momentumStacks"), 1) + "). Next dodge: no decay.", "player"])
 	UI.renderStatusTags()
 
 func SPELL_CATALOGUE__wind_wall__execute(s = null):
 	var this = JS._this
 	var armor = JS.round(Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 8, 0.95))
-	State.status.player.windWallActive = true
+	State.status.get("player").windWallActive = true
 	if armor > 0:
 		Helpers.gainBlock("player", armor)
 	JS.callm(s, "log", ["🛡️ Wind Wall! Next incoming hit delayed to next turn." + (" +" + JS.s(armor) + " Armor" if armor > 0 else ""), "player"])
@@ -2798,12 +2798,12 @@ func SPELL_CATALOGUE__tornado__execute(s = null):
 	var alive = Helpers.aliveEnemies()
 	var _arr12 = JS.iter(alive)
 	for i in range(len(_arr12)):
-		State.setActiveEnemy(JS.indexOf(State.combat.enemies, JS.idx(Helpers.aliveEnemies(), i)))
+		State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
 		JS.callm(s, "hit", [{"baseDamage": dmg, "effects": [], "abilityElement": "Air", "_isTornadoSelf": true}])
-	if JS.t(JS.idx(State.combat.enemies, State.combat.targetIdx)):
-		State.setActiveEnemy(State.combat.targetIdx)
+	if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("targetIdx"))):
+		State.setActiveEnemy(State.combat.get("targetIdx"))
 	if not JS.t(State.combat.get("over")):
-		State.status.player.tornadoAoENext = true
+		State.status.get("player").tornadoAoENext = true
 	JS.callm(s, "log", ["🌪️ Tornado! All enemies hit. Next Air attack is AoE.", "player"])
 	UI.renderStatusTags()
 
@@ -2831,15 +2831,15 @@ func SPELL_CATALOGUE__twin_strike__execute(s = null):
 	var this = JS._this
 	# ── Secondary ─────────────────────────────────────────────────────────────────
 	var hits = JS.round(2 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 1.0))
-	if JS.t(State.status.player.get("tornadoAoENext")):
-		State.status.player.tornadoAoENext = false
+	if JS.t(State.status.get("player").get("tornadoAoENext")):
+		State.status.get("player").tornadoAoENext = false
 		UI.log_("🌪️ Tornado boost — AoE!", "status")
 		var _arr13 = JS.iter(Helpers.aliveEnemies())
 		for i in range(len(_arr13)):
-			State.setActiveEnemy(JS.indexOf(State.combat.enemies, JS.idx(Helpers.aliveEnemies(), i)))
+			State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
 			JS.callm(s, "hit", [{"baseDamage": 1, "effects": [], "hits": hits, "abilityElement": "Air"}])
-		if JS.t(JS.idx(State.combat.enemies, State.combat.targetIdx)):
-			State.setActiveEnemy(State.combat.targetIdx)
+		if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("targetIdx"))):
+			State.setActiveEnemy(State.combat.get("targetIdx"))
 	else:
 		JS.callm(s, "hit", [{"baseDamage": 1, "effects": [], "hits": hits, "abilityElement": "Air"}])
 	JS.callm(s, "log", ["⚔️ Twin Strike!", "player"])
@@ -2847,36 +2847,36 @@ func SPELL_CATALOGUE__twin_strike__execute(s = null):
 func SPELL_CATALOGUE__windy_takedown__execute(s = null):
 	var this = JS._this
 	var dmg = JS.round(25 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 5, 0.95))
-	if JS.t(State.status.player.get("tornadoAoENext")):
-		State.status.player.tornadoAoENext = false
+	if JS.t(State.status.get("player").get("tornadoAoENext")):
+		State.status.get("player").tornadoAoENext = false
 		UI.log_("🌪️ Tornado boost — AoE!", "status")
 		var _arr14 = JS.iter(Helpers.aliveEnemies())
 		for i in range(len(_arr14)):
-			State.setActiveEnemy(JS.indexOf(State.combat.enemies, JS.idx(Helpers.aliveEnemies(), i)))
+			State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
 			JS.callm(s, "hit", [{"baseDamage": dmg, "effects": [], "abilityElement": "Air", "apMult": 0.75}])
-		if JS.t(JS.idx(State.combat.enemies, State.combat.targetIdx)):
-			State.setActiveEnemy(State.combat.targetIdx)
+		if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("targetIdx"))):
+			State.setActiveEnemy(State.combat.get("targetIdx"))
 	else:
 		JS.callm(s, "hit", [{"baseDamage": dmg, "effects": [], "abilityElement": "Air", "apMult": 0.75}])
 	JS.callm(s, "log", ["💥 Windy Takedown!", "player"])
 
 func SPELL_CATALOGUE__sleeper_gust__execute(s = null):
 	var this = JS._this
-	if JS.t(State.status.player.get("tornadoAoENext")):
-		State.status.player.tornadoAoENext = false
+	if JS.t(State.status.get("player").get("tornadoAoENext")):
+		State.status.get("player").tornadoAoENext = false
 		UI.log_("🌪️ Tornado boost — AoE!", "status")
 		var _arr15 = JS.iter(Helpers.aliveEnemies())
 		for i in range(len(_arr15)):
-			State.setActiveEnemy(JS.indexOf(State.combat.enemies, JS.idx(Helpers.aliveEnemies(), i)))
+			State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
 			JS.callm(s, "hit", [{"baseDamage": 1, "effects": [], "hits": 2, "abilityElement": "Air", "apMult": 1.5}])
-		if JS.t(JS.idx(State.combat.enemies, State.combat.targetIdx)):
-			State.setActiveEnemy(State.combat.targetIdx)
+		if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("targetIdx"))):
+			State.setActiveEnemy(State.combat.get("targetIdx"))
 	else:
 		JS.callm(s, "hit", [{"baseDamage": 1, "effects": [], "hits": 2, "abilityElement": "Air", "apMult": 1.5}])
 	if not JS.t(State.combat.get("over")):
 		var actionsBonus = JS.round(2 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 1.0))
-		State.status.player.nextTurnBonusActions = (JS.or_(State.status.player.get("nextTurnBonusActions"), 0)) + actionsBonus
-		JS.callm(s, "log", ["😴 Sleeper Gust! +" + JS.s(actionsBonus) + " actions next turn (" + JS.s(State.status.player.nextTurnBonusActions) + " pending).", "player"])
+		State.status.get("player").nextTurnBonusActions = (JS.or_(State.status.get("player").get("nextTurnBonusActions"), 0)) + actionsBonus
+		JS.callm(s, "log", ["😴 Sleeper Gust! +" + JS.s(actionsBonus) + " actions next turn (" + JS.s(State.status.get("player").get("nextTurnBonusActions")) + " pending).", "player"])
 
 func SPELL_CATALOGUE__queue_slash__execute(s = null):
 	var this = JS._this
@@ -2889,11 +2889,11 @@ func SPELL_CATALOGUE__queue_slash__execute(s = null):
 func SPELL_CATALOGUE__slipcut__execute(s = null):
 	var this = JS._this
 	var eab = JS.or_(State.combat.get("currentQueuePosition"), 0)
-	var hasMomentum = (JS.or_(State.status.player.get("momentumStacks"), 0)) >= 1
+	var hasMomentum = (JS.or_(State.status.get("player").get("momentumStacks"), 0)) >= 1
 	var dmg = JS.round(20 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 3, 0.95))
 	var bonusNote = ""
 	if (eab == 0 and hasMomentum):
-		State.status.player.momentumStacks = max(0, (JS.or_(State.status.player.get("momentumStacks"), 0)) - 1)
+		State.status.get("player").momentumStacks = max(0, (JS.or_(State.status.get("player").get("momentumStacks"), 0)) - 1)
 		dmg += 15
 		bonusNote = " (−1 Momentum → +15 dmg)"
 	JS.callm(s, "hit", [{"baseDamage": dmg, "effects": [], "abilityElement": "Air"}])
@@ -2909,23 +2909,23 @@ func SPELL_CATALOGUE__wind_surge__execute(s = null):
 	var alive = Helpers.aliveEnemies()
 	var _arr16 = JS.iter(alive)
 	for i in range(len(_arr16)):
-		State.setActiveEnemy(JS.indexOf(State.combat.enemies, JS.idx(Helpers.aliveEnemies(), i)))
+		State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
 		JS.callm(s, "hit", [{"baseDamage": dmg, "effects": [], "abilityElement": "Air"}])
-	if JS.t(JS.idx(State.combat.enemies, State.combat.targetIdx)):
-		State.setActiveEnemy(State.combat.targetIdx)
+	if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("targetIdx"))):
+		State.setActiveEnemy(State.combat.get("targetIdx"))
 	var shift = JS.or_(State.combat.get("_aoPriorityShift"), 0)
 	JS.callm(s, "log", ["🌊 Wind Surge! All enemies hit. Subsequent spells: " + ("+" if shift > 0 else "") + JS.s(shift) + " priority.", "player"])
 	UI.renderStatusTags()
 
 func SPELL_CATALOGUE__break_momentum__execute(s = null):
 	var this = JS._this
-	var stacks = floori(JS.or_(State.status.player.get("momentumStacks"), 0))
+	var stacks = floori(JS.or_(State.status.get("player").get("momentumStacks"), 0))
 	if stacks == 0:
 		JS.callm(s, "log", ["💫 No Momentum to consume!", "status"])
 		return
 	var dmgPerStack = JS.round(5 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 0.95))
 	var dmg = (stacks * dmgPerStack) + JS.callm(s, "attackPow", [])
-	State.status.player.momentumStacks = 0
+	State.status.get("player").momentumStacks = 0
 	Hit.applyDirectDamage.call("player", "enemy", dmg, "💫 Break Momentum (" + JS.s(stacks) + "×" + JS.s(dmgPerStack) + ")")
 	JS.callm(s, "log", ["💫 Break Momentum! " + JS.s(stacks) + " stacks → " + JS.s(dmg) + " damage!", "player"])
 	UI.renderStatusTags()
@@ -2935,15 +2935,15 @@ func SPELL_CATALOGUE__winds_end__execute(s = null):
 	# ── Legendary ─────────────────────────────────────────────────────────────────
 	var dd = JS.find(JS.or_(State.player.get("spellbook"), []), func(sp = null): return sp.get("id") == "dynamic_drift")
 	var drift = (abs(JS.or_(dd.get("_battlePriority"), 0)) if JS.t(dd) else 0)
-	var momentum = floori(JS.or_(State.status.player.get("momentumStacks"), 0))
+	var momentum = floori(JS.or_(State.status.get("player").get("momentumStacks"), 0))
 	var dmg = JS.round(((15 + (drift * 12)) + (momentum * 1.5)) + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 3, 0.95))
 	var alive = Helpers.aliveEnemies()
 	var _arr17 = JS.iter(alive)
 	for i in range(len(_arr17)):
-		State.setActiveEnemy(JS.indexOf(State.combat.enemies, JS.idx(Helpers.aliveEnemies(), i)))
+		State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
 		JS.callm(s, "hit", [{"baseDamage": dmg, "effects": [], "abilityElement": "Air"}])
-	if JS.t(JS.idx(State.combat.enemies, State.combat.targetIdx)):
-		State.setActiveEnemy(State.combat.targetIdx)
+	if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("targetIdx"))):
+		State.setActiveEnemy(State.combat.get("targetIdx"))
 	JS.callm(s, "log", ["🌪️ Wind's End! " + JS.s(dmg) + " dmg to all (drift ×" + JS.s(drift) + ", " + JS.s(momentum) + " Momentum).", "player"])
 	UI.renderStatusTags()
 
@@ -2954,10 +2954,10 @@ func SPELL_CATALOGUE__absolute_zero__execute(s = null):
 	var alive = Helpers.aliveEnemies()
 	var _arr18 = JS.iter(alive)
 	for i in range(len(_arr18)):
-		State.setActiveEnemy(JS.indexOf(State.combat.enemies, JS.idx(Helpers.aliveEnemies(), i)))
+		State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
 		JS.callm(s, "hit", [{"baseDamage": dmg, "effects": [], "abilityElement": "Air", "_noAtk": true}])
-	if JS.t(JS.idx(State.combat.enemies, State.combat.targetIdx)):
-		State.setActiveEnemy(State.combat.targetIdx)
+	if JS.t(JS.idx(State.combat.get("enemies"), State.combat.get("targetIdx"))):
+		State.setActiveEnemy(State.combat.get("targetIdx"))
 	JS.callm(s, "log", ["❄️ Absolute Zero! " + JS.s(dmg) + " dmg to all (" + JS.s(total) + " total |priority| this turn).", "player"])
 	UI.renderStatusTags()
 
@@ -2974,10 +2974,10 @@ func SPELL_CATALOGUE__storm_rush__execute(s = null):
 	var this = JS._this
 	var momentumBonus = JS.round(5 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 0.95))
 	Helpers.addMomentumStacks(momentumBonus)
-	for sp in JS.iter(State.player.spellbook):
+	for sp in JS.iter(State.player.get("spellbook")):
 		if (JS.or_(sp.get("currentCD"), 0)) > 0:
-			sp.currentCD = max(0, sp.currentCD - 1)
-	JS.callm(s, "log", ["⚡ Storm Rush! +" + JS.s(momentumBonus) + " Momentum (×" + JS.toFixed(State.status.player.momentumStacks, 1) + "). All CDs −1.", "player"])
+			sp.currentCD = max(0, sp.get("currentCD") - 1)
+	JS.callm(s, "log", ["⚡ Storm Rush! +" + JS.s(momentumBonus) + " Momentum (×" + JS.toFixed(State.status.get("player").get("momentumStacks"), 1) + "). All CDs −1.", "player"])
 	UI.renderStatusTags()
 
 func SPELL_CATALOGUE__power_strike__execute(s = null):
@@ -3013,8 +3013,8 @@ func SPELL_CATALOGUE__vampiric_strike__execute(s = null):
 func SPELL_CATALOGUE__war_cry__execute(s = null):
 	var this = JS._this
 	var bonus = JS.round(10 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 3, 0.9))
-	State.status.player.battlePowerBonus = (JS.or_(State.status.player.get("battlePowerBonus"), 0)) + bonus
-	JS.callm(s, "log", ["📯 War Cry! +" + JS.s(bonus) + " Power this battle (total: +" + JS.s(State.status.player.battlePowerBonus) + ")", "player"])
+	State.status.get("player").battlePowerBonus = (JS.or_(State.status.get("player").get("battlePowerBonus"), 0)) + bonus
+	JS.callm(s, "log", ["📯 War Cry! +" + JS.s(bonus) + " Power this battle (total: +" + JS.s(State.status.get("player").get("battlePowerBonus")) + ")", "player"])
 	UI.updateStatsUI()
 
 func SPELL_CATALOGUE__plasma_arc__execute(s = null):
@@ -3029,14 +3029,14 @@ func SPELL_CATALOGUE__plasma_arc__execute(s = null):
 	JS.callm(s, "log", ["⚡🔥 Plasma Arc! " + JS.s(meltAmt) + " Melt, Surge " + JS.s(surgeVal) + " loaded.", "player"])
 
 func SPELL_CATALOGUE__superheated__execute(s = null):
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if (not JS.t(e) or not JS.t(e.get("alive"))):
 		return
-	if (JS.or_(e.status.get("burnStacks"), 0)) > 0:
-		e.status.burnStacks = JS.round(e.status.burnStacks * 2)
-		UI.log_("🌡️ Superheated! Burn ×2 → " + JS.s(e.status.burnStacks), "player")
-	if JS.t(e.status.get("surgeActive")):
-		UI.log_("⚡ Superheated triggers Surge (" + JS.s(e.status.surgeValue) + " dmg)!", "player")
+	if (JS.or_(e.get("status").get("burnStacks"), 0)) > 0:
+		e.get("status").burnStacks = JS.round(e.get("status").get("burnStacks") * 2)
+		UI.log_("🌡️ Superheated! Burn ×2 → " + JS.s(e.get("status").get("burnStacks")), "player")
+	if JS.t(e.get("status").get("surgeActive")):
+		UI.log_("⚡ Superheated triggers Surge (" + JS.s(e.get("status").get("surgeValue")) + " dmg)!", "player")
 		Surge._triggerSurge("enemy")
 	else:
 		UI.log_("⚡ Superheated — no Surge to detonate", "player")
@@ -3056,50 +3056,50 @@ func SPELL_CATALOGUE__thunderroot__execute(s = null):
 func SPELL_CATALOGUE__static_bloom__execute(s = null):
 	var this = JS._this
 	var totalStacks = [null]
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if (not JS.t(e) or not JS.t(e.get("alive"))):
 		return
-	var seeds = JS.or_(e.status.get("seeds"), [])
+	var seeds = JS.or_(e.get("status").get("seeds"), [])
 	if len(seeds) == 0:
 		JS.callm(s, "log", ["⚡🌸 Static Bloom — no Seeds to trigger", "player"])
 		return
 	totalStacks[0] = 0
 	for seed_ in JS.iter(JS.arr(seeds)):
 		totalStacks[0] += JS.or_(seed_.get("stacks"), 1)
-		Seeds._bloomSeed("enemy", seed_, State.combat.activeEnemyIdx)
+		Seeds._bloomSeed("enemy", seed_, State.combat.get("activeEnemyIdx"))
 		if JS.t(State.combat.get("over")):
 			continue
 	if not JS.t(State.combat.get("over")):
-		e.status.seeds = []
+		e.get("status").seeds = []
 		var shockBonus = JS.round(Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 1.0))
 		var shockAmt = totalStacks[0] + shockBonus
-		e.status.shockStacks = (JS.or_(e.status.get("shockStacks"), 0)) + shockAmt
-		UI.log_("⚡ Static Bloom! +" + JS.s(shockAmt) + " Shock from " + JS.s(totalStacks[0]) + " bloomed stacks (×" + JS.toFixed(e.status.shockStacks, 1) + ")", "status")
+		e.get("status").shockStacks = (JS.or_(e.get("status").get("shockStacks"), 0)) + shockAmt
+		UI.log_("⚡ Static Bloom! +" + JS.s(shockAmt) + " Shock from " + JS.s(totalStacks[0]) + " bloomed stacks (×" + JS.toFixed(e.get("status").get("shockStacks"), 1) + ")", "status")
 		JS.callm(s, "log", ["⚡🌸 Static Bloom! Seeds triggered, +" + JS.s(shockAmt) + " Shock.", "player"])
 
 func SPELL_CATALOGUE__burning_grove__execute(s = null):
 	var this = JS._this
 	# ── Fire + Nature ─────────────────────────────────────────────────────────────
 	var burnAmt = JS.round(10 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 0.9))
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if (not JS.t(e) or not JS.t(e.get("alive"))):
 		return
-	e.status.burnStacks = (JS.or_(e.status.get("burnStacks"), 0)) + burnAmt
-	e.status.burnSourcePower = JS.callm(s, "effectPow", [])
-	UI.log_("🔥 Burning Grove: +" + JS.s(burnAmt) + " Burn (×" + JS.s(e.status.burnStacks) + ")", "status")
+	e.get("status").burnStacks = (JS.or_(e.get("status").get("burnStacks"), 0)) + burnAmt
+	e.get("status").burnSourcePower = JS.callm(s, "effectPow", [])
+	UI.log_("🔥 Burning Grove: +" + JS.s(burnAmt) + " Burn (×" + JS.s(e.get("status").get("burnStacks")) + ")", "status")
 	Seeds._plantSeed("enemy", "damage", 2, 5, {"incantLevel": JS.or_(this.get("incantationLevel"), 1)})
 	JS.callm(s, "log", ["🔥🌱 Burning Grove! " + JS.s(burnAmt) + " Burn, Damage Seed ×2 planted.", "player"])
 
 func SPELL_CATALOGUE__char_bloom__execute(s = null):
 	var this = JS._this
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if (not JS.t(e) or not JS.t(e.get("alive"))):
 		return
-	var burnConsumed = JS.or_(e.status.get("burnStacks"), 0)
+	var burnConsumed = JS.or_(e.get("status").get("burnStacks"), 0)
 	if burnConsumed <= 0:
 		JS.callm(s, "log", ["🔥 Char Bloom — no Burn to consume", "player"])
 		return
-	e.status.burnStacks = 0
+	e.get("status").burnStacks = 0
 	var seedStacks = max(1, floori(burnConsumed / 10.0))
 	var bonus = JS.round(Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 1.0))
 	var finalStacks = seedStacks + bonus
@@ -3112,12 +3112,12 @@ func SPELL_CATALOGUE__storm_window__execute(s = null):
 	# ── Air + Lightning ──────────────────────────────────────────────────────────
 	var eab = JS.or_(State.combat.get("currentQueuePosition"), 0)
 	var pidx = JS.or_(State.combat.get("_playerActionIdx"), 1)
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if (not JS.t(e) or not JS.t(e.get("alive"))):
 		return
 	if (eab == 0 and pidx >= 2):
 		# Ideal position: detonate Surge
-		if JS.t(e.status.get("surgeActive")):
+		if JS.t(e.get("status").get("surgeActive")):
 			JS.callm(s, "log", ["⚡💨 Storm Window! Surge detonated early!", "player"])
 			Surge._triggerSurge("enemy")
 		else:
@@ -3130,14 +3130,14 @@ func SPELL_CATALOGUE__storm_window__execute(s = null):
 
 func SPELL_CATALOGUE__arc_load__execute(s = null):
 	var this = JS._this
-	var momentum = floori(JS.or_(State.status.player.get("momentumStacks"), 0))
+	var momentum = floori(JS.or_(State.status.get("player").get("momentumStacks"), 0))
 	var dmg = JS.round(18 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 3, 0.9))
 	JS.callm(s, "hit", [{"baseDamage": dmg, "effects": [], "abilityElement": "Lightning"}])
 	if (not JS.t(State.combat.get("over")) and momentum > 0):
-		var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+		var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 		if (JS.t(e) and JS.t(e.get("alive"))):
-			e.status.shockStacks = (JS.or_(e.status.get("shockStacks"), 0)) + momentum
-			JS.callm(s, "log", ["💨⚡ Arc Load! " + JS.s(dmg) + " dmg + " + JS.s(momentum) + " Shock from Momentum (×" + JS.s(e.status.shockStacks) + " total).", "player"])
+			e.get("status").shockStacks = (JS.or_(e.get("status").get("shockStacks"), 0)) + momentum
+			JS.callm(s, "log", ["💨⚡ Arc Load! " + JS.s(dmg) + " dmg + " + JS.s(momentum) + " Shock from Momentum (×" + JS.s(e.get("status").get("shockStacks")) + " total).", "player"])
 
 func SPELL_CATALOGUE__windfall_seed__execute(s = null):
 	var this = JS._this
@@ -3146,16 +3146,16 @@ func SPELL_CATALOGUE__windfall_seed__execute(s = null):
 	JS.callm(s, "log", ["🌱💨 Windfall Seed planted! +1 priority to all actions while germinating.", "player"])
 
 func SPELL_CATALOGUE__gale_bind__execute(s = null):
-	var cur = floori(JS.or_(State.status.player.get("momentumStacks"), 0))
+	var cur = floori(JS.or_(State.status.get("player").get("momentumStacks"), 0))
 	var convert_ = floori(cur * 0.5)
 	if convert_ <= 0:
 		JS.callm(s, "log", ["🌿💨 Gale Bind — not enough Momentum.", "player"])
 		return
-	State.status.player.momentumStacks = max(0, (JS.or_(State.status.player.get("momentumStacks"), 0)) - convert_)
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	State.status.get("player").momentumStacks = max(0, (JS.or_(State.status.get("player").get("momentumStacks"), 0)) - convert_)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if (JS.t(e) and JS.t(e.get("alive"))):
 		Helpers.applyRoot("player", "enemy", convert_)
-		e.status._galeBind = (JS.or_(e.status.get("_galeBind"), 0)) + convert_
+		e.get("status")._galeBind = (JS.or_(e.get("status").get("_galeBind"), 0)) + convert_
 	JS.callm(s, "log", ["🌿💨 Gale Bind! −" + JS.s(convert_) + " Momentum → " + JS.s(convert_) + " Root (expires next round).", "player"])
 
 func SPELL_CATALOGUE__afterburn__execute(s = null):
@@ -3165,7 +3165,7 @@ func SPELL_CATALOGUE__afterburn__execute(s = null):
 
 func SPELL_CATALOGUE__ember_flurry__execute(s = null):
 	var this = JS._this
-	var momentum = floori(JS.or_(State.status.player.get("momentumStacks"), 0))
+	var momentum = floori(JS.or_(State.status.get("player").get("momentumStacks"), 0))
 	var base = JS.round(8 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 0.9))
 	var momBonus = momentum * 2
 	var hitsLanded = 0

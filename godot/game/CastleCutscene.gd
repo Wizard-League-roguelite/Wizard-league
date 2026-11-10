@@ -117,14 +117,14 @@ func fadeCurve(t = null, inD = null, outS = null):
 	if t < inD:
 		return t / float(inD)
 	if t > outS:
-		return 1 - ((t - outS) / float(1 - outS))
+		return 1 - ((t - outS) / float((1 - outS)))
 	return 1
 
 func drawNarration(lines = null, t = null):
 	for l in JS.iter(lines):
-		if (t >= l.t0 and t <= l.t1):
-			var mid = (l.t0 + l.t1) * 0.5
-			var fade = (clamp_((t - l.t0) / 0.06, 0, 1) if t < mid else clamp_((l.t1 - t) / 0.06, 0, 1))
+		if (t >= l.get("t0") and t <= l.get("t1")):
+			var mid = (l.get("t0") + l.get("t1")) * 0.5
+			var fade = (clamp_((t - l.get("t0")) / 0.06, 0, 1) if t < mid else clamp_((l.get("t1") - t) / 0.06, 0, 1))
 			var barH = H() * 0.115
 			var bg = _ctx.createLinearGradient(0, H() - (barH * 1.6), 0, H())
 			bg.addColorStop(0, "rgba(0,0,0,0)")
@@ -140,7 +140,7 @@ func drawNarration(lines = null, t = null):
 			_ctx.shadowColor = "rgba(0,0,0,0.9)"
 			_ctx.shadowBlur = 8
 			_ctx.fillStyle = "#c8b890"
-			_ctx.fillText(l.text, W() * 0.5, H() * 0.96)
+			_ctx.fillText(l.get("text"), W() * 0.5, H() * 0.96)
 			_ctx.restore()
 			break
 
@@ -158,8 +158,8 @@ func spawnP(x = null, y = null, o = null):
 	_particles.append({
 		"x": x,
 		"y": y,
-		"vx": (o.vx if o.get("vx") != null else (randf() - 0.5) * 2),
-		"vy": (o.vy if o.get("vy") != null else (-randf()) * 1.4),
+		"vx": (o.get("vx") if o.get("vx") != null else (randf() - 0.5) * 2),
+		"vy": (o.get("vy") if o.get("vy") != null else (-randf()) * 1.4),
 		"life": 1,
 		"decay": JS.or_(o.get("decay"), 0.013),
 		"size": (o.get("size") if JS.t(o.get("size")) else (randf() * 2) + 1),
@@ -169,16 +169,16 @@ func spawnP(x = null, y = null, o = null):
 	})
 
 func tickP():
-	_particles = JS.arr(_particles).filter(func(p = null): return p.life > 0)
+	_particles = JS.arr(_particles).filter(func(p = null): return p.get("life") > 0)
 	for p in JS.iter(_particles):
-		p.x += p.vx
-		p.y += p.vy
-		p.life -= p.decay
+		p.x += p.get("vx")
+		p.y += p.get("vy")
+		p.life -= p.get("decay")
 		_ctx.save()
-		_ctx.globalAlpha = p.life * 0.75
-		_ctx.fillStyle = "rgb(" + JS.s(p.r) + "," + JS.s(p.g) + "," + JS.s(p.b) + ")"
+		_ctx.globalAlpha = p.get("life") * 0.75
+		_ctx.fillStyle = "rgb(" + JS.s(p.get("r")) + "," + JS.s(p.get("g")) + "," + JS.s(p.get("b")) + ")"
 		_ctx.beginPath()
-		_ctx.arc(p.x, p.y, p.size, 0, PI * 2)
+		_ctx.arc(p.get("x"), p.get("y"), p.size, 0, PI * 2)
 		_ctx.fill()
 		_ctx.restore()
 
@@ -530,14 +530,14 @@ func drawElementWizard(cx = null, cy = null, s = null, el = null, sec = null, id
 	var pulse = 0.14 + (0.05 * sin((sec * 1.4) + (idx * 0.9)))
 	# Elemental aura
 	var aura = ctx.createRadialGradient(cx, cy - (40 * s), 0, cx, cy - (40 * s), 55 * s)
-	aura.addColorStop(0, "rgba(" + JS.s(el.r) + "," + JS.s(el.g) + "," + JS.s(el.b) + "," + JS.s(pulse) + ")")
+	aura.addColorStop(0, "rgba(" + JS.s(el.get("r")) + "," + JS.s(el.get("g")) + "," + JS.s(el.get("b")) + "," + JS.s(pulse) + ")")
 	aura.addColorStop(1, "rgba(0,0,0,0)")
 	ctx.fillStyle = aura
 	ctx.fillRect(cx - (65 * s), cy - (90 * s), 130 * s, 110 * s)
 	# Wizard body
 	drawWizard(cx, cy, s)
 	# Small colored dot above hat (element indicator)
-	ctx.fillStyle = "rgba(" + JS.s(el.r) + "," + JS.s(el.g) + "," + JS.s(el.b) + ",0.65)"
+	ctx.fillStyle = "rgba(" + JS.s(el.get("r")) + "," + JS.s(el.get("g")) + "," + JS.s(el.get("b")) + ",0.65)"
 	ctx.beginPath()
 	ctx.arc(cx, cy - (90 * s), 4 * s, 0, PI * 2)
 	ctx.fill()
@@ -587,7 +587,7 @@ func sceneExterior(t = null, sec = null):
 	var bob = sin(sec * 3.6) * 2.5
 	drawOurWizard(walkX, (gY + (H() * 0.06)) + bob, H() / 640.0)
 	drawBars(1)
-	drawNarration(NAR.exterior, t)
+	drawNarration(NAR.get("exterior"), t)
 	var ov = 1 - fadeCurve(t, 0.1, 0.88)
 	if ov > 0:
 		_ctx.fillStyle = "rgba(0,0,0," + JS.s(ov) + ")"
@@ -631,7 +631,7 @@ func sceneHall(t = null, sec = null):
 	# un-zoom
 	tickP()
 	drawBars(1)
-	drawNarration(NAR.hall, t)
+	drawNarration(NAR.get("hall"), t)
 	var ov = 1 - fadeCurve(t, 0.08, 0.9)
 	if ov > 0:
 		_ctx.fillStyle = "rgba(0,0,0," + JS.s(ov) + ")"
@@ -668,7 +668,7 @@ func sceneThrone(t = null, sec = null):
 	_ctx.restore()
 	tickP()
 	drawBars(1)
-	drawNarration(NAR.throne, t)
+	drawNarration(NAR.get("throne"), t)
 	var ov = 1 - fadeCurve(t, 0.06, 0.9)
 	if ov > 0:
 		_ctx.fillStyle = "rgba(0,0,0," + JS.s(ov) + ")"
@@ -681,7 +681,7 @@ func scenePan(t = null, sec = null):
 	var panX = easeInOut(t) * (worldW - W())
 	var floorY = H() * 0.8
 	var ws = H() / 680.0
-	var spacing = worldW / float(len(EL) + 1)
+	var spacing = worldW / float((len(EL) + 1))
 	_ctx.save()
 	_ctx.translate(-panX, 0)
 	# Sky/background (wider)
@@ -716,8 +716,8 @@ func scenePan(t = null, sec = null):
 		_ctx.save()
 		_ctx.font = JS.s(clamp_(H() * 0.022, 9, 16)) + "px 'Cinzel',serif"
 		_ctx.textAlign = "center"
-		_ctx.fillStyle = "rgba(" + JS.s(el.r) + "," + JS.s(el.g) + "," + JS.s(el.b) + ",0.45)"
-		_ctx.fillText(el.name, ex, floorY + (18 * ws))
+		_ctx.fillStyle = "rgba(" + JS.s(el.get("r")) + "," + JS.s(el.get("g")) + "," + JS.s(el.get("b")) + ",0.45)"
+		_ctx.fillText(el.get("name"), ex, floorY + (18 * ws))
 		_ctx.restore()
 	_ctx.restore()
 	# Vignette edges
@@ -732,7 +732,7 @@ func scenePan(t = null, sec = null):
 	_ctx.fillStyle = vigR
 	_ctx.fillRect(W() * 0.82, 0, W() * 0.18, H())
 	drawBars(1)
-	drawNarration(NAR.pan, t)
+	drawNarration(NAR.get("pan"), t)
 	var ov = 1 - fadeCurve(t, 0.06, 0.9)
 	if ov > 0:
 		_ctx.fillStyle = "rgba(0,0,0," + JS.s(ov) + ")"
@@ -779,7 +779,7 @@ func sceneDispatch(t = null, sec = null):
 		_ctx.fillRect(0, 0, W(), H())
 	tickP()
 	drawBars(1)
-	drawNarration(NAR.dispatch, t)
+	drawNarration(NAR.get("dispatch"), t)
 	var ov = 1 - fadeCurve(t, 0.06, 0.88)
 	if ov > 0:
 		_ctx.fillStyle = "rgba(0,0,0," + JS.s(ov) + ")"
@@ -850,7 +850,7 @@ func sceneEject(t = null, sec = null):
 		_ctx.fillRect(charX - (8 * wS), charY - (60 * wS), 36 * wS, 36 * wS)
 	tickP()
 	drawBars(1)
-	drawNarration(NAR.eject, t)
+	drawNarration(NAR.get("eject"), t)
 	# Fade out at end
 	if t > 0.8:
 		_ctx.fillStyle = "rgba(0,0,0," + JS.s((t - 0.8) / 0.2) + ")"
@@ -867,18 +867,18 @@ func tick(ts = null):
 	var el = ts - _startTime
 	var sec = el / 1000.0
 	_ctx.clearRect(0, 0, W(), H())
-	if el < T.exteriorEnd:
-		sceneExterior(el / float(T.exteriorEnd), sec)
-	elif el < T.hallEnd:
-		sceneHall((el - T.exteriorEnd) / float(T.hallEnd - T.exteriorEnd), sec)
-	elif el < T.throneEnd:
-		sceneThrone((el - T.hallEnd) / float(T.throneEnd - T.hallEnd), sec)
-	elif el < T.panEnd:
-		scenePan((el - T.throneEnd) / float(T.panEnd - T.throneEnd), sec)
-	elif el < T.dispatchEnd:
-		sceneDispatch((el - T.panEnd) / float(T.dispatchEnd - T.panEnd), sec)
-	elif el < T.ejectEnd:
-		sceneEject((el - T.dispatchEnd) / float(T.ejectEnd - T.dispatchEnd), sec)
+	if el < T.get("exteriorEnd"):
+		sceneExterior(el / float(T.get("exteriorEnd")), sec)
+	elif el < T.get("hallEnd"):
+		sceneHall((el - T.get("exteriorEnd")) / float((T.get("hallEnd") - T.get("exteriorEnd"))), sec)
+	elif el < T.get("throneEnd"):
+		sceneThrone((el - T.get("hallEnd")) / float((T.get("throneEnd") - T.get("hallEnd"))), sec)
+	elif el < T.get("panEnd"):
+		scenePan((el - T.get("throneEnd")) / float((T.get("panEnd") - T.get("throneEnd"))), sec)
+	elif el < T.get("dispatchEnd"):
+		sceneDispatch((el - T.get("panEnd")) / float((T.get("dispatchEnd") - T.get("panEnd"))), sec)
+	elif el < T.get("ejectEnd"):
+		sceneEject((el - T.get("dispatchEnd")) / float((T.get("ejectEnd") - T.get("dispatchEnd"))), sec)
 	else:
 		endCutscene()
 		return

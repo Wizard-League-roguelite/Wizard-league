@@ -16,14 +16,14 @@ func showBetweenRuns():
 	UI.showScreen("between-runs-screen")
 	var slotData = (Main.getActiveSlotData() if JS.t(Main.getActiveSlotData) else {})
 	if JS.t(slotData.get("wizardBuild")):
-		Characters._wizBuild = JS.assign(JS.merge([Characters.WIZ_DEFAULTS]), [slotData.wizardBuild])
+		Characters._wizBuild = JS.assign(JS.merge([Characters.WIZ_DEFAULTS]), [slotData.get("wizardBuild")])
 	JS.setTimeout(LobbyMap.showBetweenRuns_map, 50)
 
 func lobbyStartRun():
 	LobbyMap.stopLobbyMap()
 	var slotData = Main.getActiveSlotData()
 	if JS.t(slotData.get("wizardBuild")):
-		Characters._wizBuild = JS.assign(JS.merge([Characters.WIZ_DEFAULTS]), [slotData.wizardBuild])
+		Characters._wizBuild = JS.assign(JS.merge([Characters.WIZ_DEFAULTS]), [slotData.get("wizardBuild")])
 	Characters.playerCharId = JS.or_(JS.or_(Characters._wizBuild.get("archetype"), slotData.get("savedCharId")), "arcanist")
 	var welcomeEl = document.getElementById("welcome-msg")
 	if JS.t(welcomeEl):
@@ -41,7 +41,7 @@ func renderBrunLastRun():
 		el.innerHTML = "<div class=\"brun-run-title\" style=\"color:#c8a060;font-size:1rem;\">&#9876; Wizard&#39;s League</div><div style=\"color:#555;font-size:.7rem;margin-top:.3rem;\">Select New Run to begin your journey</div>"
 		return
 	var zoneStr = (" → " + JS.s(State._runZoneReached) + " Zone" if (JS.t(State._runZoneReached) and not JS.eq(State._runZoneReached, State.playerElement)) else "")
-	el.innerHTML = "\n    <div class=\"brun-run-title\">" + JS.s(State.playerEmoji) + " " + JS.s(State.playerElement) + zoneStr + " — Run Ended</div>\n    <div class=\"brun-run-grid\">\n      <div class=\"brun-run-stat\"><div class=\"brun-run-label\">Rooms</div><div class=\"brun-run-val\">" + JS.s(State._runRoomsCompleted) + "</div></div>\n      <div class=\"brun-run-stat\"><div class=\"brun-run-label\">⚔ Dealt</div><div class=\"brun-run-val\" style=\"color:#e84a4a\">" + JS.s(State._runDmgDealt) + "</div></div>\n      <div class=\"brun-run-stat\"><div class=\"brun-run-label\">🛡 Taken</div><div class=\"brun-run-val\" style=\"color:#4a8aaa\">" + JS.s(State._runDmgTaken) + "</div></div>\n      <div class=\"brun-run-stat\"><div class=\"brun-run-label\">Gold</div><div class=\"brun-run-val\" style=\"color:#c8a830\">" + JS.s(State.player.gold) + "g</div></div>\n      <div class=\"brun-run-stat\"><div class=\"brun-run-label\">Phos</div><div class=\"brun-run-val\" style=\"color:#a080ff\">+" + JS.s(phosEarned) + " ✦</div></div>\n    </div>\n    <div style=\"margin-top:.5rem;font-size:.65rem;color:#5a4a80;\">Total Phos: <span style=\"color:#a080ff;font-family:'Cinzel',serif;\">" + JS.s(JS.or_(meta.get("phos"), 0)) + " ✦</span></div>"
+	el.innerHTML = "\n    <div class=\"brun-run-title\">" + JS.s(State.playerEmoji) + " " + JS.s(State.playerElement) + zoneStr + " — Run Ended</div>\n    <div class=\"brun-run-grid\">\n      <div class=\"brun-run-stat\"><div class=\"brun-run-label\">Rooms</div><div class=\"brun-run-val\">" + JS.s(State._runRoomsCompleted) + "</div></div>\n      <div class=\"brun-run-stat\"><div class=\"brun-run-label\">⚔ Dealt</div><div class=\"brun-run-val\" style=\"color:#e84a4a\">" + JS.s(State._runDmgDealt) + "</div></div>\n      <div class=\"brun-run-stat\"><div class=\"brun-run-label\">🛡 Taken</div><div class=\"brun-run-val\" style=\"color:#4a8aaa\">" + JS.s(State._runDmgTaken) + "</div></div>\n      <div class=\"brun-run-stat\"><div class=\"brun-run-label\">Gold</div><div class=\"brun-run-val\" style=\"color:#c8a830\">" + JS.s(State.player.get("gold")) + "g</div></div>\n      <div class=\"brun-run-stat\"><div class=\"brun-run-label\">Phos</div><div class=\"brun-run-val\" style=\"color:#a080ff\">+" + JS.s(phosEarned) + " ✦</div></div>\n    </div>\n    <div style=\"margin-top:.5rem;font-size:.65rem;color:#5a4a80;\">Total Phos: <span style=\"color:#a080ff;font-family:'Cinzel',serif;\">" + JS.s(JS.or_(meta.get("phos"), 0)) + " ✦</span></div>"
 
 # set in showGameOver path
 func switchBrunTab(tab = null, btnEl = null):
@@ -59,7 +59,7 @@ func switchBrunTab(tab = null, btnEl = null):
 		if not JS.t(len(history)):
 			content.innerHTML = "<div class=\"brun-empty\">No runs recorded yet.</div>"
 			return
-		content.innerHTML = JS.join(JS.arr(history).map(func(r = null): return "\n      <div class=\"brun-hist-row\">\n        <div class=\"brun-hist-el\">" + (JS.or_(r.get("emoji"), "⚔")) + " " + (JS.or_(r.get("element"), "?")) + " <span style=\"color:#4a6a8a;font-size:.6rem;margin-left:.3rem;\">" + ("→ " + JS.s(r.zone) + " Zone" if (JS.t(r.get("zone")) and not JS.eq(r.zone, r.element)) else "") + "</span></div>\n        <div class=\"brun-hist-stats\">\n          <span>" + JS.s(JS.or_(r.get("battles"), 0)) + " battles</span>\n          <span>" + JS.s(JS.or_(JS.or_(r.get("rooms"), r.get("battles")), 0)) + " rooms</span>\n          <span style=\"color:#c8a830\">" + JS.s(JS.or_(r.get("gold"), 0)) + "g</span>\n          <span style=\"color:#a080ff\">" + JS.s(JS.or_(r.get("phos"), 0)) + "✦</span>\n        </div>\n        <div class=\"brun-hist-details\" style=\"display:flex;gap:.8rem;font-size:.6rem;color:#555;margin-top:.2rem;\">\n          <span>⚔ " + JS.s(JS.or_(r.get("dmgDealt"), 0)) + " dealt</span>\n          <span>🛡 " + JS.s(JS.or_(r.get("dmgTaken"), 0)) + " taken</span>\n          <span>📚 " + JS.s(JS.or_(r.get("spells"), 0)) + " spells</span>\n        </div>\n        <div class=\"brun-hist-date\">" + (JS.or_(r.get("date"), "")) + "</div>\n      </div>"), "")
+		content.innerHTML = JS.join(JS.arr(history).map(func(r = null): return "\n      <div class=\"brun-hist-row\">\n        <div class=\"brun-hist-el\">" + (JS.or_(r.get("emoji"), "⚔")) + " " + (JS.or_(r.get("element"), "?")) + " <span style=\"color:#4a6a8a;font-size:.6rem;margin-left:.3rem;\">" + ("→ " + JS.s(r.get("zone")) + " Zone" if (JS.t(r.get("zone")) and not JS.eq(r.get("zone"), r.get("element"))) else "") + "</span></div>\n        <div class=\"brun-hist-stats\">\n          <span>" + JS.s(JS.or_(r.get("battles"), 0)) + " battles</span>\n          <span>" + JS.s(JS.or_(JS.or_(r.get("rooms"), r.get("battles")), 0)) + " rooms</span>\n          <span style=\"color:#c8a830\">" + JS.s(JS.or_(r.get("gold"), 0)) + "g</span>\n          <span style=\"color:#a080ff\">" + JS.s(JS.or_(r.get("phos"), 0)) + "✦</span>\n        </div>\n        <div class=\"brun-hist-details\" style=\"display:flex;gap:.8rem;font-size:.6rem;color:#555;margin-top:.2rem;\">\n          <span>⚔ " + JS.s(JS.or_(r.get("dmgDealt"), 0)) + " dealt</span>\n          <span>🛡 " + JS.s(JS.or_(r.get("dmgTaken"), 0)) + " taken</span>\n          <span>📚 " + JS.s(JS.or_(r.get("spells"), 0)) + " spells</span>\n        </div>\n        <div class=\"brun-hist-date\">" + (JS.or_(r.get("date"), "")) + "</div>\n      </div>"), "")
 	elif tab == "artifacts":
 		Artifacts.markArtifactsSeen()
 		renderArtifactVaultTab(content, meta)
@@ -73,7 +73,7 @@ func _artifactCardHTML(a = null, meta = null, onEquip = null, onUnequip = null):
 	var def = JS.idx(Artifacts.ARTIFACT_CATALOGUE, a.id)
 	if not JS.t(def):
 		return ""
-	var activeId = meta.activeArtifactId
+	var activeId = meta.get("activeArtifactId")
 	var isActive = JS.eq(a.id, activeId)
 	var star = JS.or_(a.get("star"), 0)
 	var sColor = JS.idx(["#888", "#c8a030", "#e8d060", "#00ccff"], min(star, 3))
@@ -81,15 +81,15 @@ func _artifactCardHTML(a = null, meta = null, onEquip = null, onUnequip = null):
 	var pips = JS.join(JS.arrayFrom({"length": 3}, func(_u = null, i = null): return "<span class=\"kt-level-pip" + (" filled" if i < star else "") + "\"></span>"), "")
 	var stateClass = ("kt-card-equipped" if isActive else "kt-card-unlocked")
 	var equipBtn = ("<button class=\"kt-action-btn kt-btn-equipped\" onclick=\"" + JS.s(onUnequip) + "\">✓ Active</button>" if isActive else "<button class=\"kt-action-btn kt-btn-equip can-afford\" onclick=\"" + JS.s(onEquip) + "\">Bring Along</button>")
-	return "<div class=\"kt-card " + stateClass + "\">\n    <div class=\"kt-card-top-row\">\n      <span class=\"kt-card-tag" + (" kt-tag-equipped" if isActive else "") + "\">Artifact</span>\n      <span class=\"kt-card-phoros-tag" + (" kt-phoros-equipped" if isActive else "") + "\" style=\"color:" + JS.s(sColor) + ";font-size:.58rem;\">" + ("★".repeat(star) if star > 0 else "—") + "</span>\n    </div>\n    <div class=\"kt-card-art\">" + JS.s(def.emoji) + "</div>\n    <div class=\"kt-card-name\">" + JS.s(def.name) + ("<div style=\"font-size:.4rem;color:#70a030;letter-spacing:.06em;font-family:Cinzel,serif;margin-top:2px;\">✦ ACTIVE</div>" if isActive else "") + "</div>\n    <div class=\"kt-card-hint\">" + JS.s(JS.idx(def.desc, star)) + "</div>\n    <div class=\"kt-card-footer\">\n      <div class=\"kt-level-section\">\n        <div class=\"kt-level-pips\">" + pips + "</div>\n        <div style=\"font-size:.42rem;color:#5a4a28;margin-top:2px;\">" + prog + "</div>\n      </div>\n      " + equipBtn + "\n    </div>\n  </div>"
+	return "<div class=\"kt-card " + stateClass + "\">\n    <div class=\"kt-card-top-row\">\n      <span class=\"kt-card-tag" + (" kt-tag-equipped" if isActive else "") + "\">Artifact</span>\n      <span class=\"kt-card-phoros-tag" + (" kt-phoros-equipped" if isActive else "") + "\" style=\"color:" + JS.s(sColor) + ";font-size:.58rem;\">" + ("★".repeat(star) if star > 0 else "—") + "</span>\n    </div>\n    <div class=\"kt-card-art\">" + JS.s(def.get("emoji")) + "</div>\n    <div class=\"kt-card-name\">" + JS.s(def.get("name")) + ("<div style=\"font-size:.4rem;color:#70a030;letter-spacing:.06em;font-family:Cinzel,serif;margin-top:2px;\">✦ ACTIVE</div>" if isActive else "") + "</div>\n    <div class=\"kt-card-hint\">" + JS.s(JS.idx(def.get("desc"), star)) + "</div>\n    <div class=\"kt-card-footer\">\n      <div class=\"kt-level-section\">\n        <div class=\"kt-level-pips\">" + pips + "</div>\n        <div style=\"font-size:.42rem;color:#5a4a28;margin-top:2px;\">" + prog + "</div>\n      </div>\n      " + equipBtn + "\n    </div>\n  </div>"
 
 func renderArtifactVaultTab(content = null, meta = null, refreshFn = null):
 	var refresh = JS.or_(refreshFn, "switchBrunTab('artifacts')")
-	if (not JS.t(meta.get("artifacts")) or not JS.t(len(meta.artifacts))):
+	if (not JS.t(meta.get("artifacts")) or not JS.t(len(meta.get("artifacts")))):
 		content.innerHTML = "<div class=\"brun-empty\">No artifacts yet — defeat a Gym Leader to have a chance at one!</div>"
 		return
 	var header = "<div style=\"font-size:.6rem;color:#4a3820;text-align:center;margin-bottom:.9rem;line-height:1.5;\">\n    Bring one artifact per run — it earns stars after every 25 rooms.\n  </div>"
-	var cards = JS.join(JS.arr(meta.artifacts).map(func(a = null): return _artifactCardHTML(a, meta, "equipArtifact('" + JS.s(a.id) + "');" + refresh, "unequipArtifact();" + refresh)), "")
+	var cards = JS.join(JS.arr(meta.get("artifacts")).map(func(a = null): return _artifactCardHTML(a, meta, "equipArtifact('" + JS.s(a.id) + "');" + refresh, "unequipArtifact();" + refresh)), "")
 	content.innerHTML = header + ("<div class=\"kt-card-grid\">" + cards + "</div>")
 
 # ── Between-zone artifact swap (Hades-style) ──────────────────────────────────
@@ -105,9 +105,9 @@ func showArtifactSwapOverlay(onContinue = null):
 		var m = Artifacts.getMeta()
 		var arts = JS.or_(m.get("artifacts"), [])
 		var cards = JS.join(JS.arr(arts).map(func(a = null): return _artifactCardHTML(a, m, "_artSwapEquip('" + JS.s(a.id) + "')", "_artSwapEquip('" + JS.s(a.id) + "')")), "")
-		var activeId = m.activeArtifactId
+		var activeId = m.get("activeArtifactId")
 		var activeDef = (JS.idx(Artifacts.ARTIFACT_CATALOGUE, activeId) if JS.t(activeId) else activeId)
-		var activeLine = ("<div style=\"font-size:.58rem;color:#70a030;margin-top:.3rem;\">Currently carrying: " + JS.s(activeDef.emoji) + " " + JS.s(activeDef.name) + "</div>" if JS.t(activeDef) else "<div style=\"font-size:.58rem;color:#5a4a30;margin-top:.3rem;\">No artifact equipped.</div>")
+		var activeLine = ("<div style=\"font-size:.58rem;color:#70a030;margin-top:.3rem;\">Currently carrying: " + JS.s(activeDef.get("emoji")) + " " + JS.s(activeDef.get("name")) + "</div>" if JS.t(activeDef) else "<div style=\"font-size:.58rem;color:#5a4a30;margin-top:.3rem;\">No artifact equipped.</div>")
 		panel.innerHTML = "\n      <div style=\"font-family:'Cinzel',serif;font-size:.95rem;color:#c8a060;text-align:center;letter-spacing:.1em;margin-bottom:.3rem;\">Zone Complete</div>\n      <div style=\"font-size:.6rem;color:#6a5040;text-align:center;margin-bottom:.2rem;\">Swap your artifact before the next zone.</div>\n      " + activeLine + "\n      <div style=\"margin:.9rem 0;border-top:1px solid #2a1a0a;\"></div>\n      <div class=\"kt-card-grid\" id=\"art-swap-grid\">" + cards + "</div>\n      <div style=\"margin-top:1.1rem;text-align:center;\">\n        <button onclick=\"_artSwapContinue()\" style=\"background:#0f0d1a;border:2px solid #5a40aa;color:#9a70ee;padding:.55rem 2.5rem;font-family:'Cinzel',serif;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;border-radius:7px;cursor:pointer;\">Continue →</button>\n      </div>"
 	var rebuild = _fn1
 	var _fn2 = func(id = null):
@@ -179,13 +179,13 @@ func renderBookUpgradesTab(content = null, meta = null):
 			var baseSpell = State.BOOK_SPELL_SLOTS_BASE + (JS.or_(cat.get("spellSlots"), 0))
 			var isActive = JS.eq(bookId, startingBookId)
 			var equipBtn = ("<button onclick=\"unequipStartingBook()\" style=\"background:#1a1205;border:1px solid #5a4020;color:#8a6030;font-family:'Cinzel',serif;font-size:.55rem;padding:.25rem .6rem;border-radius:3px;cursor:pointer;\">Unequip</button>" if isActive else "<button onclick=\"equipStartingBook('" + JS.s(bookId) + "')\" style=\"background:#1a1205;border:1px solid #8a6020;color:#c8a060;font-family:'Cinzel',serif;font-size:.55rem;padding:.25rem .6rem;border-radius:3px;cursor:pointer;\">Equip</button>")
-			html[0] += "<div style=\"background:" + ("#1a1205" if isActive else "#0f0d0b") + ";border:1px solid " + ("#8a6020" if isActive else "#2a2020") + ";border-radius:6px;padding:.65rem .85rem;margin-bottom:.5rem;\">\n        <div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:.15rem;\">\n          <div style=\"font-family:'Cinzel',serif;font-size:.74rem;color:" + rarityColor + ";display:flex;align-items:center;gap:.35rem;\">\n            <span style=\"display:inline-flex;width:22px;height:22px;flex-shrink:0;\">" + JS.s((JS.idx(DeckIcons.DECK_ICONS, bookId) if (true and JS.t(JS.idx(DeckIcons.DECK_ICONS, bookId))) else cat.emoji)) + "</span>\n            " + JS.s(cat.name) + ("<span style=\"color:#c8a060;font-size:.55rem;margin-left:.5rem;\"> ✦ STARTING DECK</span>" if isActive else "") + "\n          </div>\n          <div style=\"display:flex;align-items:center;gap:.4rem;\">\n            <div style=\"font-size:.56rem;color:#5a5a5a;\">" + rarityLabel + " · Lv " + JS.s(lvl) + "/" + JS.s(maxLvl) + "</div>\n            " + equipBtn + "\n          </div>\n        </div>\n        <div style=\"font-size:.6rem;color:#888;margin-bottom:.1rem;\">" + JS.s(cat.desc) + "</div>\n        <div style=\"font-size:.57rem;color:#7a4a30;margin-bottom:.3rem;\">⚠ " + JS.s(cat.negative) + "</div>\n        <div style=\"font-size:.6rem;color:#7a8a5a;padding:.3rem 0;border-top:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a;margin-bottom:.3rem;\">\n          " + JS.s((JS.idx(cat.levelDescs, lvl) if JS.t(cat.get("levelDescs")) else "")) + "\n        </div>\n        " + ("<div style=\"font-size:.6rem;color:#4a8a4a;margin-bottom:.3rem;\">✓ Effect Maxed</div>" if maxedEff else "<button onclick=\"purchaseCatalogueBookUpgrade('" + JS.s(bookId) + "')\" " + ("" if canAffordEff else "disabled") + "\n               style=\"width:100%;background:" + ("#0a1a0a" if canAffordEff else "#0a0a0a") + ";border:1px solid " + ("#5a7a20" if canAffordEff else "#2a2020") + ";\n               color:" + ("#a0c060" if canAffordEff else "#3a4020") + ";padding:.25rem;font-family:'Cinzel',serif;font-size:.6rem;\n               letter-spacing:.08em;cursor:" + ("pointer" if canAffordEff else "not-allowed") + ";border-radius:4px;text-transform:uppercase;margin-bottom:.3rem;\">\n               Upgrade Effect Lv" + JS.s(lvl) + "→" + JS.s(lvl + 1) + " — " + JS.s(upgCost) + " ✦</button>") + "\n        <div style=\"border-top:1px solid #1a1818;padding-top:.3rem;\">\n          " + _bookSlotRow("Spell Slots", baseSpell + extraSpell, baseSpell + BOOK_SLOT_MAX_SPELL, extraSpell, BOOK_SLOT_MAX_SPELL, _spellSlotCost, bookId, "spellSlots", phos) + "\n        </div>\n      </div>"
+			html[0] += "<div style=\"background:" + ("#1a1205" if isActive else "#0f0d0b") + ";border:1px solid " + ("#8a6020" if isActive else "#2a2020") + ";border-radius:6px;padding:.65rem .85rem;margin-bottom:.5rem;\">\n        <div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:.15rem;\">\n          <div style=\"font-family:'Cinzel',serif;font-size:.74rem;color:" + rarityColor + ";display:flex;align-items:center;gap:.35rem;\">\n            <span style=\"display:inline-flex;width:22px;height:22px;flex-shrink:0;\">" + JS.s((JS.idx(DeckIcons.DECK_ICONS, bookId) if (true and JS.t(JS.idx(DeckIcons.DECK_ICONS, bookId))) else cat.get("emoji"))) + "</span>\n            " + JS.s(cat.get("name")) + ("<span style=\"color:#c8a060;font-size:.55rem;margin-left:.5rem;\"> ✦ STARTING DECK</span>" if isActive else "") + "\n          </div>\n          <div style=\"display:flex;align-items:center;gap:.4rem;\">\n            <div style=\"font-size:.56rem;color:#5a5a5a;\">" + rarityLabel + " · Lv " + JS.s(lvl) + "/" + JS.s(maxLvl) + "</div>\n            " + equipBtn + "\n          </div>\n        </div>\n        <div style=\"font-size:.6rem;color:#888;margin-bottom:.1rem;\">" + JS.s(cat.get("desc")) + "</div>\n        <div style=\"font-size:.57rem;color:#7a4a30;margin-bottom:.3rem;\">⚠ " + JS.s(cat.get("negative")) + "</div>\n        <div style=\"font-size:.6rem;color:#7a8a5a;padding:.3rem 0;border-top:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a;margin-bottom:.3rem;\">\n          " + JS.s((JS.idx(cat.get("levelDescs"), lvl) if JS.t(cat.get("levelDescs")) else "")) + "\n        </div>\n        " + ("<div style=\"font-size:.6rem;color:#4a8a4a;margin-bottom:.3rem;\">✓ Effect Maxed</div>" if maxedEff else "<button onclick=\"purchaseCatalogueBookUpgrade('" + JS.s(bookId) + "')\" " + ("" if canAffordEff else "disabled") + "\n               style=\"width:100%;background:" + ("#0a1a0a" if canAffordEff else "#0a0a0a") + ";border:1px solid " + ("#5a7a20" if canAffordEff else "#2a2020") + ";\n               color:" + ("#a0c060" if canAffordEff else "#3a4020") + ";padding:.25rem;font-family:'Cinzel',serif;font-size:.6rem;\n               letter-spacing:.08em;cursor:" + ("pointer" if canAffordEff else "not-allowed") + ";border-radius:4px;text-transform:uppercase;margin-bottom:.3rem;\">\n               Upgrade Effect Lv" + JS.s(lvl) + "→" + JS.s(lvl + 1) + " — " + JS.s(upgCost) + " ✦</button>") + "\n        <div style=\"border-top:1px solid #1a1818;padding-top:.3rem;\">\n          " + _bookSlotRow("Spell Slots", baseSpell + extraSpell, baseSpell + BOOK_SLOT_MAX_SPELL, extraSpell, BOOK_SLOT_MAX_SPELL, _spellSlotCost, bookId, "spellSlots", phos) + "\n        </div>\n      </div>"
 	# ── Default Deck ──────────────────────────────────────────────────────────
 	var isDefaultActive = (not JS.t(startingBookId))
 	html[0] += "<div style=\"font-size:.62rem;color:#4a4a60;margin:.5rem 0 .4rem;letter-spacing:.08em;text-transform:uppercase;\">Default Deck</div>"
 	var defBook = JS.or_(JS.idx(bookSlotUpgrades, "default"), {})
 	var defExtraSpell = JS.or_(defBook.get("spellSlots"), 0)
-	html[0] += "<div style=\"background:" + ("#1a1205" if isDefaultActive else "#0f0d0b") + ";border:1px solid " + ("#8a6020" if isDefaultActive else "#2a2020") + ";border-radius:6px;padding:.65rem .85rem;margin-bottom:.5rem;\">\n    <div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:.15rem;\">\n      <div style=\"font-family:'Cinzel',serif;font-size:.74rem;color:#a08060;display:flex;align-items:center;gap:.35rem;\">\n        <span style=\"display:inline-flex;width:22px;height:22px;flex-shrink:0;\">" + JS.s((DeckIcons.DECK_ICONS.standard if (true and JS.t(DeckIcons.DECK_ICONS.get("standard"))) else "")) + "</span>\n        Standard" + ("<span style=\"color:#c8a060;font-size:.55rem;margin-left:.5rem;\"> ✦ STARTING DECK</span>" if isDefaultActive else "") + "\n      </div>\n      " + ("" if isDefaultActive else "<button onclick=\"unequipStartingBook()\" style=\"background:#1a1205;border:1px solid #8a6020;color:#c8a060;font-family:'Cinzel',serif;font-size:.55rem;padding:.25rem .6rem;border-radius:3px;cursor:pointer;\">Set Default</button>") + "\n    </div>\n    <div style=\"font-size:.6rem;color:#555;margin-bottom:.35rem;\">Your base deck when no catalogue deck is equipped.</div>\n    " + _bookSlotRow("Spell Slots", State.BOOK_SPELL_SLOTS_BASE + defExtraSpell, State.BOOK_SPELL_SLOTS_BASE + BOOK_SLOT_MAX_SPELL, defExtraSpell, BOOK_SLOT_MAX_SPELL, _spellSlotCost, "default", "spellSlots", phos) + "\n  </div>"
+	html[0] += "<div style=\"background:" + ("#1a1205" if isDefaultActive else "#0f0d0b") + ";border:1px solid " + ("#8a6020" if isDefaultActive else "#2a2020") + ";border-radius:6px;padding:.65rem .85rem;margin-bottom:.5rem;\">\n    <div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:.15rem;\">\n      <div style=\"font-family:'Cinzel',serif;font-size:.74rem;color:#a08060;display:flex;align-items:center;gap:.35rem;\">\n        <span style=\"display:inline-flex;width:22px;height:22px;flex-shrink:0;\">" + JS.s((DeckIcons.DECK_ICONS.get("standard") if (true and JS.t(DeckIcons.DECK_ICONS.get("standard"))) else "")) + "</span>\n        Standard" + ("<span style=\"color:#c8a060;font-size:.55rem;margin-left:.5rem;\"> ✦ STARTING DECK</span>" if isDefaultActive else "") + "\n      </div>\n      " + ("" if isDefaultActive else "<button onclick=\"unequipStartingBook()\" style=\"background:#1a1205;border:1px solid #8a6020;color:#c8a060;font-family:'Cinzel',serif;font-size:.55rem;padding:.25rem .6rem;border-radius:3px;cursor:pointer;\">Set Default</button>") + "\n    </div>\n    <div style=\"font-size:.6rem;color:#555;margin-bottom:.35rem;\">Your base deck when no catalogue deck is equipped.</div>\n    " + _bookSlotRow("Spell Slots", State.BOOK_SPELL_SLOTS_BASE + defExtraSpell, State.BOOK_SPELL_SLOTS_BASE + BOOK_SLOT_MAX_SPELL, defExtraSpell, BOOK_SLOT_MAX_SPELL, _spellSlotCost, "default", "spellSlots", phos) + "\n  </div>"
 	content.innerHTML = html[0]
 
 func purchaseCatalogueBookUpgrade(catalogueId = null):
@@ -195,14 +195,14 @@ func purchaseCatalogueBookUpgrade(catalogueId = null):
 	var meta = Artifacts.getMeta()
 	if not JS.t(meta.get("bookUpgradeLevels")):
 		meta.bookUpgradeLevels = {}
-	var lvl = JS.or_(JS.idx(meta.bookUpgradeLevels, catalogueId), 0)
+	var lvl = JS.or_(JS.idx(meta.get("bookUpgradeLevels"), catalogueId), 0)
 	if lvl >= 4:
 		return
 	var cost = JS.or_(JS.idx(JS.or_(cat.get("upgradeCosts"), []), lvl), 0)
 	if (JS.or_(meta.get("phos"), 0)) < cost:
 		return
 	meta.phos -= cost
-	meta.bookUpgradeLevels[catalogueId] = lvl + 1
+	meta.get("bookUpgradeLevels")[catalogueId] = lvl + 1
 	Artifacts.saveMeta()
 	_rerenderBookPanel()
 
@@ -240,9 +240,9 @@ func purchaseBookSlotUpgrade(bookKey = null, type_ = null):
 	var meta = Artifacts.getMeta()
 	if not JS.t(meta.get("bookSlotUpgrades")):
 		meta.bookSlotUpgrades = {}
-	if not JS.t(JS.idx(meta.bookSlotUpgrades, bookKey)):
-		meta.bookSlotUpgrades[bookKey] = {}
-	var current = JS.or_(JS.idx(JS.idx(meta.bookSlotUpgrades, bookKey), type_), 0)
+	if not JS.t(JS.idx(meta.get("bookSlotUpgrades"), bookKey)):
+		meta.get("bookSlotUpgrades")[bookKey] = {}
+	var current = JS.or_(JS.idx(JS.idx(meta.get("bookSlotUpgrades"), bookKey), type_), 0)
 	var max_ = (BOOK_SLOT_MAX_SPELL if type_ == "spellSlots" else BOOK_SLOT_MAX_PASSIVE)
 	if current >= max_:
 		return
@@ -250,7 +250,7 @@ func purchaseBookSlotUpgrade(bookKey = null, type_ = null):
 	if (JS.or_(meta.get("phos"), 0)) < cost:
 		return
 	meta.phos -= cost
-	JS.idx(meta.bookSlotUpgrades, bookKey)[type_] = current + 1
+	JS.idx(meta.get("bookSlotUpgrades"), bookKey)[type_] = current + 1
 	Artifacts.saveMeta()
 	_rerenderBookPanel()
 
@@ -275,7 +275,7 @@ func renderTalentTab(content = null, meta = null):
 	var _arr4 = JS.iter(sections)
 	for i in range(len(_arr4)):
 		var key = _arr4[i]
-		html[0] += "<button class=\"talent-sec-btn" + (" active" if JS.eq(i, 0) else "") + "\" onclick=\"switchTalentSection('" + JS.s(key) + "',this)\">" + JS.s(JS.idx(Talents.TALENT_TREE, key).label) + "</button>"
+		html[0] += "<button class=\"talent-sec-btn" + (" active" if JS.eq(i, 0) else "") + "\" onclick=\"switchTalentSection('" + JS.s(key) + "',this)\">" + JS.s(JS.idx(Talents.TALENT_TREE, key).get("label")) + "</button>"
 	html[0] += "</div>"
 	html[0] += "<div id=\"talent-nodes-area\"></div>"
 	content.innerHTML = html[0]
@@ -299,13 +299,13 @@ func renderTalentSection(key = null, meta = null):
 	var phos = JS.or_(meta.get("phos"), 0)
 	var _fn5 = func(node = null):
 		var current = JS.or_(JS.idx(talents, node.id), 0)
-		var maxed = current >= node.maxLevel
+		var maxed = current >= node.get("maxLevel")
 		var nextLvl = current + 1
 		var cost = (0 if maxed else JS.callm(node, "cost", [nextLvl]))
 		var canAfford = phos >= cost
-		var barPct = (current / float(node.maxLevel)) * 100
-		return "<div class=\"talent-node " + ("maxed" if maxed else "") + " " + ("affordable" if (not maxed and canAfford) else "") + "\">\n      <div class=\"talent-node-top\">\n        <span class=\"talent-node-emoji\">" + JS.s(node.emoji) + "</span>\n        <span class=\"talent-node-name\">" + JS.s(node.name) + "</span>\n        <span class=\"talent-node-level\">" + JS.s(current) + "/" + JS.s(node.maxLevel) + "</span>\n      </div>\n      <div class=\"talent-node-desc\">" + JS.s(node.desc) + "</div>\n      <div class=\"talent-node-bar\"><div class=\"talent-node-fill\" style=\"width:" + JS.s(barPct) + "%\"></div></div>\n      " + ("<div class=\"talent-node-maxed\">MAX</div>" if maxed else "<button class=\"talent-buy-btn " + ("can-afford" if canAfford else "") + "\"\n             onclick=\"buyTalent('" + JS.s(node.id) + "')\"\n             " + ("" if canAfford else "disabled") + ">\n             Upgrade · " + JS.s(cost) + "✦\n           </button>") + "\n    </div>"
-	area.innerHTML = JS.join(JS.arr(section.nodes).map(_fn5), "")
+		var barPct = (current / float(node.get("maxLevel"))) * 100
+		return "<div class=\"talent-node " + ("maxed" if maxed else "") + " " + ("affordable" if (not maxed and canAfford) else "") + "\">\n      <div class=\"talent-node-top\">\n        <span class=\"talent-node-emoji\">" + JS.s(node.get("emoji")) + "</span>\n        <span class=\"talent-node-name\">" + JS.s(node.get("name")) + "</span>\n        <span class=\"talent-node-level\">" + JS.s(current) + "/" + JS.s(node.get("maxLevel")) + "</span>\n      </div>\n      <div class=\"talent-node-desc\">" + JS.s(node.get("desc")) + "</div>\n      <div class=\"talent-node-bar\"><div class=\"talent-node-fill\" style=\"width:" + JS.s(barPct) + "%\"></div></div>\n      " + ("<div class=\"talent-node-maxed\">MAX</div>" if maxed else "<button class=\"talent-buy-btn " + ("can-afford" if canAfford else "") + "\"\n             onclick=\"buyTalent('" + JS.s(node.id) + "')\"\n             " + ("" if canAfford else "disabled") + ">\n             Upgrade · " + JS.s(cost) + "✦\n           </button>") + "\n    </div>"
+	area.innerHTML = JS.join(JS.arr(section.get("nodes")).map(_fn5), "")
 
 func buyTalent(nodeId = null):
 	var ok = Talents.purchaseTalent(nodeId)
@@ -318,7 +318,7 @@ func buyTalent(nodeId = null):
 		phosEl.textContent = JS.or_(meta.get("phos"), 0)
 	# find which section this node is in and re-render
 	for key in JS.iter(JS.keys(Talents.TALENT_TREE)):
-		if JS.t(JS.find(Talents.TALENT_TREE[key].nodes, func(n = null): return JS.eq(n.id, nodeId))):
+		if JS.t(JS.find(Talents.TALENT_TREE[key].get("nodes"), func(n = null): return JS.eq(n.id, nodeId))):
 			renderTalentSection(key, meta)
 			renderBrunLastRun()
 			# update phos total display
@@ -377,25 +377,25 @@ func _ktCardHTML(card = null, meta = null, tagLabel = null, rowLocked = null, ro
 	var maxLevel = JS.or_(card.get("maxLevel"), 1)
 	var desc = JS.or_(JS.idx(JS.or_(card.get("levelDescs"), []), level - 1), "")
 	var lockedDesc = JS.or_(JS.idx(JS.or_(card.get("levelDescs"), []), 0), "")
-	var canAffordUnlock = phos >= card.phosCost
-	var wouldFit = (used + card.phorosCost) <= budget
+	var canAffordUnlock = phos >= card.get("phosCost")
+	var wouldFit = (used + card.get("phorosCost")) <= budget
 	var _fn6 = func():
 		if ((not unlocked or maxLevel <= 1) or not JS.t(rowComplete)):
 			return ""
 		var pips = JS.join(JS.arrayFrom({"length": maxLevel}, func(_u = null, i = null): return "<span class=\"kt-level-pip" + (" filled" if i < level else "") + "\"></span>"), "")
 		if level >= maxLevel:
 			return "<div class=\"kt-level-section\"><div class=\"kt-level-pips\">" + pips + "</div><div class=\"kt-level-maxed\">Mastered</div></div>"
-		var nextCost = JS.idx(card.levelCosts, level)
+		var nextCost = JS.idx(card.get("levelCosts"), level)
 		var canLvl = (phos >= nextCost if JS.t(nextCost) else nextCost)
 		return "<div class=\"kt-level-section\">\n      <div class=\"kt-level-pips\">" + pips + "</div>\n      <button class=\"kt-levelup-btn" + (" can-afford" if JS.t(canLvl) else "") + "\"\n        onclick=\"ktLevelAndRefresh('" + JS.s(card.id) + "')\" " + ("" if JS.t(canLvl) else "disabled") + ">\n        Level Up — " + JS.s(nextCost) + "✦\n      </button>\n    </div>"
 	var _levelSection = _fn6
 	if not unlocked:
 		if JS.t(rowLocked):
-			return "<div class=\"kt-card kt-card-row-locked\">\n        <div class=\"kt-card-top-row\">\n          <span class=\"kt-card-tag\">" + (JS.or_(tagLabel, "")) + "</span>\n          <span class=\"kt-card-phoros-tag\">🔒</span>\n        </div>\n        <div class=\"kt-card-art\">" + JS.s(card.emoji) + "</div>\n        <div class=\"kt-card-name\">" + JS.s(card.name) + "</div>\n        <div class=\"kt-card-hint\">" + lockedDesc + "</div>\n        <div class=\"kt-card-footer\">\n          <div class=\"kt-cost-line kt-cost-row-locked\">Complete the row above first</div>\n        </div>\n      </div>"
-		return "<div class=\"kt-card kt-card-locked\">\n      <div class=\"kt-card-top-row\">\n        <span class=\"kt-card-tag\">" + (JS.or_(tagLabel, "")) + "</span>\n      </div>\n      <div class=\"kt-card-art\">" + JS.s(card.emoji) + "</div>\n      <div class=\"kt-card-name\">" + JS.s(card.name) + "</div>\n      <div class=\"kt-card-hint\">" + lockedDesc + "</div>\n      <div class=\"kt-card-footer\">\n        <div class=\"kt-cost-line kt-cost-phos\">✦ " + JS.s(card.phosCost) + " to unlock</div>\n        <button class=\"kt-action-btn kt-btn-unlock " + ("can-afford" if canAffordUnlock else "") + "\"\n          onclick=\"ktBuyAndRefresh('" + JS.s(card.id) + "')\" " + ("" if canAffordUnlock else "disabled") + ">\n          Unlock\n        </button>\n      </div>\n    </div>"
+			return "<div class=\"kt-card kt-card-row-locked\">\n        <div class=\"kt-card-top-row\">\n          <span class=\"kt-card-tag\">" + (JS.or_(tagLabel, "")) + "</span>\n          <span class=\"kt-card-phoros-tag\">🔒</span>\n        </div>\n        <div class=\"kt-card-art\">" + JS.s(card.get("emoji")) + "</div>\n        <div class=\"kt-card-name\">" + JS.s(card.get("name")) + "</div>\n        <div class=\"kt-card-hint\">" + lockedDesc + "</div>\n        <div class=\"kt-card-footer\">\n          <div class=\"kt-cost-line kt-cost-row-locked\">Complete the row above first</div>\n        </div>\n      </div>"
+		return "<div class=\"kt-card kt-card-locked\">\n      <div class=\"kt-card-top-row\">\n        <span class=\"kt-card-tag\">" + (JS.or_(tagLabel, "")) + "</span>\n      </div>\n      <div class=\"kt-card-art\">" + JS.s(card.get("emoji")) + "</div>\n      <div class=\"kt-card-name\">" + JS.s(card.get("name")) + "</div>\n      <div class=\"kt-card-hint\">" + lockedDesc + "</div>\n      <div class=\"kt-card-footer\">\n        <div class=\"kt-cost-line kt-cost-phos\">✦ " + JS.s(card.get("phosCost")) + " to unlock</div>\n        <button class=\"kt-action-btn kt-btn-unlock " + ("can-afford" if canAffordUnlock else "") + "\"\n          onclick=\"ktBuyAndRefresh('" + JS.s(card.id) + "')\" " + ("" if canAffordUnlock else "disabled") + ">\n          Unlock\n        </button>\n      </div>\n    </div>"
 	if equipped:
-		return "<div class=\"kt-card kt-card-equipped\">\n      <div class=\"kt-card-top-row\">\n        <span class=\"kt-card-tag kt-tag-equipped\">" + (JS.or_(tagLabel, "")) + "</span>\n        <span class=\"kt-card-phoros-tag kt-phoros-equipped\">◈ " + JS.s(card.phorosCost) + "</span>\n      </div>\n      <div class=\"kt-card-art\">" + JS.s(card.emoji) + "</div>\n      <div class=\"kt-card-name\">" + JS.s(card.name) + "</div>\n      <div class=\"kt-card-hint\">" + desc + "</div>\n      <div class=\"kt-card-footer\">\n        " + JS.s(_levelSection.call()) + "\n        <button class=\"kt-action-btn kt-btn-equipped\" onclick=\"ktToggleAndRefresh('" + JS.s(card.id) + "')\">✓ Packed</button>\n      </div>\n    </div>"
-	return "<div class=\"kt-card kt-card-unlocked\">\n    <div class=\"kt-card-top-row\">\n      <span class=\"kt-card-tag\">" + (JS.or_(tagLabel, "")) + "</span>\n      <span class=\"kt-card-phoros-tag\">◈ " + JS.s(card.phorosCost) + "</span>\n    </div>\n    <div class=\"kt-card-art\">" + JS.s(card.emoji) + "</div>\n    <div class=\"kt-card-name\">" + JS.s(card.name) + "</div>\n    <div class=\"kt-card-hint\">" + desc + "</div>\n    <div class=\"kt-card-footer\">\n      " + JS.s(_levelSection.call()) + "\n      <button class=\"kt-action-btn " + ("kt-btn-equip can-afford" if wouldFit else "kt-btn-equip") + "\"\n        onclick=\"ktToggleAndRefresh('" + JS.s(card.id) + "')\" " + ("" if wouldFit else "disabled") + ">\n        " + ("Bring Along" if wouldFit else "No Room") + "\n      </button>\n    </div>\n  </div>"
+		return "<div class=\"kt-card kt-card-equipped\">\n      <div class=\"kt-card-top-row\">\n        <span class=\"kt-card-tag kt-tag-equipped\">" + (JS.or_(tagLabel, "")) + "</span>\n        <span class=\"kt-card-phoros-tag kt-phoros-equipped\">◈ " + JS.s(card.get("phorosCost")) + "</span>\n      </div>\n      <div class=\"kt-card-art\">" + JS.s(card.get("emoji")) + "</div>\n      <div class=\"kt-card-name\">" + JS.s(card.get("name")) + "</div>\n      <div class=\"kt-card-hint\">" + desc + "</div>\n      <div class=\"kt-card-footer\">\n        " + JS.s(_levelSection.call()) + "\n        <button class=\"kt-action-btn kt-btn-equipped\" onclick=\"ktToggleAndRefresh('" + JS.s(card.id) + "')\">✓ Packed</button>\n      </div>\n    </div>"
+	return "<div class=\"kt-card kt-card-unlocked\">\n    <div class=\"kt-card-top-row\">\n      <span class=\"kt-card-tag\">" + (JS.or_(tagLabel, "")) + "</span>\n      <span class=\"kt-card-phoros-tag\">◈ " + JS.s(card.get("phorosCost")) + "</span>\n    </div>\n    <div class=\"kt-card-art\">" + JS.s(card.get("emoji")) + "</div>\n    <div class=\"kt-card-name\">" + JS.s(card.get("name")) + "</div>\n    <div class=\"kt-card-hint\">" + desc + "</div>\n    <div class=\"kt-card-footer\">\n      " + JS.s(_levelSection.call()) + "\n      <button class=\"kt-action-btn " + ("kt-btn-equip can-afford" if wouldFit else "kt-btn-equip") + "\"\n        onclick=\"ktToggleAndRefresh('" + JS.s(card.id) + "')\" " + ("" if wouldFit else "disabled") + ">\n        " + ("Bring Along" if wouldFit else "No Room") + "\n      </button>\n    </div>\n  </div>"
 
 func _ktRowLocked(cards = null, idx = null, unlockedIds = null):
 	var row = floori(idx / 4.0)
@@ -545,11 +545,11 @@ func showIncantationPreview():
 		s.textContent = "\n      @keyframes incStarPulse {\n        0%,100% { opacity:1; filter:brightness(1) drop-shadow(0 0 2px currentColor); transform:scale(1); }\n        50%      { opacity:.5; filter:brightness(2.5) drop-shadow(0 0 6px currentColor); transform:scale(1.4); }\n      }\n      @keyframes incShimmer {\n        0%   { left:-80%; }\n        100% { left:160%; }\n      }\n      @keyframes incFireGlow {\n        0%,100% { opacity:.7; transform:scaleY(1);   filter:blur(2px); }\n        33%     { opacity:1;   transform:scaleY(1.15); filter:blur(1px); }\n        66%     { opacity:.6;  transform:scaleY(.9);   filter:blur(3px); }\n      }\n      @keyframes incBorderPulse {\n        0%,100% { opacity:1; }\n        50%     { opacity:.6; }\n      }\n    "
 		document.head.appendChild(s)
 	var _fn9 = func(t = null):
-		var isGradient = JS.includes(t.bg, "gradient")
+		var isGradient = JS.includes(t.get("bg"), "gradient")
 		var isFire = (t.get("label") == "Kindled" or t.get("label") == "Blazing")
-		var borderGrad = "linear-gradient(to right, #1a1a1a 50%, " + JS.s(t.border) + " 100%)"
+		var borderGrad = "linear-gradient(to right, #1a1a1a 50%, " + JS.s(t.get("border")) + " 100%)"
 		# Staggered sparkling stars
-		var starSpans = JS.join(JS.map(JS.arr("✦".repeat(t.stars)), func(s = null, i = null): return "<span style=\"display:inline-block;animation:incStarPulse " + JS.s(5.5 + (i * 0.7)) + "s ease-in-out " + JS.s(i * 1.0) + "s infinite;\">" + JS.s(s) + "</span>"), "")
+		var starSpans = JS.join(JS.map(JS.arr("✦".repeat(t.get("stars"))), func(s = null, i = null): return "<span style=\"display:inline-block;animation:incStarPulse " + JS.s(5.5 + (i * 0.7)) + "s ease-in-out " + JS.s(i * 1.0) + "s infinite;\">" + JS.s(s) + "</span>"), "")
 		# Shimmer overlay for gradient cards
 		var shimmer = ("<div style=\"position:absolute;top:0;left:-80%;width:45%;height:100%;pointer-events:none;z-index:2;\n           background:linear-gradient(to right,transparent,rgba(255,255,255,.09),transparent);\n           animation:incShimmer 3.5s linear infinite;\"></div>" if isGradient else "")
 		# Fire flicker overlay for Kindled / Blazing
@@ -557,7 +557,7 @@ func showIncantationPreview():
 		var fire = ("<div style=\"position:absolute;bottom:0;right:0;width:55%;height:100%;pointer-events:none;z-index:2;\n           background:linear-gradient(to left," + fireColor + ",transparent);\n           animation:incFireGlow 1.6s ease-in-out infinite;\"></div>" if isFire else "")
 		# Border pulse for fire cards
 		var wrapperAnim = ("animation:incBorderPulse 1.8s ease-in-out infinite;" if isFire else "")
-		return "<div style=\"padding:3px;background:" + borderGrad + ";border-radius:7px;margin-bottom:.5rem;" + wrapperAnim + "\">\n      <div style=\"display:flex;align-items:stretch;border-radius:5px;overflow:hidden;background:" + JS.s(t.bg) + ";position:relative;\">\n        " + shimmer + fire + "\n        <div style=\"flex:1;padding:.4rem .55rem;position:relative;z-index:3;\">\n          <div style=\"font-size:.72rem;font-family:'Cinzel',serif;color:" + JS.s(JS.or_(t.get("leftNameColor"), t.get("nameColor"))) + ";margin-bottom:.2rem;\">🔮 Example Spell" + (" <span style=\"font-size:.45rem;opacity:.65;\">" + JS.s(t.note) + "</span>" if JS.t(t.get("note")) else "") + "</div>\n          <div style=\"font-size:.48rem;color:" + JS.s(JS.or_(t.get("leftSubColor"), t.get("subColor"))) + ";\">" + ("Two spells fused into one." if JS.t(t.get("note")) else "Deals damage and applies a status effect.") + "</div>\n        </div>\n        <div style=\"display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:58px;padding:3px 8px;gap:1px;position:relative;z-index:3;\">\n          <div style=\"font-size:.45rem;font-family:'Cinzel',serif;color:" + JS.s(t.tagColor) + ";letter-spacing:.1em;\">" + starSpans + "</div>\n          <div style=\"font-size:.72rem;font-family:'Cinzel',serif;color:" + JS.s(t.nameColor) + ";font-weight:700;letter-spacing:.08em;text-transform:uppercase;line-height:1.1;\">" + JS.s(t.label) + "</div>\n        </div>\n      </div>\n    </div>"
+		return "<div style=\"padding:3px;background:" + borderGrad + ";border-radius:7px;margin-bottom:.5rem;" + wrapperAnim + "\">\n      <div style=\"display:flex;align-items:stretch;border-radius:5px;overflow:hidden;background:" + JS.s(t.get("bg")) + ";position:relative;\">\n        " + shimmer + fire + "\n        <div style=\"flex:1;padding:.4rem .55rem;position:relative;z-index:3;\">\n          <div style=\"font-size:.72rem;font-family:'Cinzel',serif;color:" + JS.s(JS.or_(t.get("leftNameColor"), t.get("nameColor"))) + ";margin-bottom:.2rem;\">🔮 Example Spell" + (" <span style=\"font-size:.45rem;opacity:.65;\">" + JS.s(t.get("note")) + "</span>" if JS.t(t.get("note")) else "") + "</div>\n          <div style=\"font-size:.48rem;color:" + JS.s(JS.or_(t.get("leftSubColor"), t.get("subColor"))) + ";\">" + ("Two spells fused into one." if JS.t(t.get("note")) else "Deals damage and applies a status effect.") + "</div>\n        </div>\n        <div style=\"display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:58px;padding:3px 8px;gap:1px;position:relative;z-index:3;\">\n          <div style=\"font-size:.45rem;font-family:'Cinzel',serif;color:" + JS.s(t.get("tagColor")) + ";letter-spacing:.1em;\">" + starSpans + "</div>\n          <div style=\"font-size:.72rem;font-family:'Cinzel',serif;color:" + JS.s(t.get("nameColor")) + ";font-weight:700;letter-spacing:.08em;text-transform:uppercase;line-height:1.1;\">" + JS.s(t.get("label")) + "</div>\n        </div>\n      </div>\n    </div>"
 	var cardHTML = _fn9
 	html[0] = "<div style=\"font-family:'Cinzel',serif;font-size:.9rem;letter-spacing:.1em;color:#c8a060;text-align:center;margin-bottom:.8rem;border-bottom:1px solid #2a1a08;padding-bottom:.6rem;\">\n    📜 Spell Rarity Tiers\n  </div>"
 	for t in JS.iter(tiers):

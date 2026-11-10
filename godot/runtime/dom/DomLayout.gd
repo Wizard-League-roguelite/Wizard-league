@@ -770,6 +770,7 @@ func layout_flex(n: DomNode, inner_w: float, inner_h: float, cb_h: float, auto_h
 					layout_box(el, inner_w, AUTO, FILL, cw, -1.0)
 					b = el.lh
 					it["laid_h"] = el.lh
+					it["laid"] = true
 			var mnh2 := spec_h(el, inner_h, "min-height")
 			if is_auto(mnh2):
 				if el.cs.get("overflow-y", "visible") != "visible": mnh2 = 0.0
@@ -778,6 +779,7 @@ func layout_flex(n: DomNode, inner_w: float, inner_h: float, cb_h: float, auto_h
 						if is_auto(sh):
 							layout_box(el, inner_w, AUTO, FILL, cw, -1.0)
 							it["laid_h"] = el.lh
+							it["laid"] = true
 						else: it["laid_h"] = sh
 					mnh2 = it.laid_h
 					if not is_auto(sh): mnh2 = minf(mnh2, sh)
@@ -856,7 +858,7 @@ func layout_flex(n: DomNode, inner_w: float, inner_h: float, cb_h: float, auto_h
 				layout_box(el, inner_w, cross_avail, FIT, it.main, -1.0)
 				it.cross = el.lh
 			else:
-				if absf(it.main - it.get("laid_h", -1.0)) > 0.01 or el.lw != it.cw:
+				if not it.get("laid", false) or absf(it.main - el.lh) > 0.01 or el.lw != it.cw:
 					var fh: float = it.main
 					# keep auto height when the item was neither grown nor shrunk
 					if is_auto(spec_h(el, inner_h)) and absf(it.main - it.base) < 0.01 and it.has("laid_h"): fh = -1.0

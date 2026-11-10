@@ -449,7 +449,7 @@ func ktPhoresUsed(meta = null, type_ = null):
 	var pool = (JS.flat(JS.values(KT_ELEMENTAL_CARDS)) if type_ == "elemental" else KT_GENERAL_CARDS)
 	var _fn1 = func(sum = null, id = null):
 		var card = JS.find(pool, func(c = null): return JS.eq(c.id, id))
-		return sum + (card.phorosCost if JS.t(card) else 0)
+		return sum + (card.get("phorosCost") if JS.t(card) else 0)
 	return JS.reduce(equipped, _fn1, 0)
 
 func ktGetCardLevel(meta = null, cardId = null):
@@ -469,15 +469,15 @@ func applyKnowledgeTreeCards():
 
 # ── Apply KT starter spells after giveStarterSpell() ─────────────────────────
 func ktApplyStarterSpells():
-	if (not JS.t(State.player.get("_ktStarterSpells")) or not JS.t(len(State.player._ktStarterSpells))):
+	if (not JS.t(State.player.get("_ktStarterSpells")) or not JS.t(len(State.player.get("_ktStarterSpells")))):
 		return
-	for entry in JS.iter(State.player._ktStarterSpells):
-		var elemName = (entry if (JS.typeof_(entry)) == "string" else entry.element)
+	for entry in JS.iter(State.player.get("_ktStarterSpells")):
+		var elemName = (entry if (JS.typeof_(entry)) == "string" else entry.get("element"))
 		var rarity = ("dim" if (JS.typeof_(entry)) == "string" else JS.or_(entry.get("rarity"), "dim"))
 		var spellId = JS.idx(Spells.STARTER_SPELL, elemName)
 		if not JS.t(spellId):
 			continue
-		var alreadyOwned = JS.some(JS.or_(State.player.get("spellbooks"), []), func(b = null): return JS.some(b.spells, func(s = null): return JS.eq(s.id, spellId)))
+		var alreadyOwned = JS.some(JS.or_(State.player.get("spellbooks"), []), func(b = null): return JS.some(b.get("spells"), func(s = null): return JS.eq(s.id, spellId)))
 		if not alreadyOwned:
 			Spells.addSpellById(spellId, true, rarity)
 
@@ -490,15 +490,15 @@ func ktUnlockCard(cardId = null):
 		return false
 	if not JS.t(meta.get("ktUnlocked")):
 		meta.ktUnlocked = []
-	if JS.includes(meta.ktUnlocked, cardId):
+	if JS.includes(meta.get("ktUnlocked"), cardId):
 		return false
-	if (JS.or_(meta.get("phos"), 0)) < card.phosCost:
+	if (JS.or_(meta.get("phos"), 0)) < card.get("phosCost"):
 		return false
-	meta.phos -= card.phosCost
-	meta.ktUnlocked.append(cardId)
+	meta.phos -= card.get("phosCost")
+	meta.get("ktUnlocked").append(cardId)
 	if not JS.t(meta.get("ktLevels")):
 		meta.ktLevels = {}
-	meta.ktLevels[cardId] = 1
+	meta.get("ktLevels")[cardId] = 1
 	Artifacts.saveMeta()
 	return true
 
@@ -509,31 +509,31 @@ func ktUpgradeCard(cardId = null):
 	var card = JS.find(allCards, func(c = null): return JS.eq(c.id, cardId))
 	if not JS.t(card):
 		return false
-	if (not JS.t(meta.get("ktUnlocked")) or not JS.includes(meta.ktUnlocked, cardId)):
+	if (not JS.t(meta.get("ktUnlocked")) or not JS.includes(meta.get("ktUnlocked"), cardId)):
 		return false
 	if not JS.t(meta.get("ktLevels")):
 		meta.ktLevels = {}
-	var currentLevel = JS.or_(JS.idx(meta.ktLevels, cardId), 1)
-	if currentLevel >= card.maxLevel:
+	var currentLevel = JS.or_(JS.idx(meta.get("ktLevels"), cardId), 1)
+	if currentLevel >= card.get("maxLevel"):
 		return false
 	var nextLevel = currentLevel + 1
-	var cost = JS.idx(card.levelCosts, nextLevel - 1)
+	var cost = JS.idx(card.get("levelCosts"), nextLevel - 1)
 	if (not JS.t(cost) or (JS.or_(meta.get("phos"), 0)) < cost):
 		return false
 	meta.phos -= cost
-	meta.ktLevels[cardId] = nextLevel
+	meta.get("ktLevels")[cardId] = nextLevel
 	Artifacts.saveMeta()
 	return true
 
 # ── Equip / unequip a card (uses type-specific Phoros budget) ────────────────
 func ktEquipCard(cardId = null):
 	var meta = Artifacts.getMeta()
-	if (not JS.t(meta.get("ktUnlocked")) or not JS.includes(meta.ktUnlocked, cardId)):
+	if (not JS.t(meta.get("ktUnlocked")) or not JS.includes(meta.get("ktUnlocked"), cardId)):
 		return false
 	if not JS.t(meta.get("ktEquipped")):
 		meta.ktEquipped = []
-	if JS.includes(meta.ktEquipped, cardId):
-		meta.ktEquipped = JS.arr(meta.ktEquipped).filter(func(id = null): return not JS.eq(id, cardId))
+	if JS.includes(meta.get("ktEquipped"), cardId):
+		meta.ktEquipped = JS.arr(meta.get("ktEquipped")).filter(func(id = null): return not JS.eq(id, cardId))
 		Artifacts.saveMeta()
 		return true
 	var isGeneral = JS.some(KT_GENERAL_CARDS, func(c = null): return JS.eq(c.id, cardId))
@@ -542,9 +542,9 @@ func ktEquipCard(cardId = null):
 	var card = JS.find(pool, func(c = null): return JS.eq(c.id, cardId))
 	if not JS.t(card):
 		return false
-	if (ktPhoresUsed(meta, type_) + card.phorosCost) > ktGetBudget(meta, type_):
+	if (ktPhoresUsed(meta, type_) + card.get("phorosCost")) > ktGetBudget(meta, type_):
 		return false
-	meta.ktEquipped.append(cardId)
+	meta.get("ktEquipped").append(cardId)
 	Artifacts.saveMeta()
 	return true
 
@@ -583,7 +583,7 @@ func KT_GENERAL_CARDS__kt_defense__apply(lvl = null):
 	State.player.defense += lvl * 8
 
 func KT_GENERAL_CARDS__kt_iron_will__apply(lvl = null):
-	State.player._talentReviveBonus = (JS.or_(State.player.get("_talentReviveBonus"), 0)) + JS.idx([0.3, 0.5, 0.75], lvl - 1)
+	State.player._talentReviveBonus = (JS.or_(State.player.get("_talentReviveBonus"), 0)) + JS.un(JS.idx([0.3, 0.5, 0.75], lvl - 1))
 
 func KT_GENERAL_CARDS__kt_treasure__apply(lvl = null):
 	State.player._goldBonus = (JS.or_(State.player.get("_goldBonus"), 0)) + (lvl * 0.1)
@@ -630,7 +630,7 @@ func KT_ELEMENTAL_CARDS__Fire__kt_fire_dmg__apply(lvl = null):
 func KT_ELEMENTAL_CARDS__Fire__kt_fire_starter__apply(lvl = null):
 	if not JS.t(State.player.get("_ktStarterSpells")):
 		State.player._ktStarterSpells = []
-	State.player._ktStarterSpells.append({"element": "Fire", "rarity": JS.idx(["dim", "kindled", "blazing"], lvl - 1)})
+	State.player.get("_ktStarterSpells").append({"element": "Fire", "rarity": JS.idx(["dim", "kindled", "blazing"], lvl - 1)})
 
 func KT_ELEMENTAL_CARDS__Lightning__kt_lightning_shock__apply(lvl = null):
 	State.player._talentShockBonus = (JS.or_(State.player.get("_talentShockBonus"), 0)) + (lvl * 0.5)
@@ -644,7 +644,7 @@ func KT_ELEMENTAL_CARDS__Lightning__kt_lightning_dmg__apply(lvl = null):
 func KT_ELEMENTAL_CARDS__Lightning__kt_lightning_starter__apply(lvl = null):
 	if not JS.t(State.player.get("_ktStarterSpells")):
 		State.player._ktStarterSpells = []
-	State.player._ktStarterSpells.append({"element": "Lightning", "rarity": JS.idx(["dim", "kindled", "blazing"], lvl - 1)})
+	State.player.get("_ktStarterSpells").append({"element": "Lightning", "rarity": JS.idx(["dim", "kindled", "blazing"], lvl - 1)})
 
 func KT_ELEMENTAL_CARDS__Nature__kt_nature_root__apply(lvl = null):
 	State.player._talentRootBonus = (JS.or_(State.player.get("_talentRootBonus"), 0)) + (lvl * 0.5)
@@ -658,7 +658,7 @@ func KT_ELEMENTAL_CARDS__Nature__kt_nature_dmg__apply(lvl = null):
 func KT_ELEMENTAL_CARDS__Nature__kt_nature_starter__apply(lvl = null):
 	if not JS.t(State.player.get("_ktStarterSpells")):
 		State.player._ktStarterSpells = []
-	State.player._ktStarterSpells.append({"element": "Nature", "rarity": JS.idx(["dim", "kindled", "blazing"], lvl - 1)})
+	State.player.get("_ktStarterSpells").append({"element": "Nature", "rarity": JS.idx(["dim", "kindled", "blazing"], lvl - 1)})
 
 func KT_ELEMENTAL_CARDS__Air__kt_air_slipstream__apply(lvl = null):
 	State.player._slipstreamInterval = JS.idx([5, 4, 3], lvl - 1)
@@ -672,4 +672,4 @@ func KT_ELEMENTAL_CARDS__Air__kt_air_dmg__apply(lvl = null):
 func KT_ELEMENTAL_CARDS__Air__kt_air_starter__apply(lvl = null):
 	if not JS.t(State.player.get("_ktStarterSpells")):
 		State.player._ktStarterSpells = []
-	State.player._ktStarterSpells.append({"element": "Air", "rarity": JS.idx(["dim", "kindled", "blazing"], lvl - 1)})
+	State.player.get("_ktStarterSpells").append({"element": "Air", "rarity": JS.idx(["dim", "kindled", "blazing"], lvl - 1)})

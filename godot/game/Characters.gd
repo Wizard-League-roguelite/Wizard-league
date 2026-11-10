@@ -251,7 +251,7 @@ func rollCharacterBuff(charId = null):
 	var ch = JS.find(CHARACTER_ROSTER, func(c = null): return JS.eq(c.id, charId))
 	if not JS.t(ch):
 		return null
-	var pool = JS.arr(ch.buffPool).filter(func(id = null): return JS.t(JS.idx(CHARACTER_BUFFS, id)))
+	var pool = JS.arr(ch.get("buffPool")).filter(func(id = null): return JS.t(JS.idx(CHARACTER_BUFFS, id)))
 	if not JS.t(len(pool)):
 		return null
 	var id = JS.idx(pool, floori(randf() * len(pool)))
@@ -271,35 +271,35 @@ func _applyWizBuild(patch = null):
 
 func getWizColorMap():
 	var b = _wizBuild
-	var hatClr = JS.or_(JS.find(WIZ_HAT_COLORS, func(c = null): return JS.eq(c.id, b.hatColor)), JS.idx(WIZ_HAT_COLORS, 0))
-	var outClr = JS.or_(JS.find(WIZ_OUTFIT_COLORS, func(c = null): return JS.eq(c.id, b.outfit)), JS.idx(WIZ_OUTFIT_COLORS, 0))
-	var beardClr = JS.or_(JS.find(WIZ_BEARD_COLORS, func(c = null): return JS.eq(c.id, b.beardColor)), JS.idx(WIZ_BEARD_COLORS, 0))
-	var staffClr = JS.or_(JS.find(WIZ_STAFF_COLORS, func(c = null): return JS.eq(c.id, b.staffColor)), JS.idx(WIZ_STAFF_COLORS, 0))
-	var glowClr = JS.or_(JS.find(WIZ_STAFF_GLOWS, func(g = null): return JS.eq(g.id, b.staffGlow)), JS.idx(WIZ_STAFF_GLOWS, 0))
-	var eyeClr = JS.or_(JS.find(WIZ_EYE_COLORS, func(e = null): return JS.eq(e.id, b.eyeColor)), JS.idx(WIZ_EYE_COLORS, 0))
+	var hatClr = JS.or_(JS.find(WIZ_HAT_COLORS, func(c = null): return JS.eq(c.id, b.get("hatColor"))), JS.idx(WIZ_HAT_COLORS, 0))
+	var outClr = JS.or_(JS.find(WIZ_OUTFIT_COLORS, func(c = null): return JS.eq(c.id, b.get("outfit"))), JS.idx(WIZ_OUTFIT_COLORS, 0))
+	var beardClr = JS.or_(JS.find(WIZ_BEARD_COLORS, func(c = null): return JS.eq(c.id, b.get("beardColor"))), JS.idx(WIZ_BEARD_COLORS, 0))
+	var staffClr = JS.or_(JS.find(WIZ_STAFF_COLORS, func(c = null): return JS.eq(c.id, b.get("staffColor"))), JS.idx(WIZ_STAFF_COLORS, 0))
+	var glowClr = JS.or_(JS.find(WIZ_STAFF_GLOWS, func(g = null): return JS.eq(g.id, b.get("staffGlow"))), JS.idx(WIZ_STAFF_GLOWS, 0))
+	var eyeClr = JS.or_(JS.find(WIZ_EYE_COLORS, func(e = null): return JS.eq(e.id, b.get("eyeColor"))), JS.idx(WIZ_EYE_COLORS, 0))
 	var showBeard = b.get("beardStyle") != "none"
 	return {
 		".": null,
-		"1": outClr.p0,
-		"2": outClr.p1,
-		"3": outClr.p2,
-		"4": outClr.p3,
-		"h": hatClr.color,
+		"1": outClr.get("p0"),
+		"2": outClr.get("p1"),
+		"3": outClr.get("p2"),
+		"4": outClr.get("p3"),
+		"h": hatClr.get("color"),
 		"s": SpriteData.SKIN_C,
-		"e": eyeClr.color,
+		"e": eyeClr.get("color"),
 		"b": SpriteData.BOOT_C,
-		"w": (beardClr.color if showBeard else null),
-		"f": staffClr.color,
+		"w": (beardClr.get("color") if showBeard else null),
+		"f": staffClr.get("color"),
 		"g": JS.or_(glowClr.get("color"), outClr.get("p3")),
 	}
 
 func showCharacterScreen():
 	var slotData = Main.getActiveSlotData()
 	if JS.t(slotData.get("wizardBuild")):
-		_wizBuild = JS.assign(JS.merge([WIZ_DEFAULTS]), [slotData.wizardBuild])
+		_wizBuild = JS.assign(JS.merge([WIZ_DEFAULTS]), [slotData.get("wizardBuild")])
 	elif JS.t(slotData.get("savedCharId")):
-		_wizBuild = JS.merge([WIZ_DEFAULTS, {"archetype": slotData.savedCharId}])
-	playerCharId = _wizBuild.archetype
+		_wizBuild = JS.merge([WIZ_DEFAULTS, {"archetype": slotData.get("savedCharId")}])
+	playerCharId = _wizBuild.get("archetype")
 	_charRolledBuffs = {}
 	for ch in JS.iter(CHARACTER_ROSTER):
 		_charRolledBuffs[ch.id] = rollCharacterBuff(ch.id)
@@ -313,12 +313,12 @@ func showCharacterScreen():
 func _renderWizBuilder():
 	_renderWizSection("archetype", "Wizard Type", _buildArchetypeOpts())
 	_renderWizBoon()
-	_renderWizSection("hat", "Hat Color", _buildColorOpts(WIZ_HAT_COLORS, "hatColor", func(c = null): return "background:" + JS.s(c.color) + ";"))
-	_renderWizSection("outfit", "Outfit Color", _buildColorOpts(WIZ_OUTFIT_COLORS, "outfit", func(c = null): return "background:linear-gradient(135deg," + JS.s(c.p0) + "," + JS.s(c.p1) + ");"))
+	_renderWizSection("hat", "Hat Color", _buildColorOpts(WIZ_HAT_COLORS, "hatColor", func(c = null): return "background:" + JS.s(c.get("color")) + ";"))
+	_renderWizSection("outfit", "Outfit Color", _buildColorOpts(WIZ_OUTFIT_COLORS, "outfit", func(c = null): return "background:linear-gradient(135deg," + JS.s(c.get("p0")) + "," + JS.s(c.get("p1")) + ");"))
 	_renderWizSection("beard", "Beard", _buildBeardOpts())
-	_renderWizSection("staff", "Staff Wood", _buildColorOpts(WIZ_STAFF_COLORS, "staffColor", func(c = null): return "background:" + JS.s(c.color) + ";"))
-	_renderWizSection("staffglow", "Orb Glow", _buildColorOpts(WIZ_STAFF_GLOWS, "staffGlow", func(c = null): return ("background:radial-gradient(circle," + JS.s(c.color) + "," + JS.s(c.color) + "66);" if JS.t(c.get("color")) else "background:#0a0806;"), true))
-	_renderWizSection("eyes", "Eye Color", _buildColorOpts(WIZ_EYE_COLORS, "eyeColor", func(c = null): return "background:" + JS.s(c.color) + ";"))
+	_renderWizSection("staff", "Staff Wood", _buildColorOpts(WIZ_STAFF_COLORS, "staffColor", func(c = null): return "background:" + JS.s(c.get("color")) + ";"))
+	_renderWizSection("staffglow", "Orb Glow", _buildColorOpts(WIZ_STAFF_GLOWS, "staffGlow", func(c = null): return ("background:radial-gradient(circle," + JS.s(c.get("color")) + "," + JS.s(c.get("color")) + "66);" if JS.t(c.get("color")) else "background:#0a0806;"), true))
+	_renderWizSection("eyes", "Eye Color", _buildColorOpts(WIZ_EYE_COLORS, "eyeColor", func(c = null): return "background:" + JS.s(c.get("color")) + ";"))
 	_renderWizPreview()
 
 func _renderWizSection(id = null, label = null, html = null):
@@ -334,28 +334,28 @@ func _buildColorOpts(list = null, key = null, styleFn = null, noneOpt = null):
 	var _fn1 = func(c = null):
 		var selected = JS.eq(JS.idx(_wizBuild, key), c.id)
 		var noneX = ("<div style=\"position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#3a2a10;font-size:11px;\">✕</div>" if c.get("id") == "none" else "")
-		return _wizOpt(selected, "_applyWizBuild({" + JS.s(key) + ":'" + JS.s(c.id) + "'})", styleFn.call(c), c.name, noneX)
+		return _wizOpt(selected, "_applyWizBuild({" + JS.s(key) + ":'" + JS.s(c.id) + "'})", styleFn.call(c), c.get("name"), noneX)
 	return JS.join(JS.arr(list).map(_fn1), "")
 
 func _buildArchetypeOpts():
 	var _fn2 = func(a = null):
-		var selected = JS.eq(_wizBuild.archetype, a.id)
+		var selected = JS.eq(_wizBuild.get("archetype"), a.id)
 		var ps = JS.or_(JS.idx(CHAR_PORTRAIT_STYLES, a.id), CHAR_PORTRAIT_STYLES.get("battlemage"))
-		var swatch = "background:" + JS.s(ps.bg) + ";display:flex;align-items:center;justify-content:center;font-size:15px;"
-		return _wizOpt(selected, "_applyWizBuild({archetype:'" + JS.s(a.id) + "'})", swatch, a.name, a.emoji)
+		var swatch = "background:" + JS.s(ps.get("bg")) + ";display:flex;align-items:center;justify-content:center;font-size:15px;"
+		return _wizOpt(selected, "_applyWizBuild({archetype:'" + JS.s(a.id) + "'})", swatch, a.get("name"), a.get("emoji"))
 	return JS.join(JS.arr(WIZ_ARCHETYPES).map(_fn2), "")
 
 func _buildBeardOpts():
 	var _fn3 = func(s = null):
-		var selected = JS.eq(_wizBuild.beardStyle, s.id)
+		var selected = JS.eq(_wizBuild.get("beardStyle"), s.id)
 		var swatchStyle = ("background:#0a0806;" if s.get("id") == "none" else "background:#e8e0d0;")
 		var extra = ("<div style=\"position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#3a2a10;font-size:11px;\">✕</div>" if s.get("id") == "none" else "<div style=\"position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:14px;height:10px;background:#e8e0d0;border-radius:3px 3px 5px 5px;\"></div>")
-		return _wizOpt(selected, "_applyWizBuild({beardStyle:'" + JS.s(s.id) + "'})", swatchStyle, s.name, extra)
+		return _wizOpt(selected, "_applyWizBuild({beardStyle:'" + JS.s(s.id) + "'})", swatchStyle, s.get("name"), extra)
 	var styleOpts = JS.join(JS.arr(WIZ_BEARD_STYLES).map(_fn3), "")
 	var divider = "<div style=\"width:100%;height:1px;background:#1a1208;margin:4px 0;\"></div>"
 	var _fn4 = func(c = null):
-		var selected = JS.eq(_wizBuild.beardColor, c.id)
-		return _wizOpt(selected, "_applyWizBuild({beardColor:'" + JS.s(c.id) + "'})", "background:" + JS.s(c.color) + ";", c.name)
+		var selected = JS.eq(_wizBuild.get("beardColor"), c.id)
+		return _wizOpt(selected, "_applyWizBuild({beardColor:'" + JS.s(c.id) + "'})", "background:" + JS.s(c.get("color")) + ";", c.get("name"))
 	var colorOpts = JS.join(JS.arr(WIZ_BEARD_COLORS).map(_fn4), "")
 	return styleOpts + divider + colorOpts
 
@@ -366,14 +366,14 @@ func _renderWizBoon():
 	var old = secEl.querySelector(".wiz-boon-row")
 	if JS.t(old):
 		old.remove()
-	var arch = JS.find(WIZ_ARCHETYPES, func(a = null): return JS.eq(a.id, _wizBuild.archetype))
-	var buff = JS.idx(_charRolledBuffs, _wizBuild.archetype)
+	var arch = JS.find(WIZ_ARCHETYPES, func(a = null): return JS.eq(a.id, _wizBuild.get("archetype")))
+	var buff = JS.idx(_charRolledBuffs, _wizBuild.get("archetype"))
 	if not JS.t(arch):
 		return
 	var row = document.createElement("div")
 	row.className = "wiz-boon-row"
 	row.style.cssText = "margin-top:.45rem;padding:.35rem .5rem;background:#0e0c06;border:1px solid #1e1808;border-radius:5px;font-size:.56rem;line-height:1.5;"
-	row.innerHTML = ("<div style=\"color:#7a5828;font-size:.47rem;font-family:Cinzel,serif;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.15rem;\">" + JS.s(arch.desc) + "</div>") + ("<div style=\"color:#5a4020;font-size:.46rem;font-family:Cinzel,serif;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.1rem;\">Starting Boon (re-rolled each run)</div><div style=\"color:#c8a060;\">" + JS.s(buff.emoji) + " " + JS.s(buff.name) + " — <span style=\"color:#7a6040;\">" + JS.s(buff.desc) + "</span></div>" if JS.t(buff) else "")
+	row.innerHTML = ("<div style=\"color:#7a5828;font-size:.47rem;font-family:Cinzel,serif;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.15rem;\">" + JS.s(arch.get("desc")) + "</div>") + ("<div style=\"color:#5a4020;font-size:.46rem;font-family:Cinzel,serif;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.1rem;\">Starting Boon (re-rolled each run)</div><div style=\"color:#c8a060;\">" + JS.s(buff.get("emoji")) + " " + JS.s(buff.get("name")) + " — <span style=\"color:#7a6040;\">" + JS.s(buff.get("desc")) + "</span></div>" if JS.t(buff) else "")
 	secEl.appendChild(row)
 
 # ── Draw wizard preview on canvas using the real sprite system ────────────────
@@ -385,17 +385,17 @@ func _renderWizPreview():
 	var W = canvas.width
 	var H = canvas.height
 	var b = _wizBuild
-	var arch = JS.or_(JS.find(WIZ_ARCHETYPES, func(a = null): return JS.eq(a.id, b.archetype)), JS.idx(WIZ_ARCHETYPES, 0))
-	var hatClr = JS.or_(JS.find(WIZ_HAT_COLORS, func(c = null): return JS.eq(c.id, b.hatColor)), JS.idx(WIZ_HAT_COLORS, 0))
-	var outClr = JS.or_(JS.find(WIZ_OUTFIT_COLORS, func(c = null): return JS.eq(c.id, b.outfit)), JS.idx(WIZ_OUTFIT_COLORS, 0))
-	var beardClr = JS.or_(JS.find(WIZ_BEARD_COLORS, func(c = null): return JS.eq(c.id, b.beardColor)), JS.idx(WIZ_BEARD_COLORS, 0))
-	var staffClr = JS.or_(JS.find(WIZ_STAFF_COLORS, func(c = null): return JS.eq(c.id, b.staffColor)), JS.idx(WIZ_STAFF_COLORS, 0))
-	var glowClr = JS.or_(JS.find(WIZ_STAFF_GLOWS, func(g = null): return JS.eq(g.id, b.staffGlow)), JS.idx(WIZ_STAFF_GLOWS, 0))
-	var eyeClr = JS.or_(JS.find(WIZ_EYE_COLORS, func(e = null): return JS.eq(e.id, b.eyeColor)), JS.idx(WIZ_EYE_COLORS, 0))
-	var ps = JS.or_(JS.idx(CHAR_PORTRAIT_STYLES, b.archetype), CHAR_PORTRAIT_STYLES.get("battlemage"))
+	var arch = JS.or_(JS.find(WIZ_ARCHETYPES, func(a = null): return JS.eq(a.id, b.get("archetype"))), JS.idx(WIZ_ARCHETYPES, 0))
+	var hatClr = JS.or_(JS.find(WIZ_HAT_COLORS, func(c = null): return JS.eq(c.id, b.get("hatColor"))), JS.idx(WIZ_HAT_COLORS, 0))
+	var outClr = JS.or_(JS.find(WIZ_OUTFIT_COLORS, func(c = null): return JS.eq(c.id, b.get("outfit"))), JS.idx(WIZ_OUTFIT_COLORS, 0))
+	var beardClr = JS.or_(JS.find(WIZ_BEARD_COLORS, func(c = null): return JS.eq(c.id, b.get("beardColor"))), JS.idx(WIZ_BEARD_COLORS, 0))
+	var staffClr = JS.or_(JS.find(WIZ_STAFF_COLORS, func(c = null): return JS.eq(c.id, b.get("staffColor"))), JS.idx(WIZ_STAFF_COLORS, 0))
+	var glowClr = JS.or_(JS.find(WIZ_STAFF_GLOWS, func(g = null): return JS.eq(g.id, b.get("staffGlow"))), JS.idx(WIZ_STAFF_GLOWS, 0))
+	var eyeClr = JS.or_(JS.find(WIZ_EYE_COLORS, func(e = null): return JS.eq(e.id, b.get("eyeColor"))), JS.idx(WIZ_EYE_COLORS, 0))
+	var ps = JS.or_(JS.idx(CHAR_PORTRAIT_STYLES, b.get("archetype")), CHAR_PORTRAIT_STYLES.get("battlemage"))
 	# Background
 	var grad = ctx.createLinearGradient(0, 0, 0, H)
-	var bgParts = JS.orf(JS.match_(ps.bg, JS.re("#[0-9a-fA-F]{6}", "g")), func(): return ["#080604", "#0a0806"])
+	var bgParts = JS.orf(JS.match_(ps.get("bg"), JS.re("#[0-9a-fA-F]{6}", "g")), func(): return ["#080604", "#0a0806"])
 	grad.addColorStop(0, JS.idx(bgParts, 0))
 	grad.addColorStop(1, JS.idx(bgParts, len(bgParts) - 1))
 	ctx.fillStyle = grad
@@ -410,24 +410,24 @@ func _renderWizPreview():
 		"battlemage": SpriteData.SPRITE_CHAR_WARRIOR,
 		"hexblade": SpriteData.SPRITE_CHAR_ROGUE,
 		"arcanist": SpriteData.SPRITE_CHAR_MAGE,
-	}, b.archetype), SpriteData.SPRITE_CHAR_WARRIOR)
+	}, b.get("archetype")), SpriteData.SPRITE_CHAR_WARRIOR)
 	if not JS.t(rows):
 		return
 	# Build full custom color map — overrides charToColor for every character
 	var showBeard = b.get("beardStyle") != "none"
 	var customColorMap = {
 		".": null,
-		"1": outClr.p0,
-		"2": outClr.p1,
-		"3": outClr.p2,
-		"4": outClr.p3,
-		"h": hatClr.color,
+		"1": outClr.get("p0"),
+		"2": outClr.get("p1"),
+		"3": outClr.get("p2"),
+		"4": outClr.get("p3"),
+		"h": hatClr.get("color"),
 		"s": SpriteData.SKIN_C,
-		"e": eyeClr.color,
+		"e": eyeClr.get("color"),
 		"b": SpriteData.BOOT_C,
-		"w": (beardClr.color if showBeard else null),
-		"f": staffClr.color,
-		"g": glowClr.color,
+		"w": (beardClr.get("color") if showBeard else null),
+		"f": staffClr.get("color"),
+		"g": glowClr.get("color"),
 	}
 	# null = transparent (no beard)
 	# Draw sprite using custom color map
@@ -448,7 +448,7 @@ func _renderWizPreview():
 	# Name label
 	var nameEl = document.getElementById("wiz-prev-name")
 	if JS.t(nameEl):
-		nameEl.textContent = arch.name
+		nameEl.textContent = arch.get("name")
 
 func _updateCharBtn():
 	var btn = document.getElementById("char-continue-btn")
@@ -457,7 +457,7 @@ func _updateCharBtn():
 
 func confirmCharacterSelect():
 	# Sync archetype + full build from wizard builder
-	playerCharId = _wizBuild.archetype
+	playerCharId = _wizBuild.get("archetype")
 	playerCharBuff = JS.or_(JS.idx(_charRolledBuffs, playerCharId), null)
 	Main.patchActiveSlot({"savedCharId": playerCharId, "wizardBuild": _wizBuild})
 	if JS.t(_wizBuilderFromLobby):
@@ -470,7 +470,7 @@ func confirmCharacterSelect():
 func CHARACTER_BUFFS__buff_hp_bonus__apply():
 	# ── Warrior buffs ──────────────────────────────────────────────────────────
 	State.player.baseMaxHPBonus = (JS.or_(State.player.get("baseMaxHPBonus"), 0)) + 50
-	State.player.hp = min(Helpers.maxHPFor("player"), State.player.hp + 50)
+	State.player.hp = min(Helpers.maxHPFor("player"), State.player.get("hp") + 50)
 
 func CHARACTER_BUFFS__buff_def_bonus__apply():
 	State.player.defense += 5

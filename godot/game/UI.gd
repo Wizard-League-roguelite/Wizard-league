@@ -34,13 +34,13 @@ func _boot():
 # renderEnemyCards, renderSpellButtons, updateHPBars, log, showScreen, etc.
 func updateStatsUI():
 	# Build lives string: filled hearts for remaining, empty for lost
-	var maxDisplay = max(State.player.revives, 3)
-	var heartsStr = "❤".repeat(State.player.revives) + "🖤".repeat(max(0, maxDisplay - State.player.revives))
+	var maxDisplay = max(State.player.get("revives"), 3)
+	var heartsStr = "❤".repeat(State.player.get("revives")) + "🖤".repeat(max(0, maxDisplay - State.player.get("revives")))
 	# During combat show effective (status-modified) stats; outside show base
-	var inCombat = JS.andf(((true and not JS.t(State.combat.get("over"))) and true), func(): return State.status.player)
-	var dispAtk = (Helpers.attackPowerFor("player") if JS.t(inCombat) else State.player.attackPower)
-	var dispEfx = (Helpers.effectPowerFor("player") if JS.t(inCombat) else State.player.effectPower)
-	var dispDef = (Helpers.defenseFor("player") if JS.t(inCombat) else State.player.defense)
+	var inCombat = JS.andf(((true and not JS.t(State.combat.get("over"))) and true), func(): return State.status.get("player"))
+	var dispAtk = (Helpers.attackPowerFor("player") if JS.t(inCombat) else State.player.get("attackPower"))
+	var dispEfx = (Helpers.effectPowerFor("player") if JS.t(inCombat) else State.player.get("effectPower"))
+	var dispDef = (Helpers.defenseFor("player") if JS.t(inCombat) else State.player.get("defense"))
 	for prefix in JS.iter(["map", "combat"]):
 		var ap = document.getElementById(JS.s(prefix) + "-atk")
 		if JS.t(ap):
@@ -53,13 +53,13 @@ func updateStatsUI():
 			df.textContent = dispDef
 		var g = document.getElementById(JS.s(prefix) + "-gold")
 		if JS.t(g):
-			g.textContent = State.player.gold
+			g.textContent = State.player.get("gold")
 		var lh = document.getElementById(JS.s(prefix) + "-lives")
 		if JS.t(lh):
 			lh.textContent = heartsStr
 	var mi = document.getElementById("map-items")
 	if JS.t(mi):
-		mi.textContent = len(State.player.inventory)
+		mi.textContent = len(State.player.get("inventory"))
 	# Deck mode stats panel
 	var dsp = document.getElementById("deck-stats-panel")
 	if JS.t(dsp):
@@ -76,7 +76,7 @@ func updateStatsUI():
 			d.textContent = dispDef
 		var g = _e.call("dsp-gold")
 		if JS.t(g):
-			g.textContent = JS.s(State.player.gold) + "g"
+			g.textContent = JS.s(State.player.get("gold")) + "g"
 		var l = _e.call("dsp-lives")
 		if JS.t(l):
 			l.textContent = heartsStr
@@ -126,16 +126,16 @@ func renderEnemyCards():
 	var _arr1 = JS.iter(JS.or_(State.combat.get("enemies"), []))
 	for i in range(len(_arr1)):
 		var e = _arr1[i]
-		var pct = max(0, (e.hp / float(e.enemyMaxHP)) * 100)
+		var pct = max(0, (e.get("hp") / float(e.get("enemyMaxHP"))) * 100)
 		var card = document.createElement("div")
-		card.className = "arena-enemy-card" + (" targeted" if JS.eq(i, State.combat.targetIdx) else "") + ("" if JS.t(e.get("alive")) else " dead")
+		card.className = "arena-enemy-card" + (" targeted" if JS.eq(i, State.combat.get("targetIdx")) else "") + ("" if JS.t(e.get("alive")) else " dead")
 		card.dataset.idx = i
 		card.style.padding = pad
 		# In deck mode, position each card below its sprite
 		if (_isDeck and _canvasW > 0):
-			var ep = Sprites.enemySpritePos(i, State.combat.enemies, _canvasW, _canvasH)
-			card.style.left = JS.s(JS.add(ep.x, ep.w / 2.0)) + "px"
-			card.style.top = JS.s(JS.add(JS.add(ep.y, ep.h), 6)) + "px"
+			var ep = Sprites.enemySpritePos(i, State.combat.get("enemies"), _canvasW, _canvasH)
+			card.style.left = JS.s(JS.add(ep.get("x"), ep.get("w") / 2.0)) + "px"
+			card.style.top = JS.s(JS.add(JS.add(ep.get("y"), ep.get("h")), 6)) + "px"
 			card.style.minWidth = "110px"
 		if JS.t(e.get("alive")):
 			var _fn2 = func():
@@ -147,28 +147,28 @@ func renderEnemyCards():
 		# Build passive list: primary + extra passives
 		var el = Helpers.primaryElement(JS.or_(e.get("element"), ""))
 		var passivePool = JS.or_(JS.idx(Passives.PASSIVE_CHOICES, el), [])
-		var allPassiveIds = JS.filter([e.passive] + JS.arr(JS.or_(e.get("extraPassives"), [])), JS.t)
+		var allPassiveIds = JS.filter([e.get("passive")] + JS.arr(JS.or_(e.get("extraPassives"), [])), JS.t)
 		var passiveObjs = JS.arr(allPassiveIds).map(func(id = null): return JS.orf(JS.find(passivePool, func(p = null): return JS.eq(p.id, id)), func(): return {"id": id, "title": id, "desc": ""}))
 		# Build all queued intents as inline badges
 		var intentBadges = ""
-		if ((JS.t(e.get("alive")) and JS.t(e.get("intentQueue"))) and len(e.intentQueue) > 0):
+		if ((JS.t(e.get("alive")) and JS.t(e.get("intentQueue"))) and len(e.get("intentQueue")) > 0):
 			var _fn3 = func(intent = null, ii = null):
 				if JS.t(intent.get("hidden")):
 					return "<span style=\"font-size:" + JS.s(fs.call(0.46)) + ";color:#554466;font-family:'Cinzel',serif;\n            background:#110022;border:1px solid #2a1040;border-radius:3px;padding:1px 4px;\n            " + ("font-weight:bold;" if JS.eq(ii, 0) else "opacity:.6;") + "\">???</span>"
 				var isCurrent = JS.eq(ii, 0)
-				var isCharge = JS.includes(intent.label, "⚡")
+				var isCharge = JS.includes(intent.get("label"), "⚡")
 				var color = ("#ffcc44" if isCharge else ("#e0c0ff" if isCurrent else "#886aa0"))
 				var bg = ("#2a1800" if isCharge else ("#1a0030" if isCurrent else "#0e0018"))
 				var border = ("#aa7700" if isCharge else ("#7040cc" if isCurrent else "#221040"))
-				var hintBody = ((JS.callm(intent, "hintFn", []) if JS.t(intent.get("hintFn")) else intent.hint) if (not JS.t(State.player.get("_mistBlindDamage")) and (JS.t(intent.get("hintFn")) or JS.t(intent.get("hint")))) else "")
-				var hintTip = (JS.s(intent.label) + "\n" + JS.s(hintBody) if JS.t(hintBody) else intent.label)
-				return "<span style=\"font-size:" + JS.s(fs.call(0.46)) + ";color:" + color + ";font-family:'Cinzel',serif;\n          background:" + bg + ";border:1px solid " + border + ";border-radius:3px;padding:1px 4px;white-space:nowrap;\n          " + ("font-weight:bold;" if isCurrent else "opacity:.65;") + "\"\n          title=\"" + JS.s(hintTip) + "\">" + ("▶ " if isCurrent else "") + JS.s(intent.label) + "</span>"
-			intentBadges = JS.join(JS.map(e.intentQueue, _fn3), "")
+				var hintBody = ((JS.callm(intent, "hintFn", []) if JS.t(intent.get("hintFn")) else intent.get("hint")) if (not JS.t(State.player.get("_mistBlindDamage")) and (JS.t(intent.get("hintFn")) or JS.t(intent.get("hint")))) else "")
+				var hintTip = (JS.s(intent.get("label")) + "\n" + JS.s(hintBody) if JS.t(hintBody) else intent.get("label"))
+				return "<span style=\"font-size:" + JS.s(fs.call(0.46)) + ";color:" + color + ";font-family:'Cinzel',serif;\n          background:" + bg + ";border:1px solid " + border + ";border-radius:3px;padding:1px 4px;white-space:nowrap;\n          " + ("font-weight:bold;" if isCurrent else "opacity:.65;") + "\"\n          title=\"" + JS.s(hintTip) + "\">" + ("▶ " if isCurrent else "") + JS.s(intent.get("label")) + "</span>"
+			intentBadges = JS.join(JS.map(e.get("intentQueue"), _fn3), "")
 		# Passives + items as emoji-only with tooltip
-		var passiveBadges = JS.join(JS.arr(passiveObjs).map(func(p = null): return "<span style=\"cursor:help;opacity:.7;display:inline-flex;align-items:center;\" title=\"" + (JS.or_(p.get("title"), p.get("id"))) + ": " + JS.replace(((JS.or_(p.get("desc"), "")) + " " + (JS.or_(p.get("detail"), ""))).strip_edges(), JS.re("\"", "g"), "'") + "\">" + PassiveIcons.passiveIconSVG(p, 14) + "</span>"), "")
-		var itemBadges = JS.join(JS.arr(JS.or_(e.get("items"), [])).map(func(it = null): return "<span style=\"cursor:help;opacity:.7;font-size:" + JS.s(fs.call(0.5)) + ";\" title=\"" + JS.s(it.name) + "\">" + JS.s(it.emoji) + "</span>"), "")
+		var passiveBadges = JS.join(JS.arr(passiveObjs).map(func(p = null): return "<span style=\"cursor:help;opacity:.7;display:inline-flex;align-items:center;\" title=\"" + JS.s(JS.or_(p.get("title"), p.get("id"))) + ": " + JS.replace(((JS.or_(p.get("desc"), "")) + " " + (JS.or_(p.get("detail"), ""))).strip_edges(), JS.re("\"", "g"), "'") + "\">" + PassiveIcons.passiveIconSVG(p, 14) + "</span>"), "")
+		var itemBadges = JS.join(JS.arr(JS.or_(e.get("items"), [])).map(func(it = null): return "<span style=\"cursor:help;opacity:.7;font-size:" + JS.s(fs.call(0.5)) + ";\" title=\"" + JS.s(it.get("name")) + "\">" + JS.s(it.get("emoji")) + "</span>"), "")
 		var badges = passiveBadges + itemBadges
-		card.innerHTML = "\n      <div style=\"display:flex;align-items:center;gap:3px;justify-content:space-between;\">\n        <div class=\"arena-hud-name\" style=\"display:flex;align-items:center;gap:3px;min-width:0;overflow:hidden;white-space:nowrap;\">" + Encounters.elemHatSVG(JS.or_(e.get("element"), "Neutral"), 11) + " <span style=\"overflow:hidden;text-overflow:ellipsis;\">" + JS.s(e.name) + "</span></div>\n        " + ("<div style=\"display:flex;gap:2px;flex-shrink:0;\">" + badges + "</div>" if JS.t(badges) else "") + "\n      </div>\n      <div style=\"margin-top:2px;\">\n        <div class=\"arena-hud-hp-wrap\" style=\"width:100%;margin-bottom:2px;\"><div class=\"arena-hud-hp-fill\" style=\"width:" + JS.s(pct) + "%;background:" + hpColor(pct) + "\"></div></div>\n        <div class=\"arena-hud-hp-text\" style=\"white-space:nowrap;\">" + JS.s(e.hp) + "/" + JS.s(e.enemyMaxHP) + "</div>\n      </div>\n      <div class=\"arena-hud-status\" id=\"estatus-" + JS.s(i) + "\" style=\"margin-top:2px;\"></div>\n    "
+		card.innerHTML = "\n      <div style=\"display:flex;align-items:center;gap:3px;justify-content:space-between;\">\n        <div class=\"arena-hud-name\" style=\"display:flex;align-items:center;gap:3px;min-width:0;overflow:hidden;white-space:nowrap;\">" + Encounters.elemHatSVG(JS.or_(e.get("element"), "Neutral"), 11) + " <span style=\"overflow:hidden;text-overflow:ellipsis;\">" + JS.s(e.get("name")) + "</span></div>\n        " + ("<div style=\"display:flex;gap:2px;flex-shrink:0;\">" + badges + "</div>" if JS.t(badges) else "") + "\n      </div>\n      <div style=\"margin-top:2px;\">\n        <div class=\"arena-hud-hp-wrap\" style=\"width:100%;margin-bottom:2px;\"><div class=\"arena-hud-hp-fill\" style=\"width:" + JS.s(pct) + "%;background:" + hpColor(pct) + "\"></div></div>\n        <div class=\"arena-hud-hp-text\" style=\"white-space:nowrap;\">" + JS.s(e.get("hp")) + "/" + JS.s(e.get("enemyMaxHP")) + "</div>\n      </div>\n      <div class=\"arena-hud-status\" id=\"estatus-" + JS.s(i) + "\" style=\"margin-top:2px;\"></div>\n    "
 		hud.appendChild(card)
 	# Status tags per enemy
 	var _mistHPPct = JS.round(((JS.or_(State.player.get("_mistEnemyHPMult"), 1)) - 1) * 100)
@@ -178,34 +178,34 @@ func renderEnemyCards():
 		var row = document.getElementById("estatus-" + JS.s(i))
 		if not JS.t(row):
 			continue
-		var s = e.status
-		if s.burnStacks > 0:
-			var v = JS.round(s.burnStacks)
+		var s = e.get("status")
+		if s.get("burnStacks") > 0:
+			var v = JS.round(s.get("burnStacks"))
 			row.appendChild(tag("🔥" + JS.s(v), "tag-burn", "Burn ×" + JS.s(v) + " — deals " + JS.s(v) + " dmg/turn"))
-		if s.stunned > 0:
-			row.appendChild(tag("❄" + JS.s(s.stunned) + "t", "tag-stun", "Stunned — skips " + JS.s(s.stunned) + " turn(s)"))
-		if s.rootStacks > 0:
-			var v = JS.round(s.rootStacks)
+		if s.get("stunned") > 0:
+			row.appendChild(tag("❄" + JS.s(s.get("stunned")) + "t", "tag-stun", "Stunned — skips " + JS.s(s.get("stunned")) + " turn(s)"))
+		if s.get("rootStacks") > 0:
+			var v = JS.round(s.get("rootStacks"))
 			row.appendChild(tag("🌿" + JS.s(v), "tag-root", "Root ×" + JS.s(v) + " — takes +" + JS.s(v * Constants.ROOT_POWER_PER_STACK) + " bonus damage"))
-		if s.overgrowthStacks > 0:
-			var v = JS.round(s.overgrowthStacks)
+		if s.get("overgrowthStacks") > 0:
+			var v = JS.round(s.get("overgrowthStacks"))
 			row.appendChild(tag("🌿G" + JS.s(v), "tag-root", "Overgrowth ×" + JS.s(v) + " — +" + JS.s(v * Constants.ROOT_POWER_PER_STACK) + " bonus damage"))
-		if s.foamStacks > 0:
-			var v = floori(s.foamStacks)
+		if s.get("foamStacks") > 0:
+			var v = floori(s.get("foamStacks"))
 			row.appendChild(tag("🫧" + JS.s(v), "tag-block", "Foam ×" + JS.s(v) + " — -" + JS.s(floori(v * 1.5)) + " Defense (less Armor gained; at negative Defense, enemy hits deal bonus damage)"))
-		if s.shockStacks > 0:
-			var v = JS.round(s.shockStacks)
+		if s.get("shockStacks") > 0:
+			var v = JS.round(s.get("shockStacks"))
 			row.appendChild(tag("⚡" + JS.s(v), "tag-stun", "Shock ×" + JS.s(v) + " — reduces outgoing damage by " + JS.s(v * 5) + "%"))
-		if s.block > 0:
-			var v = JS.round(s.block)
+		if s.get("block") > 0:
+			var v = JS.round(s.get("block"))
 			row.appendChild(tag("🛡" + JS.s(v), "tag-block", "Armor " + JS.s(v) + " — absorbs " + JS.s(v) + " damage"))
-		if s.phaseTurns > 0:
-			row.appendChild(tag("🔮", "tag-phase", "Phase — immune to damage for " + JS.s(s.phaseTurns) + " turn(s)"))
-		if s.frostStacks > 0:
-			var v = JS.round(s.frostStacks)
+		if s.get("phaseTurns") > 0:
+			row.appendChild(tag("🔮", "tag-phase", "Phase — immune to damage for " + JS.s(s.get("phaseTurns")) + " turn(s)"))
+		if s.get("frostStacks") > 0:
+			var v = JS.round(s.get("frostStacks"))
 			row.appendChild(tag("❄️" + JS.s(v), "tag-stun", "Frost ×" + JS.s(v) + " — -" + JS.s(v) + " ATK/Armor"))
-		if s.stoneStacks > 0:
-			var v = floori(s.stoneStacks)
+		if s.get("stoneStacks") > 0:
+			var v = floori(s.get("stoneStacks"))
 			row.appendChild(tag("🪨" + JS.s(v), "tag-block", "Stone ×" + JS.s(v) + " — +" + JS.s(v * 3) + " ATK, +" + JS.s(v * 2) + " Armor"))
 		# Mist HP bonus: undispellable indicator
 		if _mistHPPct > 0:
@@ -226,22 +226,22 @@ func renderSummonsRow():
 	if not JS.t(col):
 		return
 	col.innerHTML = ""
-	if (not JS.t(State.combat.get("summons")) or len(State.combat.summons) == 0):
+	if (not JS.t(State.combat.get("summons")) or len(State.combat.get("summons")) == 0):
 		Sprites.renderBattlefield()
 		return
-	for s in JS.iter(State.combat.summons):
-		if s.hp <= 0:
+	for s in JS.iter(State.combat.get("summons")):
+		if s.get("hp") <= 0:
 			continue
 		var card = document.createElement("div")
 		card.className = "arena-summon-card"
-		var pct = JS.round((s.hp / float(s.maxHP)) * 100)
-		card.textContent = JS.s(s.emoji) + " " + JS.s(s.name) + " " + JS.s(s.hp) + "/" + JS.s(s.maxHP)
+		var pct = JS.round((s.get("hp") / float(s.get("maxHP"))) * 100)
+		card.textContent = JS.s(s.get("emoji")) + " " + JS.s(s.get("name")) + " " + JS.s(s.get("hp")) + "/" + JS.s(s.get("maxHP"))
 		col.appendChild(card)
 	Sprites.renderBattlefield()
 
 func updateHPBars():
 	var pMax = Helpers.maxHPFor("player")
-	var pPct = max(0, (State.player.hp / float(pMax)) * 100)
+	var pPct = max(0, (State.player.get("hp") / float(pMax)) * 100)
 	# Player HUD
 	var fill = document.getElementById("player-hud-hp-fill")
 	if JS.t(fill):
@@ -249,7 +249,7 @@ func updateHPBars():
 		fill.style.background = hpColor(pPct)
 	var txt = document.getElementById("player-hp-text")
 	if JS.t(txt):
-		txt.textContent = JS.s(max(0, State.player.hp)) + " / " + JS.s(pMax)
+		txt.textContent = JS.s(max(0, State.player.get("hp"))) + " / " + JS.s(pMax)
 	var nm = document.getElementById("player-hud-name")
 	if JS.t(nm):
 		nm.textContent = State.playerName
@@ -270,49 +270,49 @@ func renderStatusTags():
 	var pr = document.getElementById("player-status-row")
 	if JS.t(pr):
 		pr.innerHTML = ""
-		var s = State.status.player
-		if s.burnStacks > 0:
-			var v = JS.round(s.burnStacks)
+		var s = State.status.get("player")
+		if s.get("burnStacks") > 0:
+			var v = JS.round(s.get("burnStacks"))
 			pr.appendChild(tag("🔥" + JS.s(v), "tag-burn", "Burn ×" + JS.s(v) + " — deals " + JS.s(v) + " dmg/turn (1 per stack)"))
-		if s.stunned > 0:
-			pr.appendChild(tag("❄" + JS.s(s.stunned) + "t", "tag-stun", "Stunned — skip " + JS.s(s.stunned) + " turn(s)"))
-		if s.rootStacks > 0:
-			var v = JS.round(s.rootStacks)
+		if s.get("stunned") > 0:
+			pr.appendChild(tag("❄" + JS.s(s.get("stunned")) + "t", "tag-stun", "Stunned — skip " + JS.s(s.get("stunned")) + " turn(s)"))
+		if s.get("rootStacks") > 0:
+			var v = JS.round(s.get("rootStacks"))
 			pr.appendChild(tag("🌿" + JS.s(v), "tag-root", "Root ×" + JS.s(v) + " — you take +" + JS.s(v * Constants.ROOT_POWER_PER_STACK) + " bonus damage from attacks"))
-		if s.overgrowthStacks > 0:
-			var v = JS.round(s.overgrowthStacks)
+		if s.get("overgrowthStacks") > 0:
+			var v = JS.round(s.get("overgrowthStacks"))
 			pr.appendChild(tag("🌿G" + JS.s(v), "tag-root", "Overgrowth ×" + JS.s(v) + " — enhanced root, +" + JS.s(v * Constants.ROOT_POWER_PER_STACK) + " bonus damage"))
-		if s.foamStacks > 0:
-			var v = floori(s.foamStacks)
+		if s.get("foamStacks") > 0:
+			var v = floori(s.get("foamStacks"))
 			pr.appendChild(tag("🫧" + JS.s(v), "tag-block", "Foam ×" + JS.s(v) + " — -" + JS.s(floori(v * 1.5)) + " Defense (less Armor gained; at negative Defense, enemy hits deal bonus damage)"))
-		if s.shockStacks > 0:
-			var v = JS.round(s.shockStacks)
+		if s.get("shockStacks") > 0:
+			var v = JS.round(s.get("shockStacks"))
 			pr.appendChild(tag("⚡" + JS.s(v), "tag-stun", "Shock ×" + JS.s(v) + " — reduces your outgoing damage by " + JS.s(v * 5) + "%"))
-		if s.block > 0:
-			var v = JS.round(s.block)
+		if s.get("block") > 0:
+			var v = JS.round(s.get("block"))
 			pr.appendChild(tag("🛡" + JS.s(v), "tag-block", "Armor " + JS.s(v) + " — absorbs " + JS.s(v) + " incoming damage"))
-		if s.phaseTurns > 0:
-			pr.appendChild(tag("🔮", "tag-phase", "Phase — immune to damage for " + JS.s(s.phaseTurns) + " turn(s)"))
-		if s.frostStacks > 0:
-			var v = JS.round(s.frostStacks)
+		if s.get("phaseTurns") > 0:
+			pr.appendChild(tag("🔮", "tag-phase", "Phase — immune to damage for " + JS.s(s.get("phaseTurns")) + " turn(s)"))
+		if s.get("frostStacks") > 0:
+			var v = JS.round(s.get("frostStacks"))
 			pr.appendChild(tag("❄️" + JS.s(v), "tag-stun", "Frost ×" + JS.s(v) + " — -" + JS.s(v) + " ATK/EFX/Armor; at 10 stacks: Frozen (stunned)"))
-		if s.stoneStacks > 0:
-			var v = floori(s.stoneStacks)
+		if s.get("stoneStacks") > 0:
+			var v = floori(s.get("stoneStacks"))
 			pr.appendChild(tag("🪨" + JS.s(v), "tag-block", "Stone ×" + JS.s(v) + " — +" + JS.s(v * 3) + " ATK, +" + JS.s(v * 2) + " Armor; decays 25%/turn"))
 		# Plasma
 		if State.playerElement == "Plasma":
 			if JS.t(s.get("stallActive")):
 				pr.appendChild(tag("🫧 Stall", "tag-phase", "Stall — enemy action delayed, charge refunded next turn"))
-			if s.borrowedCharge > 0:
-				pr.appendChild(tag("⏳" + JS.s(s.borrowedCharge) + "debt", "tag-burn", "Borrowed Charge — " + JS.s(s.borrowedCharge) + " charge debt to repay"))
-			if s.plasmaShieldReduction > 0:
-				pr.appendChild(tag("🛡" + JS.s(s.plasmaShieldReduction) + "%", "tag-block", "Plasma Shield — " + JS.s(s.plasmaShieldReduction) + "% incoming damage reduced"))
+			if s.get("borrowedCharge") > 0:
+				pr.appendChild(tag("⏳" + JS.s(s.get("borrowedCharge")) + "debt", "tag-burn", "Borrowed Charge — " + JS.s(s.get("borrowedCharge")) + " charge debt to repay"))
+			if s.get("plasmaShieldReduction") > 0:
+				pr.appendChild(tag("🛡" + JS.s(s.get("plasmaShieldReduction")) + "%", "tag-block", "Plasma Shield — " + JS.s(s.get("plasmaShieldReduction")) + "% incoming damage reduced"))
 			if JS.t(State.combat.get("plasmaOvercharged")):
 				pr.appendChild(tag("✦ OC", "tag-phase", "Overcharged — next plasma cast has bonus power"))
 		# Air: Momentum
 		if State.playerElement == "Air":
 			if (JS.or_(s.get("momentumStacks"), 0)) > 0:
-				pr.appendChild(tag("💨" + JS.s(floori(s.momentumStacks)) + "M", "tag-phase", "Momentum ×" + JS.s(floori(s.momentumStacks)) + " — +" + JS.s(floori(s.momentumStacks)) + " ATK, +" + JS.s(floori(s.momentumStacks) * 2) + "% dodge; decays each turn"))
+				pr.appendChild(tag("💨" + JS.s(floori(s.get("momentumStacks"))) + "M", "tag-phase", "Momentum ×" + JS.s(floori(s.get("momentumStacks"))) + " — +" + JS.s(floori(s.get("momentumStacks"))) + " ATK, +" + JS.s(floori(s.get("momentumStacks")) * 2) + "% dodge; decays each turn"))
 			if JS.t(s.get("windWallActive")):
 				pr.appendChild(tag("🛡️WW", "tag-block", "Wind Wall — blocks next instance of damage"))
 			if JS.t(s.get("tornadoAoENext")):
@@ -482,7 +482,7 @@ func setPlayerTurnUI(isPlayerTurn = null):
 	Combat.updateActionUI()
 
 func basicSpellDamagePreview():
-	var dmg = JS.round(((Constants.BASE_DMG + State.combat.tempDmgBonus) + (JS.or_(State.player.get("basicDmgFlat"), 0))) * (JS.or_(State.player.get("basicDmgMult"), 1.0)))
+	var dmg = JS.round(((Constants.BASE_DMG + State.combat.get("tempDmgBonus")) + (JS.or_(State.player.get("basicDmgFlat"), 0))) * (JS.or_(State.player.get("basicDmgMult"), 1.0)))
 	return JS.s(dmg) + "+P"
 
 func doBasicAttack(ctx = null):
@@ -547,13 +547,13 @@ func doBasicAttack(ctx = null):
 		Helpers.applyRoot("player", "enemy", JS.round(_ib.call(1, 0.5, 0.9)))
 	if State.playerElement == "Lightning":
 		var extraShock = JS.round(_ib.call(1, 0.5, 0.9) * (1 + (Helpers.effectPowerFor("player") / 50.0)))
-		State.status.enemy.shockStacks = (JS.or_(State.status.enemy.get("shockStacks"), 0)) + extraShock
-		log_("⚡ Spark Strike: +" + JS.s(extraShock) + " extra Shock (×" + JS.s(State.status.enemy.shockStacks) + ")", "status")
+		State.status.get("enemy").shockStacks = (JS.or_(State.status.get("enemy").get("shockStacks"), 0)) + extraShock
+		log_("⚡ Spark Strike: +" + JS.s(extraShock) + " extra Shock (×" + JS.s(State.status.get("enemy").get("shockStacks")) + ")", "status")
 	if State.playerElement == "Plasma":
 		var charge = JS.round(_ib.call(2, 1, 1.0))
-		State.status.player.plasmaCharge = min((JS.or_(State.status.player.get("plasmaCharge"), 0)) + charge, 20)
+		State.status.get("player").plasmaCharge = min((JS.or_(State.status.get("player").get("plasmaCharge"), 0)) + charge, 20)
 		Spells.updateChargeUI()
-		log_("🔮 Surge Bolt: +" + JS.s(charge) + " Charge (" + JS.s(State.status.player.plasmaCharge) + " total)", "player")
+		log_("🔮 Surge Bolt: +" + JS.s(charge) + " Charge (" + JS.s(State.status.get("player").get("plasmaCharge")) + " total)", "player")
 	if State.playerElement == "Air":
 		Helpers.addMomentumStacks(JS.round(_ib.call(1, 1, 1.0)))
 
@@ -561,7 +561,7 @@ func doBasicAttack(ctx = null):
 func _spellDmgPreview(spell = null):
 	if (not JS.t(spell) or not JS.t(spell.get("execute"))):
 		return ""
-	var src = JS.s(spell.execute)
+	var src = JS.s(spell.get("execute"))
 	var atk = null
 	var efx = null
 	var def = null
@@ -589,21 +589,21 @@ func _spellDmgPreview(spell = null):
 		"seismic_wave":
 			return "~" + JS.s(JS.round((20 + atk) * mult)) + " dmg · -5 enemy armor, +5 armor"
 		"shatter":
-			var e2 = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
-			if (JS.t(e2) and JS.t(e2.status.get("frozen"))):
+			var e2 = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
+			if (JS.t(e2) and JS.t(e2.get("status").get("frozen"))):
 				return "~" + JS.s(JS.round(((40 + floori(atk / 5.0)) + atk) * mult)) + " dmg (Frozen target)"
-			var fr = (JS.or_(e2.status.get("frostStacks"), 0) if JS.t(e2) else 0)
+			var fr = (JS.or_(e2.get("status").get("frostStacks"), 0) if JS.t(e2) else 0)
 			return (JS.s(fr) + " Frost × 4 = " + JS.s(fr * 4) + " dmg, clears Frost" if fr > 0 else "vs Frozen: ~40+ATK | vs Frosted: Frost×4")
 		"blitz":
-			var e2 = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
-			var sh = (JS.or_(e2.status.get("shockStacks"), 0) if JS.t(e2) else 0)
+			var e2 = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
+			var sh = (JS.or_(e2.get("status").get("shockStacks"), 0) if JS.t(e2) else 0)
 			var hpow = max(1, floori(atk / 2.0))
 			return (JS.s(sh) + " Shock × " + JS.s(hpow) + " = " + JS.s(sh * hpow) + " dmg" if sh > 0 else "Shock stacks × ATK÷2 dmg")
 		"cataclysm":
-			var st = JS.or_(State.status.player.get("stoneStacks"), 0)
+			var st = JS.or_(State.status.get("player").get("stoneStacks"), 0)
 			return (JS.s(st) + " Stone × 25 = " + JS.s(st * 25) + " dmg to all" if st > 0 else "X Stone × 25 dmg to all")
 		"break_momentum":
-			var m = floori(JS.or_(State.status.player.get("momentumStacks"), 0))
+			var m = floori(JS.or_(State.status.get("player").get("momentumStacks"), 0))
 			return (JS.s(m) + " Momentum × 5 = " + JS.s(m * 5) + " dmg" if m > 0 else "X Momentum × 5 dmg")
 		"natures_wrath":
 			return "X Root stacks × 20 dmg to all (consumes root)"
@@ -618,22 +618,22 @@ func _spellDmgPreview(spell = null):
 		"cleanse_current":
 			return "Heals (debuffs removed × 20) HP"
 		"plasma_lance":
-			var ch = JS.or_(State.status.player.get("plasmaCharge"), 0)
+			var ch = JS.or_(State.status.get("player").get("plasmaCharge"), 0)
 			return JS.s(ch) + "⚡ → ~" + JS.s(((ch * 5) + atk) + efx) + " dmg (spend×5 + ATK+EFX)"
 		"obliteration":
-			var ch = JS.or_(State.status.player.get("plasmaCharge"), 0)
+			var ch = JS.or_(State.status.get("player").get("plasmaCharge"), 0)
 			return JS.s(ch) + "⚡ → " + JS.s(ch * 2) + " hits × " + JS.s((5 + atk) + efx) + " dmg"
 		"energy_infusion":
 			return "spend ⚡ → +⚡ Power this battle"
 		"plasma_shield":
 			return "spend ⚡ → +⚡% damage reduction (max 75%)"
 		"self_sacrifice":
-			var ch = JS.or_(State.status.player.get("plasmaCharge"), 0)
+			var ch = JS.or_(State.status.get("player").get("plasmaCharge"), 0)
 			return JS.s(ch) + "⚡ → " + JS.s(ch * 2) + " hits of 5 self-dmg (each hit generates charge)"
 		"borrowed_power":
 			return "+10 Charge now — 500 dmg next turn if unpaid"
 		"plasma_stall":
-			return "Stores " + JS.s(JS.or_(State.status.player.get("plasmaCharge"), 0)) + " Charge, immune this turn, regain next"
+			return "Stores " + JS.s(JS.or_(State.status.get("player").get("plasmaCharge"), 0)) + " Charge, immune this turn, regain next"
 		"singularity":
 			return "Next Plasma ability has doubled effects"
 		"chain_lightning":
@@ -641,8 +641,8 @@ func _spellDmgPreview(spell = null):
 		"natures_call":
 			return ("Summon Treant (50 HP, 15 dmg, 100% root)" if Main.hasPassive("nature_verdant_legion") else "Summon Treant (25 HP, 5 dmg, 50% root)")
 		"living_forest":
-			var ts = JS.arr(State.combat.summons).filter(func(t = null): return t.hp > 0)
-			return (JS.s(len(ts)) + " Treants × 2 strikes of " + JS.s(JS.idx(ts, 0).dmg) + " dmg" if JS.t(len(ts)) else "Commands all Treants to strike twice")
+			var ts = JS.arr(State.combat.get("summons")).filter(func(t = null): return t.get("hp") > 0)
+			return (JS.s(len(ts)) + " Treants × 2 strikes of " + JS.s(JS.idx(ts, 0).get("dmg")) + " dmg" if JS.t(len(ts)) else "Commands all Treants to strike twice")
 		"storm_rush":
 			return "+3 actions this turn · +5 Momentum · all CDs -1"
 		"overcharge":
@@ -721,7 +721,7 @@ func _showAirPriorityPopup(choices = null, onChoose = null):
 	box.appendChild(title)
 	for ch in JS.iter(choices):
 		var btn = document.createElement("button")
-		btn.textContent = ch.label
+		btn.textContent = ch.get("label")
 		btn.style.cssText = "padding:9px;background:#2a2a3e;border:1px solid #5a5a8a;color:#fff;border-radius:5px;cursor:pointer;font-size:1rem;"
 		var _fn5 = func():
 			btn.style.borderColor = "#9a9acf"
@@ -756,43 +756,43 @@ func renderSpellButtons():
 	var bookTabBar = document.getElementById("sb-book-tabs")
 	if JS.t(bookTabBar):
 		bookTabBar.innerHTML = ""
-		if (JS.t(State.player.get("spellbooks")) and len(State.player.spellbooks) > 1):
-			var _arr8 = JS.iter(State.player.spellbooks)
+		if (JS.t(State.player.get("spellbooks")) and len(State.player.get("spellbooks")) > 1):
+			var _arr8 = JS.iter(State.player.get("spellbooks"))
 			for i in range(len(_arr8)):
 				var book = _arr8[i]
 				var btn = document.createElement("button")
-				btn.className = "sb-book-tab" + (" active" if JS.eq(i, State.player.activeBookIdx) else "")
-				btn.textContent = book.name
-				btn.disabled = ((JS.eq(i, State.player.activeBookIdx) or not JS.t(isMyTurn)) or queueFull)
+				btn.className = "sb-book-tab" + (" active" if JS.eq(i, State.player.get("activeBookIdx")) else "")
+				btn.textContent = book.get("name")
+				btn.disabled = ((JS.eq(i, State.player.get("activeBookIdx")) or not JS.t(isMyTurn)) or queueFull)
 				btn.onclick = func(): return Combat.queueSwitchBook(i)
 				# Tooltip: show book description if it's a catalogue book
 				if JS.t(book.get("catalogueId")):
-					var cat = JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, book.catalogueId)
+					var cat = JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, book.get("catalogueId"))
 					if JS.t(cat):
 						var lvl = JS.or_(book.get("upgradeLevel"), 0)
 						var lvlDesc = JS.or_(JS.idx(JS.or_(cat.get("levelDescs"), []), lvl), "")
-						var lines = [cat.name + (" ✦" if cat.get("rarity") == "legendary" else ""), cat.desc]
+						var lines = [JS.s(cat.get("name")) + (" ✦" if cat.get("rarity") == "legendary" else ""), cat.get("desc")]
 						if JS.t(lvlDesc):
 							lines.append("Level " + JS.s(lvl + 1) + ": " + lvlDesc)
 						if JS.t(cat.get("negative")):
-							lines.append("Downside: " + cat.negative)
+							lines.append("Downside: " + JS.s(cat.get("negative")))
 						btn.title = JS.join(lines, "\n")
 				bookTabBar.appendChild(btn)
-		elif (JS.t(State.player.get("spellbooks")) and len(State.player.spellbooks) == 1):
+		elif (JS.t(State.player.get("spellbooks")) and len(State.player.get("spellbooks")) == 1):
 			var lbl = document.createElement("span")
 			lbl.style.cssText = "font-family:Cinzel,serif;font-size:.6rem;color:#6a4a20;letter-spacing:.06em;cursor:help;"
-			lbl.textContent = JS.idx(State.player.spellbooks, 0).name
-			var _b0 = JS.idx(State.player.spellbooks, 0)
+			lbl.textContent = JS.idx(State.player.get("spellbooks"), 0).get("name")
+			var _b0 = JS.idx(State.player.get("spellbooks"), 0)
 			if JS.t(_b0.get("catalogueId")):
-				var _cat = JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, _b0.catalogueId)
+				var _cat = JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, _b0.get("catalogueId"))
 				if JS.t(_cat):
 					var _lvl = JS.or_(_b0.get("upgradeLevel"), 0)
 					var _lvlDesc = JS.or_(JS.idx(JS.or_(_cat.get("levelDescs"), []), _lvl), "")
-					var _lines = [_cat.name, _cat.desc]
+					var _lines = [_cat.get("name"), _cat.get("desc")]
 					if JS.t(_lvlDesc):
 						_lines.append("Level " + JS.s(_lvl + 1) + ": " + _lvlDesc)
 					if JS.t(_cat.get("negative")):
-						_lines.append("Downside: " + _cat.negative)
+						_lines.append("Downside: " + JS.s(_cat.get("negative")))
 					lbl.title = JS.join(_lines, "\n")
 			bookTabBar.appendChild(lbl)
 	# ── Populate passives row ────────────────────────────────────────────────
@@ -832,7 +832,7 @@ func renderSpellButtons():
 		var hasActions = len(JS.or_(State.combat.get("actionQueue"), [])) > 0
 		endBtn.disabled = JS.or_(JS.or_((not JS.t(State.combat.get("playerTurn"))), State.combat.get("over")), (not hasActions))
 		endBtn.className = "sb-endturn-btn" + (" ready" if hasActions else "")
-		endBtn.textContent = ("⚔ End Turn (" + JS.s(len(State.combat.actionQueue)) + ")" if hasActions else "⚔ End Turn")
+		endBtn.textContent = ("⚔ End Turn (" + JS.s(len(State.combat.get("actionQueue"))) + ")" if hasActions else "⚔ End Turn")
 	# ── Update item button ────────────────────────────────────────────────────
 	var itemBtn = document.getElementById("sb-item-btn")
 	var invCount = document.getElementById("inv-count-label")
@@ -873,32 +873,39 @@ func renderSpellButtons():
 	if (JS.t(State.activeBook()) and JS.t(State.activeBook().get("isPlasmaBook"))):
 		grid.style.gridTemplateColumns = "repeat(3,1fr)"
 		grid.innerHTML = ""
-		var availCharge = max(0, (JS.or_(State.status.player.get("plasmaCharge"), 0)) - (JS.or_(State.combat.get("plasmaChargeReserved"), 0)))
+		var availCharge = max(0, (JS.or_(State.status.get("player").get("plasmaCharge"), 0)) - (JS.or_(State.combat.get("plasmaChargeReserved"), 0)))
 		if not JS.t(State.combat.get("plasmaSpendAmounts")):
 			State.combat.plasmaSpendAmounts = {}
-		for spell in JS.iter(State.player.spellbook):
+		for spell in JS.iter(State.player.get("spellbook")):
 			if not JS.t(spell.get("isPlasmaAbility")):
 				continue
 			var onCD = (JS.or_(spell.get("currentCD"), 0)) > 0
 			var isVar = spell.get("chargeCost") == "variable"
-			var fixedCost = (spell.chargeCost if (JS.typeof_(spell.get("chargeCost"))) == "number" else 0)
-			if JS.idx(State.combat.plasmaSpendAmounts, spell.id) == null:
-				State.combat.plasmaSpendAmounts[spell.id] = (min(6, availCharge) if isVar else fixedCost)
-			var curSpend = (min(max(1, JS.idx(State.combat.plasmaSpendAmounts, spell.id)), availCharge) if isVar else fixedCost)
+			var fixedCost = (spell.get("chargeCost") if (JS.typeof_(spell.get("chargeCost"))) == "number" else 0)
+			if JS.idx(State.combat.get("plasmaSpendAmounts"), spell.id) == null:
+				State.combat.get("plasmaSpendAmounts")[spell.id] = (min(6, availCharge) if isVar else fixedCost)
+			var curSpend = (min(max(1, JS.idx(State.combat.get("plasmaSpendAmounts"), spell.id)), availCharge) if isVar else fixedCost)
 			var canAfford = availCharge >= curSpend
-			var alreadyQueued = JS.some(JS.or_(State.combat.get("actionQueue"), []), func(a = null): return JS.eq(a.spellId, spell.id))
+			var alreadyQueued = JS.some(JS.or_(State.combat.get("actionQueue"), []), func(a = null): return JS.eq(a.get("spellId"), spell.id))
 			var cell = document.createElement("button")
 			cell.className = "sb-spell-cell" + (" on-cd" if onCD else "")
 			cell.disabled = (((not JS.t(isMyTurn) or onCD) or not canAfford) or alreadyQueued)
 			var costLabel = (JS.s(curSpend) + "⚡" if isVar else (JS.s(fixedCost) + "⚡" if fixedCost > 0 else "Free"))
 			var overStr = ("✦" if JS.t(State.combat.get("plasmaOvercharged")) else "")
-			cell.innerHTML = "<div class=\"sb-spell-icon\">" + SpellIcons.spellIconSVG(spell, 22) + "</div>" + "<div class=\"sb-spell-name\">" + spell.name + (" " + overStr if JS.t(overStr) else "") + "</div>" + "<div class=\"sb-spell-cd " + ("on-cd" if onCD else "ready") + "\">" + ("CD:" + JS.s(spell.currentCD) if onCD else costLabel) + "</div>" + ("<div class=\"sb-spell-queued-badge\">✓</div>" if alreadyQueued else "")
+			cell.innerHTML = "<div class=\"sb-spell-icon\">" + SpellIcons.spellIconSVG(spell, 22) + "</div>" + "<div class=\"sb-spell-name\">" + JS.s(spell.get("name")) + (" " + overStr if JS.t(overStr) else "") + "</div>" + "<div class=\"sb-spell-cd " + ("on-cd" if onCD else "ready") + "\">" + ("CD:" + JS.s(spell.get("currentCD")) if onCD else costLabel) + "</div>" + ("<div class=\"sb-spell-queued-badge\">✓</div>" if alreadyQueued else "")
 			if true:
 				var chargeCostStr = ("Cost: variable ⚡ (adjust with +/-)" if isVar else ("Cost: " + JS.s(fixedCost) + " ⚡" if fixedCost > 0 else "Cost: Free"))
-				var cdInfo = ("CD: " + JS.s(spell.baseCooldown) + " turn" + ("s" if not JS.eq(spell.get("baseCooldown"), 1) else "") if (JS.or_(spell.get("baseCooldown"), 0)) > 0 else "")
+				var cdInfo = ("CD: " + JS.s(spell.get("baseCooldown")) + " turn" + ("s" if not JS.eq(spell.get("baseCooldown"), 1) else "") if (JS.or_(spell.get("baseCooldown"), 0)) > 0 else "")
 				var dmgPrev = _spellDmgPreview(spell)
-				var atkLine = "ATK: " + JS.s(Helpers.attackPowerFor("player")) + "  EFX: " + JS.s(Helpers.effectPowerFor("player")) + "  Charge: " + JS.s(JS.or_(State.status.player.get("plasmaCharge"), 0)) + "⚡"
-				var parts = JS.filter([spell.name + " [Plasma]", JS.or_(spell.get("desc"), ""), dmgPrev, chargeCostStr, cdInfo, atkLine], JS.t)
+				var atkLine = "ATK: " + JS.s(Helpers.attackPowerFor("player")) + "  EFX: " + JS.s(Helpers.effectPowerFor("player")) + "  Charge: " + JS.s(JS.or_(State.status.get("player").get("plasmaCharge"), 0)) + "⚡"
+				var parts = JS.filter([
+					JS.s(spell.get("name")) + " [Plasma]",
+					JS.or_(spell.get("desc"), ""),
+					dmgPrev,
+					chargeCostStr,
+					cdInfo,
+					atkLine,
+				], JS.t)
 				cell.title = JS.join(parts, "\n")
 			if isVar:
 				cell.style.cursor = "default"
@@ -911,7 +918,7 @@ func renderSpellButtons():
 				minus.style.cssText = "background:#1a0e05;border:1px solid #3a1a0a;color:#c8a060;width:18px;height:16px;font-size:.6rem;cursor:pointer;border-radius:2px;padding:0;"
 				var _fn10 = func(e = null):
 					e.stopPropagation()
-					State.combat.plasmaSpendAmounts[spell.id] = max(1, (JS.or_(JS.idx(State.combat.plasmaSpendAmounts, spell.id), 1)) - 1)
+					State.combat.get("plasmaSpendAmounts")[spell.id] = max(1, (JS.or_(JS.idx(State.combat.get("plasmaSpendAmounts"), spell.id), 1)) - 1)
 					renderSpellButtons()
 				minus.onclick = _fn10
 				var plus = document.createElement("button")
@@ -919,7 +926,7 @@ func renderSpellButtons():
 				plus.style.cssText = "background:#1a0e05;border:1px solid #3a1a0a;color:#c8a060;width:18px;height:16px;font-size:.6rem;cursor:pointer;border-radius:2px;padding:0;"
 				var _fn11 = func(e = null):
 					e.stopPropagation()
-					State.combat.plasmaSpendAmounts[spell.id] = min(availCharge, (JS.or_(JS.idx(State.combat.plasmaSpendAmounts, spell.id), 1)) + 1)
+					State.combat.get("plasmaSpendAmounts")[spell.id] = min(availCharge, (JS.or_(JS.idx(State.combat.get("plasmaSpendAmounts"), spell.id), 1)) + 1)
 					renderSpellButtons()
 				plus.onclick = _fn11
 				var castBtn = document.createElement("button")
@@ -930,10 +937,10 @@ func renderSpellButtons():
 					e.stopPropagation()
 					if (((not JS.t(isMyTurn) or onCD) or not canAfford) or alreadyQueued):
 						return
-					var snapSpend = JS.or_(JS.idx(State.combat.plasmaSpendAmounts, spell.id), 1)
+					var snapSpend = JS.or_(JS.idx(State.combat.get("plasmaSpendAmounts"), spell.id), 1)
 					State.combat.plasmaChargeReserved = (JS.or_(State.combat.get("plasmaChargeReserved"), 0)) + snapSpend
-					var snapTgt = State.combat.targetIdx
-					var snapIdx = JS.indexOf(State.player.spellbook, spell)
+					var snapTgt = State.combat.get("targetIdx")
+					var snapIdx = JS.indexOf(State.player.get("spellbook"), spell)
 					var _fn12 = func():
 						State.setActiveEnemy(snapTgt)
 						State.combat.plasmaCurrentSpend = snapSpend
@@ -944,8 +951,8 @@ func renderSpellButtons():
 						updateHPBars()
 						renderStatusTags()
 						updateStatsUI()
-					State.combat.actionQueue.append({
-						"label": spell.emoji + " " + spell.name + "(" + JS.s(snapSpend) + "⚡)",
+					State.combat.get("actionQueue").append({
+						"label": JS.s(spell.get("emoji")) + " " + JS.s(spell.get("name")) + "(" + JS.s(snapSpend) + "⚡)",
 						"fn": _fn12,
 						"targetIdx": snapTgt,
 						"isPlasma": true,
@@ -963,8 +970,8 @@ func renderSpellButtons():
 				var _fn15 = func():
 					if (((not JS.t(isMyTurn) or onCD) or not canAfford) or alreadyQueued):
 						return
-					var snapTgt = State.combat.targetIdx
-					var snapIdx = JS.indexOf(State.player.spellbook, spell)
+					var snapTgt = State.combat.get("targetIdx")
+					var snapIdx = JS.indexOf(State.player.get("spellbook"), spell)
 					State.combat.plasmaChargeReserved = (JS.or_(State.combat.get("plasmaChargeReserved"), 0)) + curSpend
 					var _fn14 = func():
 						State.setActiveEnemy(snapTgt)
@@ -974,8 +981,8 @@ func renderSpellButtons():
 						updateHPBars()
 						renderStatusTags()
 						updateStatsUI()
-					State.combat.actionQueue.append({
-						"label": spell.emoji + " " + spell.name,
+					State.combat.get("actionQueue").append({
+						"label": JS.s(spell.get("emoji")) + " " + JS.s(spell.get("name")),
 						"fn": _fn14,
 						"targetIdx": snapTgt,
 						"isPlasma": true,
@@ -990,7 +997,7 @@ func renderSpellButtons():
 	# ── Non-Plasma: Build 3-col grid ─────────────────────────────────────────
 	grid.innerHTML = ""
 	# Spell cells (player.spellbook includes _basic and _armor builtins)
-	for spell in JS.iter(State.player.spellbook):
+	for spell in JS.iter(State.player.get("spellbook")):
 		# ── Built-in: Basic Attack ───────────────────────────────────────────
 		if spell.get("id") == "_basic":
 			var _elemBasicNames = {
@@ -1027,14 +1034,14 @@ func renderSpellButtons():
 			var hasElemBasic = basicLevel > 0
 			var basicName = (JS.or_(JS.idx(_elemBasicNames, State.playerElement), "Basic Attack") if hasElemBasic else "Basic Attack")
 			var basicIcon = (JS.or_(JS.idx(_elemBasicIcons, State.playerElement), "⚔") if hasElemBasic else "⚔")
-			var basicOnCD = State.combat.basicCD > 0
-			var basicQueued = JS.some(JS.or_(State.combat.get("actionQueue"), []), func(a = null): return a.label == (basicIcon + " " + basicName))
-			var basicOutOfPP = (spell.get("currentPP") != null and spell.currentPP <= 0)
+			var basicOnCD = State.combat.get("basicCD") > 0
+			var basicQueued = JS.some(JS.or_(State.combat.get("actionQueue"), []), func(a = null): return a.get("label") == (basicIcon + " " + basicName))
+			var basicOutOfPP = (spell.get("currentPP") != null and spell.get("currentPP") <= 0)
 			# Rarity for basic: level maps to rarity tiers
 			var _basicRarityMap = [null, "dim", "kindled", "blazing", "radiant", "radiant"]
 			var _basicRarityKey = JS.or_(JS.idx(_basicRarityMap, basicLevel), null)
 			var _basicRarityInfo = (JS.idx(Incantations.SPELL_RARITY, _basicRarityKey) if (hasElemBasic and true) else null)
-			var _basicRarityColor = (_basicRarityInfo.color if JS.t(_basicRarityInfo) else null)
+			var _basicRarityColor = (_basicRarityInfo.get("color") if JS.t(_basicRarityInfo) else null)
 			var cell = document.createElement("button")
 			cell.className = "sb-spell-cell" + (" on-cd" if basicOnCD else "") + (" no-pp" if basicOutOfPP else "")
 			if JS.t(_basicRarityColor):
@@ -1042,7 +1049,7 @@ func renderSpellButtons():
 			cell.disabled = ((((not JS.t(isMyTurn) or queueFull) or basicOnCD) or basicQueued) or basicOutOfPP)
 			var _elemDmgBonus = (10 + Incantations._incantationBonus(basicLevel, 3, 0.95) if hasElemBasic else 0)
 			var basicDmgEst = max(1, JS.round(((((Constants.BASE_DMG + (JS.or_(State.combat.get("tempDmgBonus"), 0))) + (JS.or_(State.player.get("basicDmgFlat"), 0))) + _elemDmgBonus) * (JS.or_(State.player.get("basicDmgMult"), 1.0))) + Helpers.attackPowerFor("player")))
-			var _basicRarityBadge = ("<div style=\"font-size:.5rem;color:" + JS.s(_basicRarityColor) + ";letter-spacing:.04em;\">✦" + JS.s(_basicRarityInfo.label) + (" II" if basicLevel >= 5 else "") + "</div>" if JS.t(_basicRarityColor) else "")
+			var _basicRarityBadge = ("<div style=\"font-size:.5rem;color:" + JS.s(_basicRarityColor) + ";letter-spacing:.04em;\">✦" + JS.s(_basicRarityInfo.get("label")) + (" II" if basicLevel >= 5 else "") + "</div>" if JS.t(_basicRarityColor) else "")
 			# Build elemental effect description line for the button
 			var _elemEffectDescs = {
 				"Fire": func(lvl = null): return "🔥 +" + JS.s(JS.round(2 + Incantations._incantationBonus(lvl, 1, 0.9))) + " Burn",
@@ -1056,15 +1063,15 @@ func renderSpellButtons():
 			}
 			var _elemEffectFn = (JS.idx(_elemEffectDescs, State.playerElement) if JS.t(hasElemBasic) else hasElemBasic)
 			var _elemEffectLine = ("<div style=\"font-size:.48rem;color:#a0c8a0;letter-spacing:.03em;margin-top:1px;\">" + JS.s(_elemEffectFn.call(basicLevel)) + "</div>" if JS.t(_elemEffectFn) else "")
-			var basicPPLabel = ("<div class=\"sb-spell-pp\">" + JS.s(JS.or_(spell.get("currentPP"), 0)) + "/" + JS.s(spell.maxPP) + " PP</div>" if spell.get("maxPP") != null else "")
-			cell.innerHTML = ("<div class=\"sb-spell-icon\">" + basicIcon + "</div>") + ("<div class=\"sb-spell-name\">" + basicName + "</div>") + "<div class=\"sb-spell-cd " + ("on-cd" if basicOnCD else "ready") + "\">" + ("No PP" if basicOutOfPP else ("CD:" + JS.s(State.combat.basicCD) if basicOnCD else "~" + JS.s(basicDmgEst) + " dmg")) + "</div>" + _basicRarityBadge + _elemEffectLine + basicPPLabel + ("<div class=\"sb-spell-queued-badge\">✓</div>" if basicQueued else "")
+			var basicPPLabel = ("<div class=\"sb-spell-pp\">" + JS.s(JS.or_(spell.get("currentPP"), 0)) + "/" + JS.s(spell.get("maxPP")) + " PP</div>" if spell.get("maxPP") != null else "")
+			cell.innerHTML = ("<div class=\"sb-spell-icon\">" + basicIcon + "</div>") + ("<div class=\"sb-spell-name\">" + basicName + "</div>") + "<div class=\"sb-spell-cd " + ("on-cd" if basicOnCD else "ready") + "\">" + ("No PP" if basicOutOfPP else ("CD:" + JS.s(State.combat.get("basicCD")) if basicOnCD else "~" + JS.s(basicDmgEst) + " dmg")) + "</div>" + _basicRarityBadge + _elemEffectLine + basicPPLabel + ("<div class=\"sb-spell-queued-badge\">✓</div>" if basicQueued else "")
 			var _elemEffectTooltip = ("\n" + JS.s(_elemEffectFn.call(basicLevel)) + " on hit" if JS.t(_elemEffectFn) else "")
-			cell.title = basicName + " [" + JS.s(State.playerElement) + "]" + (" · " + _basicRarityInfo.label + (" II" if basicLevel >= 5 else "") if JS.t(_basicRarityInfo) else "") + "\nDeals ~" + JS.s(basicDmgEst) + " dmg (ATK: " + JS.s(Helpers.attackPowerFor("player")) + ")" + _elemEffectTooltip + "\nCooldown: 1 turn"
+			cell.title = basicName + " [" + JS.s(State.playerElement) + "]" + (" · " + JS.s(_basicRarityInfo.get("label")) + (" II" if basicLevel >= 5 else "") if JS.t(_basicRarityInfo) else "") + "\nDeals ~" + JS.s(basicDmgEst) + " dmg (ATK: " + JS.s(Helpers.attackPowerFor("player")) + ")" + _elemEffectTooltip + "\nCooldown: 1 turn"
 			var basicSpellRef = spell
 			var _fn18 = func():
 				if ((((not JS.t(isMyTurn) or queueFull) or basicOnCD) or basicQueued) or basicOutOfPP):
 					return
-				var snapTgt = State.combat.targetIdx
+				var snapTgt = State.combat.get("targetIdx")
 				var snapCD = JS.or_(Helpers.adjustedCooldownFor("player", 1), 1)
 				var _bSnapTgt = snapTgt
 				var _bHasElem = hasElemBasic
@@ -1081,16 +1088,16 @@ func renderSpellButtons():
 				var _fn17 = func():
 					if JS.t(State.player.get("_mistBlindDamage")):
 						return ""
-					var tgt = JS.idx(State.combat.enemies, _bSnapTgt)
+					var tgt = JS.idx(State.combat.get("enemies"), _bSnapTgt)
 					if (not JS.t(tgt) or not JS.t(tgt.get("alive"))):
 						return ""
-					var prevActive = State.combat.activeEnemyIdx
+					var prevActive = State.combat.get("activeEnemyIdx")
 					State.combat.activeEnemyIdx = _bSnapTgt
 					var ap = Helpers.attackPowerFor("player", "enemy")
 					State.combat.activeEnemyIdx = prevActive
 					var base = (JS.or_(State.player.get("basicDmgFlat"), 0)) + (10 if _bHasElem else 0)
 					var dmg = max(0, base + ap)
-					var block = JS.or_(tgt.status.get("block"), 0)
+					var block = JS.or_(tgt.get("status").get("block"), 0)
 					var after = max(0, dmg - block)
 					return ("~" + JS.s(after) + " dmg (" + JS.s(dmg) + "−" + JS.s(block) + " blk)" if (block > 0 and after != dmg) else "~" + JS.s(after) + " dmg")
 				Combat.queueAction(basicIcon + " " + basicName, _fn16, {"hintFn": _fn17})
@@ -1102,11 +1109,11 @@ func renderSpellButtons():
 		if spell.get("id") == "_armor":
 			var armAmt = Helpers.armorBlockAmount()
 			var armorQueued = JS.some(JS.or_(State.combat.get("actionQueue"), []), func(a = null): return a.get("label") == "🛡 Armor")
-			var armorOutOfPP = (spell.get("currentPP") != null and spell.currentPP <= 0)
+			var armorOutOfPP = (spell.get("currentPP") != null and spell.get("currentPP") <= 0)
 			var cell = document.createElement("button")
 			cell.className = "sb-spell-cell elemental" + (" no-pp" if armorOutOfPP else "")
 			cell.disabled = (((not JS.t(isMyTurn) or armorQueued) or queueFull) or armorOutOfPP)
-			var armorPPLabel = ("<div class=\"sb-spell-pp\">" + JS.s(JS.or_(spell.get("currentPP"), 0)) + "/" + JS.s(spell.maxPP) + " PP</div>" if spell.get("maxPP") != null else "")
+			var armorPPLabel = ("<div class=\"sb-spell-pp\">" + JS.s(JS.or_(spell.get("currentPP"), 0)) + "/" + JS.s(spell.get("maxPP")) + " PP</div>" if spell.get("maxPP") != null else "")
 			cell.innerHTML = "<div class=\"sb-spell-icon\">🛡</div>" + "<div class=\"sb-spell-name\">Armor</div>" + "<div class=\"sb-spell-cd ready\">" + ("No PP" if armorOutOfPP else "+" + JS.s(armAmt) + " Block") + "</div>" + armorPPLabel + ("<div class=\"sb-spell-queued-badge\">✓</div>" if armorQueued else "")
 			cell.title = "Armor\n+" + JS.s(armAmt) + " Block (10 base + DEF÷5, DEF: " + JS.s(Helpers.defenseFor("player")) + ")\nBlock absorbs damage before HP\nNo cooldown"
 			var armorSpellRef = spell
@@ -1116,8 +1123,8 @@ func renderSpellButtons():
 				var _fn19 = func():
 					if (JS.or_(armorSpellRef.get("currentPP"), 0)) > 0:
 						armorSpellRef.currentPP -= 1
-					State.status.player.block = (JS.or_(State.status.player.get("block"), 0)) + armAmt
-					log_("🛡 You brace — +" + JS.s(armAmt) + " Block (" + JS.s(State.status.player.block) + " total).", "player")
+					State.status.get("player").block = (JS.or_(State.status.get("player").get("block"), 0)) + armAmt
+					log_("🛡 You brace — +" + JS.s(armAmt) + " Block (" + JS.s(State.status.get("player").get("block")) + " total).", "player")
 					renderStatusTags()
 				Combat.queueAction("🛡 Armor", _fn19, {})
 				renderSpellButtons()
@@ -1127,43 +1134,43 @@ func renderSpellButtons():
 		var rawCD = JS.or_(spell.get("currentCD"), 0)
 		var effectiveCD = max(0, rawCD - cdPreviewReduce)
 		var onCD = (not JS.t(spell.get("multiUse")) and effectiveCD > 0)
-		var outOfPP = (spell.get("currentPP") != null and spell.currentPP <= 0)
+		var outOfPP = (spell.get("currentPP") != null and spell.get("currentPP") <= 0)
 		var isFree = (not (not JS.t(spell.get("isFreeAction"))))
-		var alreadyQueued = (not JS.t(spell.get("multiUse")) and JS.some(JS.or_(State.combat.get("actionQueue"), []), func(a = null): return (JS.t(a.get("label")) and JS.includes(a.label, spell.name))))
+		var alreadyQueued = (not JS.t(spell.get("multiUse")) and JS.some(JS.or_(State.combat.get("actionQueue"), []), func(a = null): return (JS.t(a.get("label")) and JS.includes(a.get("label"), spell.get("name")))))
 		var cell = document.createElement("button")
 		cell.className = "sb-spell-cell elemental" + (" on-cd" if onCD else "") + (" no-pp" if outOfPP else "") + (" free-action" if isFree else "")
 		# Rarity: tint border color
 		if (JS.t(spell.get("rarity")) and spell.get("rarity") != "dim"):
-			var rc = JS.idx(Incantations.SPELL_RARITY, spell.rarity)
+			var rc = JS.idx(Incantations.SPELL_RARITY, spell.get("rarity"))
 			if (JS.t(rc) and JS.t(rc.get("color"))):
-				cell.style.borderColor = rc.color
+				cell.style.borderColor = rc.get("color")
 		var isChargeShot = spell.get("id") == "charge_shot"
-		var slotsAvail = State.combat.actionsLeft - nonFreeQueued
+		var slotsAvail = State.combat.get("actionsLeft") - nonFreeQueued
 		var canQueue = (((not onCD and not outOfPP) and (JS.eq(spell.get("baseCooldown"), 0) or not alreadyQueued)) if isFree else JS.andf(((not queueFull and not onCD) and not outOfPP), func(): return JS.or_(spell.get("multiUse"), (not alreadyQueued))))
 		cell.disabled = ((not JS.t(isMyTurn) or not JS.t(canQueue)) or (isChargeShot and slotsAvail < 2))
 		var rankPct = JS.round((JS.or_(spell.get("dmgMult"), 1.0)) * 100)
 		var rankStr = (" [" + JS.s(rankPct) + "%]" if rankPct > 100 else "")
-		var cdLabel = ("No PP" if outOfPP else ("Free" if JS.t(spell.get("multiUse")) else ("CD:" + JS.s(effectiveCD) if onCD else "CD:" + JS.s(spell.baseCooldown))))
+		var cdLabel = ("No PP" if outOfPP else ("Free" if JS.t(spell.get("multiUse")) else ("CD:" + JS.s(effectiveCD) if onCD else "CD:" + JS.s(spell.get("baseCooldown")))))
 		var freeLabel = (" ✦Free" if isFree else "")
-		var ppLabel = ("<div class=\"sb-spell-pp\">" + JS.s(JS.or_(spell.get("currentPP"), 0)) + "/" + JS.s(spell.maxPP) + " PP</div>" if spell.get("maxPP") != null else "")
+		var ppLabel = ("<div class=\"sb-spell-pp\">" + JS.s(JS.or_(spell.get("currentPP"), 0)) + "/" + JS.s(spell.get("maxPP")) + " PP</div>" if spell.get("maxPP") != null else "")
 		var incLevel = JS.or_(spell.get("incantationLevel"), 1)
-		var rarityInfo = (JS.idx(Incantations.SPELL_RARITY, spell.rarity) if (true and JS.t(spell.get("rarity"))) else null)
-		var rarityColor = (rarityInfo.color if (JS.t(rarityInfo) and JS.t(rarityInfo.get("color"))) else null)
-		var incLabel = ("<div style=\"font-size:.52rem;color:" + JS.s(rarityColor) + ";letter-spacing:.04em;\">✦" + JS.s(rarityInfo.label) + "</div>" if ((JS.t(rarityInfo) and JS.t(spell.get("rarity"))) and spell.get("rarity") != "dim") else "")
+		var rarityInfo = (JS.idx(Incantations.SPELL_RARITY, spell.get("rarity")) if (true and JS.t(spell.get("rarity"))) else null)
+		var rarityColor = (rarityInfo.get("color") if (JS.t(rarityInfo) and JS.t(rarityInfo.get("color"))) else null)
+		var incLabel = ("<div style=\"font-size:.52rem;color:" + JS.s(rarityColor) + ";letter-spacing:.04em;\">✦" + JS.s(rarityInfo.get("label")) + "</div>" if ((JS.t(rarityInfo) and JS.t(spell.get("rarity"))) and spell.get("rarity") != "dim") else "")
 		var _incStat = Incantations.incantationStatDisplay(spell)
 		var incStatLabel = ("<div style=\"font-size:.5rem;color:#88aacc;letter-spacing:.03em;\">" + JS.s(_incStat) + "</div>" if JS.t(_incStat) else "")
-		cell.innerHTML = "<div class=\"sb-spell-icon\">" + SpellIcons.spellIconSVG(spell, 22) + "</div>" + "<div class=\"sb-spell-name\">" + spell.name + rankStr + freeLabel + "</div>" + "<div class=\"sb-spell-cd " + ("on-cd" if (onCD or outOfPP) else "ready") + "\">" + cdLabel + "</div>" + incLabel + incStatLabel + ppLabel + ("<div class=\"sb-spell-queued-badge\">✓</div>" if alreadyQueued else "")
+		cell.innerHTML = "<div class=\"sb-spell-icon\">" + SpellIcons.spellIconSVG(spell, 22) + "</div>" + "<div class=\"sb-spell-name\">" + JS.s(spell.get("name")) + rankStr + freeLabel + "</div>" + "<div class=\"sb-spell-cd " + ("on-cd" if (onCD or outOfPP) else "ready") + "\">" + cdLabel + "</div>" + incLabel + incStatLabel + ppLabel + ("<div class=\"sb-spell-queued-badge\">✓</div>" if alreadyQueued else "")
 		if true:
-			var cdInfo = ("CD: " + JS.s(spell.baseCooldown) + " turn" + ("s" if not JS.eq(spell.get("baseCooldown"), 1) else "") if spell.baseCooldown > 0 else "No cooldown")
-			var ppInfo = ("PP: " + JS.s(JS.or_(spell.get("currentPP"), 0)) + "/" + JS.s(spell.maxPP) if spell.get("maxPP") != null else "")
-			var elemInfo = ("[" + JS.s(spell.element) + "]" if JS.t(spell.get("element")) else "")
+			var cdInfo = ("CD: " + JS.s(spell.get("baseCooldown")) + " turn" + ("s" if not JS.eq(spell.get("baseCooldown"), 1) else "") if spell.get("baseCooldown") > 0 else "No cooldown")
+			var ppInfo = ("PP: " + JS.s(JS.or_(spell.get("currentPP"), 0)) + "/" + JS.s(spell.get("maxPP")) if spell.get("maxPP") != null else "")
+			var elemInfo = ("[" + JS.s(spell.get("element")) + "]" if JS.t(spell.get("element")) else "")
 			var rankInfo = ("Rank: +" + JS.s(rankPct - 100) + "% damage" if rankPct > 100 else "")
 			var dmgPrev = _spellDmgPreview(spell)
 			var atkLine = "ATK: " + JS.s(Helpers.attackPowerFor("player")) + "  EFX: " + JS.s(Helpers.effectPowerFor("player")) + "  DEF: " + JS.s(Helpers.defenseFor("player"))
-			var _iRar = (JS.idx(Incantations.SPELL_RARITY, spell.rarity) if (true and JS.t(spell.get("rarity"))) else null)
-			var incInfo = JS.s((_iRar.label if JS.t(_iRar) else "Dim")) + " · Incantation Level " + JS.s(JS.or_(spell.get("incantationLevel"), 1))
+			var _iRar = (JS.idx(Incantations.SPELL_RARITY, spell.get("rarity")) if (true and JS.t(spell.get("rarity"))) else null)
+			var incInfo = JS.s((_iRar.get("label") if JS.t(_iRar) else "Dim")) + " · Incantation Level " + JS.s(JS.or_(spell.get("incantationLevel"), 1))
 			var parts = JS.filter([
-				spell.name + " " + elemInfo,
+				JS.s(spell.get("name")) + " " + elemInfo,
 				JS.or_(spell.get("desc"), ""),
 				dmgPrev,
 				cdInfo,
@@ -1181,15 +1188,15 @@ func renderSpellButtons():
 				# Instant-use: don't queue, just set the shift and consume PP
 				# Normal queued spell — set shift then queue
 				# Pressure Launch: show +1/-1 choice when 10+ Momentum (runs popup then re-calls with chosen value)
-				if (((extraPriority == null and Main.hasPassive("air_pressure_launch")) and State.playerElement == "Air") and (JS.or_(State.status.player.get("momentumStacks"), 0)) >= 10):
+				if (((extraPriority == null and Main.hasPassive("air_pressure_launch")) and State.playerElement == "Air") and (JS.or_(State.status.get("player").get("momentumStacks"), 0)) >= 10):
 					var _fn21 = func(chosen = null):
 						_doQueueSpell[0].call(chosen)
 					_showAirPriorityPopup([{"label": "+1 (fast)", "value": 1}, {"label": "−1 (slow)", "value": -1}], _fn21)
 					return
-				var snapTgt = State.combat.targetIdx
+				var snapTgt = State.combat.get("targetIdx")
 				var spellRef = spell
-				var spellIdx = JS.indexOf(State.player.spellbook, spell)
-				var snapCD = (JS.or_(Helpers.adjustedCooldownFor("player", spell.baseCooldown), 1) if not JS.t(spell.get("multiUse")) else 0)
+				var spellIdx = JS.indexOf(State.player.get("spellbook"), spell)
+				var snapCD = (JS.or_(Helpers.adjustedCooldownFor("player", spell.get("baseCooldown")), 1) if not JS.t(spell.get("multiUse")) else 0)
 				var isStormRushDependent = ((stormRushQueued and rawCD > 0) and effectiveCD == 0)
 				var _sSnapTgt = snapTgt
 				var _sSpellRef = spellRef
@@ -1199,14 +1206,14 @@ func renderSpellButtons():
 					var preview = _spellDmgPreview(_sSpellRef)
 					if not JS.t(preview):
 						return ""
-					var tgt = JS.idx(State.combat.enemies, _sSnapTgt)
-					var block = (JS.or_(tgt.status.get("block"), 0) if JS.t(tgt) else 0)
+					var tgt = JS.idx(State.combat.get("enemies"), _sSnapTgt)
+					var block = (JS.or_(tgt.get("status").get("block"), 0) if JS.t(tgt) else 0)
 					return (preview + " (−" + JS.s(block) + " blk)" if block > 0 else preview)
 				var opts = {
 					"isFree": isFree,
 					"stormRushDependent": isStormRushDependent,
 					"isSpellAction": true,
-					"bookCatalogueId": (State.activeBook().catalogueId if (JS.t(State.activeBook()) and JS.t(State.activeBook().get("catalogueId"))) else null),
+					"bookCatalogueId": (State.activeBook().get("catalogueId") if (JS.t(State.activeBook()) and JS.t(State.activeBook().get("catalogueId"))) else null),
 					"spellObj": spell,
 					"priority": (JS.or_(spell.get("priority"), 0)) + (JS.or_(extraPriority, 0)),
 					"hintFn": _fn22,
@@ -1226,23 +1233,23 @@ func renderSpellButtons():
 					var ctx = Hit.makeSpellCtx("player", "enemy", spellIdx)
 					JS.callm(spellRef, "execute", [ctx])
 					# Deep Current: fire Water spell a second time
-					if ((not JS.t(State.combat.get("over")) and spellRef.get("element") == "Water") and JS.t(State.status.player.get("deepCurrentActive"))):
-						State.status.player.deepCurrentActive = false
-						log_("💠 Deep Current: " + spellRef.name + " fires again!", "player")
+					if ((not JS.t(State.combat.get("over")) and spellRef.get("element") == "Water") and JS.t(State.status.get("player").get("deepCurrentActive"))):
+						State.status.get("player").deepCurrentActive = false
+						log_("💠 Deep Current: " + JS.s(spellRef.get("name")) + " fires again!", "player")
 						State.setActiveEnemy(snapTgt)
 						var ctx2 = Hit.makeSpellCtx("player", "enemy", spellIdx)
 						JS.callm(spellRef, "execute", [ctx2])
 					updateHPBars()
 					renderStatusTags()
 					updateStatsUI()
-				Combat.queueAction(spell.emoji + " " + spell.name, _fn23, opts)
+				Combat.queueAction(JS.s(spell.get("emoji")) + " " + JS.s(spell.get("name")), _fn23, opts)
 				renderSpellButtons()
 			_doQueueSpell[0] = _fn24
 			if (not JS.t(isMyTurn) or not JS.t(canQueue)):
 				return
 			if (JS.t(spell.get("instantUse")) and not JS.t(spell.get("pickPriority"))):
-				var _iuIdx = JS.indexOf(State.player.spellbook, spell)
-				spell.currentCD = JS.or_(Helpers.adjustedCooldownFor("player", spell.baseCooldown), spell.get("baseCooldown"))
+				var _iuIdx = JS.indexOf(State.player.get("spellbook"), spell)
+				spell.currentCD = JS.or_(Helpers.adjustedCooldownFor("player", spell.get("baseCooldown")), spell.get("baseCooldown"))
 				JS.callm(spell, "execute", [Hit.makeSpellCtx("player", "enemy", _iuIdx)])
 				renderSpellButtons()
 				Combat.updateActionUI()
@@ -1253,13 +1260,13 @@ func renderSpellButtons():
 						State.combat._aoPriorityShift = chosen
 						if (JS.or_(spell.get("currentPP"), 0)) > 0:
 							spell.currentPP -= 1
-						log_(JS.s(spell.emoji) + " " + JS.s(spell.name) + "! Subsequent spells: " + ("+" if chosen > 0 else "") + JS.s(chosen) + " priority.", "player")
+						log_(JS.s(spell.get("emoji")) + " " + JS.s(spell.get("name")) + "! Subsequent spells: " + ("+" if chosen > 0 else "") + JS.s(chosen) + " priority.", "player")
 						renderSpellButtons()
 						Combat.updateActionUI()
 						return
 					State.combat._aoPriorityShift = chosen
 					_doQueueSpell[0].call()
-				_showAirPriorityPopup(spell.pickPriority, _fn25)
+				_showAirPriorityPopup(spell.get("pickPriority"), _fn25)
 				return
 			_doQueueSpell[0].call()
 		cell.onclick = _fn26
@@ -1268,19 +1275,19 @@ func renderSpellButtons():
 func _makeSpellCard(spell = null, clickFn = null, isQueued = null, isOnCD = null, hintText = null):
 	var card = document.createElement("div")
 	card.className = "spell-card" + (" card-queued" if JS.t(isQueued) else "")
-	var elemColor = JS.or_(JS.idx(_ELEM_CARD_COLORS, spell.element), _ELEM_CARD_COLORS.get("Neutral"))
+	var elemColor = JS.or_(JS.idx(_ELEM_CARD_COLORS, spell.get("element")), _ELEM_CARD_COLORS.get("Neutral"))
 	card.style.borderColor = JS.s(elemColor) + "99"
-	var rarityInfo = (JS.idx(Incantations.SPELL_RARITY, spell.rarity) if (true and JS.t(spell.get("rarity"))) else null)
-	var rarityColor = (rarityInfo.color if (JS.t(rarityInfo) and JS.t(rarityInfo.get("color"))) else null)
+	var rarityInfo = (JS.idx(Incantations.SPELL_RARITY, spell.get("rarity")) if (true and JS.t(spell.get("rarity"))) else null)
+	var rarityColor = (rarityInfo.get("color") if (JS.t(rarityInfo) and JS.t(rarityInfo.get("color"))) else null)
 	if JS.t(rarityColor):
 		card.style.borderColor = rarityColor
 	if JS.t(spell.get("id")):
 		card.dataset.spellId = spell.id
-	card.title = spell.name + (" — " + spell.desc if JS.t(spell.get("desc")) else "")
+	card.title = JS.s(spell.get("name")) + (" — " + JS.s(spell.get("desc")) if JS.t(spell.get("desc")) else "")
 	var _iconHTML = SpellIcons.spellIconSVG(spell, 50)
-	var _cdStr = ("CD:" + JS.s(spell.baseCooldown) if spell.baseCooldown > 1 else ("✦" if JS.eq(spell.get("baseCooldown"), 0) else ""))
-	var _ppStr = (JS.s(JS.or_(spell.get("currentPP"), 0)) + "/" + JS.s(spell.maxPP) if spell.get("maxPP") != null else "")
-	card.innerHTML = "<div class=\"card-top-row\">" + ("<div class=\"card-cd\">" + _cdStr + "</div>") + ("<div class=\"card-type\">" + (JS.or_(spell.get("element"), "")) + "</div>") + ("<div class=\"card-pp\">" + _ppStr + "</div>") + "</div>" + ("<div class=\"card-art\">" + _iconHTML + "</div>") + ("<div class=\"card-name\">" + JS.s(spell.name) + "</div>") + ("<div class=\"card-hint\">" + JS.replace(JS.or_(hintText, ""), JS.re(" · ", "g"), "<br>") + "</div>")
+	var _cdStr = ("CD:" + JS.s(spell.get("baseCooldown")) if spell.get("baseCooldown") > 1 else ("✦" if JS.eq(spell.get("baseCooldown"), 0) else ""))
+	var _ppStr = (JS.s(JS.or_(spell.get("currentPP"), 0)) + "/" + JS.s(spell.get("maxPP")) if spell.get("maxPP") != null else "")
+	card.innerHTML = "<div class=\"card-top-row\">" + ("<div class=\"card-cd\">" + _cdStr + "</div>") + ("<div class=\"card-type\">" + (JS.or_(spell.get("element"), "")) + "</div>") + ("<div class=\"card-pp\">" + _ppStr + "</div>") + "</div>" + ("<div class=\"card-art\">" + _iconHTML + "</div>") + ("<div class=\"card-name\">" + JS.s(spell.get("name")) + "</div>") + ("<div class=\"card-hint\">" + JS.replace(JS.or_(hintText, ""), JS.re(" · ", "g"), "<br>") + "</div>")
 	if (not JS.t(isQueued) and JS.t(clickFn)):
 		var _holdTimer = [null]
 		card.onclick = clickFn
@@ -1305,23 +1312,23 @@ func _showSpellTooltip(spell = null, hintText = null, cardEl = null):
 	var tip = document.getElementById("spell-tooltip")
 	if not JS.t(tip):
 		return
-	var rarityInfo = (JS.idx(Incantations.SPELL_RARITY, spell.rarity) if (true and JS.t(spell.get("rarity"))) else null)
-	var rarityColor = (rarityInfo.color if JS.t(rarityInfo) else "#8a6a30")
-	var rarityLabel = (rarityInfo.label if JS.t(rarityInfo) else "")
-	var elemColor = JS.or_(JS.idx(_ELEM_CARD_COLORS, spell.element), "#a09080")
+	var rarityInfo = (JS.idx(Incantations.SPELL_RARITY, spell.get("rarity")) if (true and JS.t(spell.get("rarity"))) else null)
+	var rarityColor = (rarityInfo.get("color") if JS.t(rarityInfo) else "#8a6a30")
+	var rarityLabel = (rarityInfo.get("label") if JS.t(rarityInfo) else "")
+	var elemColor = JS.or_(JS.idx(_ELEM_CARD_COLORS, spell.get("element")), "#a09080")
 	var iconHTML = SpellIcons.spellIconSVG(spell, 52)
-	var cdText = ("<span class=\"stt-stat\">CD <b>" + JS.s(spell.baseCooldown) + "</b></span>" if spell.baseCooldown > 1 else ("<span class=\"stt-stat\" style=\"color:#c8a060;\">✦ Free</span>" if JS.eq(spell.get("baseCooldown"), 0) else ""))
-	var ppText = ("<span class=\"stt-stat\">PP <b>" + JS.s(JS.or_(spell.get("currentPP"), 0)) + "/" + JS.s(spell.maxPP) + "</b></span>" if spell.get("maxPP") != null else "")
+	var cdText = ("<span class=\"stt-stat\">CD <b>" + JS.s(spell.get("baseCooldown")) + "</b></span>" if spell.get("baseCooldown") > 1 else ("<span class=\"stt-stat\" style=\"color:#c8a060;\">✦ Free</span>" if JS.eq(spell.get("baseCooldown"), 0) else ""))
+	var ppText = ("<span class=\"stt-stat\">PP <b>" + JS.s(JS.or_(spell.get("currentPP"), 0)) + "/" + JS.s(spell.get("maxPP")) + "</b></span>" if spell.get("maxPP") != null else "")
 	var dmgText = ("<span class=\"stt-stat\">" + JS.s(hintText) + "</span>" if (JS.t(hintText) and hintText != "No PP") else "")
-	tip.innerHTML = ("<div class=\"stt-header\" style=\"border-color:" + JS.s(rarityColor) + "33;\">") + ("<div class=\"stt-icon\">" + iconHTML + "</div>") + "<div class=\"stt-title-block\">" + ("<div class=\"stt-name\" style=\"color:#f0f0f8;\">" + JS.s(spell.name) + "</div>") + "<div class=\"stt-badges\">" + ("<span class=\"stt-elem\" style=\"color:" + elemColor + ";\">" + (JS.or_(spell.get("element"), "")) + "</span>") + ("<span class=\"stt-rarity\" style=\"color:" + JS.s(rarityColor) + ";\">" + JS.s(rarityLabel) + "</span>" if JS.t(rarityLabel) else "") + "</div>" + "</div>" + "</div>" + ("<div class=\"stt-desc\">" + JS.s(spell.desc) + "</div>" if JS.t(spell.get("desc")) else "") + ("<div class=\"stt-stats\">" + cdText + ppText + dmgText + "</div>")
+	tip.innerHTML = ("<div class=\"stt-header\" style=\"border-color:" + JS.s(rarityColor) + "33;\">") + ("<div class=\"stt-icon\">" + iconHTML + "</div>") + "<div class=\"stt-title-block\">" + ("<div class=\"stt-name\" style=\"color:#f0f0f8;\">" + JS.s(spell.get("name")) + "</div>") + "<div class=\"stt-badges\">" + ("<span class=\"stt-elem\" style=\"color:" + elemColor + ";\">" + (JS.or_(spell.get("element"), "")) + "</span>") + ("<span class=\"stt-rarity\" style=\"color:" + JS.s(rarityColor) + ";\">" + JS.s(rarityLabel) + "</span>" if JS.t(rarityLabel) else "") + "</div>" + "</div>" + "</div>" + ("<div class=\"stt-desc\">" + JS.s(spell.get("desc")) + "</div>" if JS.t(spell.get("desc")) else "") + ("<div class=\"stt-stats\">" + cdText + ppText + dmgText + "</div>")
 	# Position above the card
 	var rect = cardEl.getBoundingClientRect()
 	tip.style.display = "block"
 	var tipW = 220
-	var left = (rect.left + (rect.width / 2.0)) - (tipW / 2.0)
+	var left = (JS.un(rect.get("left")) + (rect.width / 2.0)) - (tipW / 2.0)
 	left = max(8, min(left, (window.innerWidth - tipW) - 8))
 	tip.style.left = JS.s(left) + "px"
-	tip.style.top = JS.s(max(8, (rect.top - tip.offsetHeight) - 10)) + "px"
+	tip.style.top = JS.s(max(8, (JS.un(rect.get("top")) - tip.offsetHeight) - 10)) + "px"
 
 func _hideSpellTooltip():
 	var tip = document.getElementById("spell-tooltip")
@@ -1363,8 +1370,8 @@ func _renderCardHand(isMyTurn = null, queueFull = null, cdPreviewReduce = null):
 				var item = _arr31[idx]
 				var fakeSpell = {
 					"id": "_item_" + JS.s(idx),
-					"emoji": item.emoji,
-					"name": item.name,
+					"emoji": item.get("emoji"),
+					"name": item.get("name"),
 					"element": "Neutral",
 					"baseCooldown": 1,
 					"desc": JS.or_(item.get("desc"), ""),
@@ -1373,7 +1380,7 @@ func _renderCardHand(isMyTurn = null, queueFull = null, cdPreviewReduce = null):
 					if not JS.t(isMyTurn):
 						return
 					Combat.useItemInCombat(idx)
-				var card = _makeSpellCard(fakeSpell, _fn32, false, false, (JS.slice(item.desc, 0, 22) if JS.t(item.get("desc")) else "Use"))
+				var card = _makeSpellCard(fakeSpell, _fn32, false, false, (JS.slice(item.get("desc"), 0, 22) if JS.t(item.get("desc")) else "Use"))
 				handEl.appendChild(card)
 		# Apply fan layout to item cards
 		var _itemFanCards = JS.arr(handEl.querySelectorAll(".spell-card"))
@@ -1388,7 +1395,7 @@ func _renderCardHand(isMyTurn = null, queueFull = null, cdPreviewReduce = null):
 		if JS.t(deckCounter):
 			deckCounter.textContent = ""
 		return
-	for spell in JS.iter(State.player.spellbook):
+	for spell in JS.iter(State.player.get("spellbook")):
 		# ── Built-in: Basic Attack ────────────────────────────────────────────
 		if spell.get("id") == "_basic":
 			var _elemBasicNames = {
@@ -1415,12 +1422,12 @@ func _renderCardHand(isMyTurn = null, queueFull = null, cdPreviewReduce = null):
 			var hasElemBasic = basicLevel > 0
 			var basicName = (JS.or_(JS.idx(_elemBasicNames, State.playerElement), "Basic Attack") if hasElemBasic else "Basic Attack")
 			var basicIcon = (JS.or_(JS.idx(_elemBasicIcons, State.playerElement), "⚔") if hasElemBasic else "⚔")
-			var basicOnCD = State.combat.basicCD > 0
-			var basicQueued = JS.some(JS.or_(State.combat.get("actionQueue"), []), func(a = null): return a.label == (basicIcon + " " + basicName))
+			var basicOnCD = State.combat.get("basicCD") > 0
+			var basicQueued = JS.some(JS.or_(State.combat.get("actionQueue"), []), func(a = null): return a.get("label") == (basicIcon + " " + basicName))
 			if (basicOnCD or basicQueued):
 				deckCount[0] += 1
 				continue
-			var basicOutOfPP = (spell.get("currentPP") != null and spell.currentPP <= 0)
+			var basicOutOfPP = (spell.get("currentPP") != null and spell.get("currentPP") <= 0)
 			var basicDmgEst = max(1, JS.round(((((Constants.BASE_DMG + (JS.or_(State.combat.get("tempDmgBonus"), 0))) + (JS.or_(State.player.get("basicDmgFlat"), 0))) + (10 if hasElemBasic else 0)) * (JS.or_(State.player.get("basicDmgMult"), 1.0))) + Helpers.attackPowerFor("player")))
 			var _basicIconIds = {
 				"Fire": "ignite",
@@ -1438,13 +1445,13 @@ func _renderCardHand(isMyTurn = null, queueFull = null, cdPreviewReduce = null):
 				"name": basicName,
 				"element": State.playerElement,
 				"baseCooldown": JS.or_(Helpers.adjustedCooldownFor("player", 1), 1),
-				"currentPP": spell.currentPP,
-				"maxPP": spell.maxPP,
+				"currentPP": spell.get("currentPP"),
+				"maxPP": spell.get("maxPP"),
 			}
 			var _fn35 = func():
 				if ((((not JS.t(isMyTurn) or JS.t(queueFull)) or basicOnCD) or basicQueued) or basicOutOfPP):
 					return
-				var snapTgt = State.combat.targetIdx
+				var snapTgt = State.combat.get("targetIdx")
 				var snapCD = JS.or_(Helpers.adjustedCooldownFor("player", 1), 1)
 				var _fn34 = func():
 					State.combat.basicCD = snapCD
@@ -1468,15 +1475,15 @@ func _renderCardHand(isMyTurn = null, queueFull = null, cdPreviewReduce = null):
 			if armorQueued:
 				deckCount[0] += 1
 				continue
-			var armorOutOfPP = (spell.get("currentPP") != null and spell.currentPP <= 0)
+			var armorOutOfPP = (spell.get("currentPP") != null and spell.get("currentPP") <= 0)
 			var _fakeArmor = {
 				"id": "_armor",
 				"emoji": "🛡",
 				"name": "Armor",
 				"element": "Neutral",
 				"baseCooldown": 0,
-				"currentPP": spell.currentPP,
-				"maxPP": spell.maxPP,
+				"currentPP": spell.get("currentPP"),
+				"maxPP": spell.get("maxPP"),
 			}
 			var _fn37 = func():
 				if ((not JS.t(isMyTurn) or JS.t(queueFull)) or armorOutOfPP):
@@ -1484,8 +1491,8 @@ func _renderCardHand(isMyTurn = null, queueFull = null, cdPreviewReduce = null):
 				var _fn36 = func():
 					if (JS.or_(spell.get("currentPP"), 0)) > 0:
 						spell.currentPP -= 1
-					State.status.player.block = (JS.or_(State.status.player.get("block"), 0)) + armAmt
-					log_("🛡 You brace — +" + JS.s(armAmt) + " Block (" + JS.s(State.status.player.block) + " total).", "player")
+					State.status.get("player").block = (JS.or_(State.status.get("player").get("block"), 0)) + armAmt
+					log_("🛡 You brace — +" + JS.s(armAmt) + " Block (" + JS.s(State.status.get("player").get("block")) + " total).", "player")
 					renderStatusTags()
 				Combat.queueAction("🛡 Armor", _fn36, {"spellObj": _fakeArmor})
 				renderSpellButtons()
@@ -1499,10 +1506,10 @@ func _renderCardHand(isMyTurn = null, queueFull = null, cdPreviewReduce = null):
 		if onCD:
 			deckCount[0] += 1
 			continue
-		var outOfPP = (spell.get("currentPP") != null and spell.currentPP <= 0)
+		var outOfPP = (spell.get("currentPP") != null and spell.get("currentPP") <= 0)
 		var isFree = (not (not JS.t(spell.get("isFreeAction"))))
 		var isZeroCD = JS.eq(spell.get("baseCooldown"), 0)
-		var alreadyQueued = ((not JS.t(spell.get("multiUse")) and not isZeroCD) and JS.some(JS.or_(State.combat.get("actionQueue"), []), func(a = null): return (JS.t(a.get("label")) and JS.includes(a.label, spell.name))))
+		var alreadyQueued = ((not JS.t(spell.get("multiUse")) and not isZeroCD) and JS.some(JS.or_(State.combat.get("actionQueue"), []), func(a = null): return (JS.t(a.get("label")) and JS.includes(a.get("label"), spell.get("name")))))
 		# Queued non-multiUse cards disappear from hand (they show in played-card-row)
 		if alreadyQueued:
 			deckCount[0] += 1
@@ -1524,7 +1531,7 @@ func _renderCardHand(isMyTurn = null, queueFull = null, cdPreviewReduce = null):
 					"isFree": isFree,
 					"stormRushDependent": isStormRushDependent[0],
 					"isSpellAction": true,
-					"bookCatalogueId": (State.activeBook().catalogueId if (JS.t(State.activeBook()) and JS.t(State.activeBook().get("catalogueId"))) else null),
+					"bookCatalogueId": (State.activeBook().get("catalogueId") if (JS.t(State.activeBook()) and JS.t(State.activeBook().get("catalogueId"))) else null),
 					"spellObj": spell,
 					"priority": (JS.or_(spell.get("priority"), 0)) + (JS.or_(extraPri, 0)),
 				}
@@ -1542,28 +1549,28 @@ func _renderCardHand(isMyTurn = null, queueFull = null, cdPreviewReduce = null):
 					State.setActiveEnemy(snapTgt[0])
 					var ctx = Hit.makeSpellCtx("player", "enemy", spellIdx[0])
 					JS.callm(spellRef[0], "execute", [ctx])
-					if ((not JS.t(State.combat.get("over")) and spellRef[0].get("element") == "Water") and JS.t(State.status.player.get("deepCurrentActive"))):
-						State.status.player.deepCurrentActive = false
-						log_("💠 Deep Current: " + spellRef[0].name + " fires again!", "player")
+					if ((not JS.t(State.combat.get("over")) and spellRef[0].get("element") == "Water") and JS.t(State.status.get("player").get("deepCurrentActive"))):
+						State.status.get("player").deepCurrentActive = false
+						log_("💠 Deep Current: " + JS.s(spellRef[0].get("name")) + " fires again!", "player")
 						State.setActiveEnemy(snapTgt[0])
 						var ctx2 = Hit.makeSpellCtx("player", "enemy", spellIdx[0])
 						JS.callm(spellRef[0], "execute", [ctx2])
 					updateHPBars()
 					renderStatusTags()
 					updateStatsUI()
-				Combat.queueAction(spell.emoji + " " + spell.name, _fn38, opts)
+				Combat.queueAction(JS.s(spell.get("emoji")) + " " + JS.s(spell.get("name")), _fn38, opts)
 				renderSpellButtons()
 			_doCardQueueSpell[0] = _fn39
 			if (not JS.t(isMyTurn) or not canQueue):
 				return
-			snapTgt[0] = State.combat.targetIdx
+			snapTgt[0] = State.combat.get("targetIdx")
 			spellRef[0] = spell
-			spellIdx[0] = JS.indexOf(State.player.spellbook, spell)
-			snapCD[0] = (0 if (JS.t(spell.get("multiUse")) or isZeroCD) else JS.or_(Helpers.adjustedCooldownFor("player", spell.baseCooldown), 1))
+			spellIdx[0] = JS.indexOf(State.player.get("spellbook"), spell)
+			snapCD[0] = (0 if (JS.t(spell.get("multiUse")) or isZeroCD) else JS.or_(Helpers.adjustedCooldownFor("player", spell.get("baseCooldown")), 1))
 			isStormRushDependent[0] = ((stormRushQueued and rawCD > 0) and effectiveCD == 0)
 			if (JS.t(spell.get("instantUse")) and not JS.t(spell.get("pickPriority"))):
-				var _iuIdx = JS.indexOf(State.player.spellbook, spell)
-				spell.currentCD = JS.or_(Helpers.adjustedCooldownFor("player", spell.baseCooldown), spell.get("baseCooldown"))
+				var _iuIdx = JS.indexOf(State.player.get("spellbook"), spell)
+				spell.currentCD = JS.or_(Helpers.adjustedCooldownFor("player", spell.get("baseCooldown")), spell.get("baseCooldown"))
 				JS.callm(spell, "execute", [Hit.makeSpellCtx("player", "enemy", _iuIdx)])
 				renderSpellButtons()
 				Combat.updateActionUI()
@@ -1574,14 +1581,14 @@ func _renderCardHand(isMyTurn = null, queueFull = null, cdPreviewReduce = null):
 						State.combat._aoPriorityShift = chosen
 						if (JS.or_(spell.get("currentPP"), 0)) > 0:
 							spell.currentPP -= 1
-						log_(JS.s(spell.emoji) + " " + JS.s(spell.name) + "! Subsequent spells: " + ("+" if chosen > 0 else "") + JS.s(chosen) + " priority.", "player")
+						log_(JS.s(spell.get("emoji")) + " " + JS.s(spell.get("name")) + "! Subsequent spells: " + ("+" if chosen > 0 else "") + JS.s(chosen) + " priority.", "player")
 						renderSpellButtons()
 						Combat.updateActionUI()
 						return
 					_doCardQueueSpell[0].call(chosen)
-				_showAirPriorityPopup(spell.pickPriority, _fn40)
+				_showAirPriorityPopup(spell.get("pickPriority"), _fn40)
 				return
-			if ((Main.hasPassive("air_pressure_launch") and State.playerElement == "Air") and (JS.or_(State.status.player.get("momentumStacks"), 0)) >= 10):
+			if ((Main.hasPassive("air_pressure_launch") and State.playerElement == "Air") and (JS.or_(State.status.get("player").get("momentumStacks"), 0)) >= 10):
 				var _fn41 = func(chosen = null):
 					_doCardQueueSpell[0].call(chosen)
 				_showAirPriorityPopup([{"label": "+1 (fast)", "value": 1}, {"label": "−1 (slow)", "value": -1}], _fn41)
@@ -1598,7 +1605,7 @@ func _renderCardHand(isMyTurn = null, queueFull = null, cdPreviewReduce = null):
 			var _hTimer = [null]
 			var ic = document.createElement("div")
 			ic.className = "item-card"
-			ic.innerHTML = ("<div class=\"ic-emoji\">" + JS.s(item.emoji) + "</div>") + ("<div class=\"ic-name\">" + JS.s(item.name) + "</div>") + "<div class=\"ic-cost\">USE (1 action)</div>"
+			ic.innerHTML = ("<div class=\"ic-emoji\">" + JS.s(item.get("emoji")) + "</div>") + ("<div class=\"ic-name\">" + JS.s(item.get("name")) + "</div>") + "<div class=\"ic-cost\">USE (1 action)</div>"
 			ic.title = JS.or_(item.get("desc"), item.get("name"))
 			var _fn44 = func():
 				Combat.useItemInCombat(idx)
@@ -1665,7 +1672,7 @@ func _renderCardHand(isMyTurn = null, queueFull = null, cdPreviewReduce = null):
 		var _applyTx = _fn49
 		# Re-clamp saved offset after re-render (hand may have shrunk)
 		if JS.t(_handRow.get("_txOffset")):
-			_applyTx.call(_handRow._txOffset)
+			_applyTx.call(_handRow.get("_txOffset"))
 		_isDragging[0] = false
 		_didDrag[0] = false
 		_capturedId[0] = null
@@ -1721,18 +1728,18 @@ func _renderArenaDecks(isMyTurn = null, queueFull = null):
 	el.style.display = "flex"
 	el.innerHTML = ""
 	for i in range(ceili(DECK_SLOT_COUNT)):
-		var book = (JS.idx(State.player.spellbooks, i) if JS.t(State.player.get("spellbooks")) else State.player.get("spellbooks"))
-		var isActive = (i == State.player.activeBookIdx if JS.t(book) else book)
+		var book = (JS.idx(State.player.get("spellbooks"), i) if JS.t(State.player.get("spellbooks")) else State.player.get("spellbooks"))
+		var isActive = (i == State.player.get("activeBookIdx") if JS.t(book) else book)
 		var slot = document.createElement("button")
 		if not JS.t(book):
 			slot.className = "arena-deck-slot empty"
 			slot.disabled = true
 			slot.innerHTML = "<div class=\"ads-art\"><svg viewBox=\"0 0 24 24\" width=\"36\" height=\"36\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"4\" y=\"4\" width=\"16\" height=\"16\" rx=\"2\" fill=\"none\" stroke=\"#2a2018\" stroke-width=\"1.5\" stroke-dasharray=\"3 2\"/></svg></div>" + "<div class=\"ads-name\">Empty</div>"
 		else:
-			var _desc = (JS.or_((JS.or_(JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, book.catalogueId), {})).get("desc"), "") if (JS.t(book.get("catalogueId")) and true) else "")
+			var _desc = (JS.or_((JS.or_(JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, book.get("catalogueId")), {})).get("desc"), "") if (JS.t(book.get("catalogueId")) and true) else "")
 			slot.className = "arena-deck-slot" + (" active" if JS.t(isActive) else "")
 			slot.disabled = JS.or_(JS.or_(isActive, (not JS.t(isMyTurn))), queueFull)
-			slot.title = book.name + ("\n" + _desc if JS.t(_desc) else "")
+			slot.title = JS.s(book.get("name")) + ("\n" + _desc if JS.t(_desc) else "")
 			var iconId = JS.or_(book.get("catalogueId"), "standard")
 			var catEntry = JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, iconId)
 			var accentColor = (JS.or_(JS.idx({
@@ -1744,9 +1751,9 @@ func _renderArenaDecks(isMyTurn = null, queueFull = null):
 				"Nature": "#50a830",
 				"Plasma": "#c040d0",
 				"Air": "#90b8cc",
-			}, catEntry.element), "#c8a060") if (JS.t(catEntry) and JS.t(catEntry.get("element"))) else "#c8a060")
+			}, catEntry.get("element")), "#c8a060") if (JS.t(catEntry) and JS.t(catEntry.get("element"))) else "#c8a060")
 			var svgArt = (JS.idx(DeckIcons.DECK_ICONS, iconId) if (true and JS.t(JS.idx(DeckIcons.DECK_ICONS, iconId))) else "<svg viewBox=\"0 0 24 24\" width=\"36\" height=\"36\" xmlns=\"http://www.w3.org/2000/svg\"><text x=\"12\" y=\"17\" text-anchor=\"middle\" font-size=\"14\">" + (JS.or_(book.get("emoji"), "📖")) + "</text></svg>")
-			var shortName = JS.join(JS.slice(JS.split(book.name, " "), 0, 2), " ")
+			var shortName = JS.join(JS.slice(JS.split(book.get("name"), " "), 0, 2), " ")
 			slot.innerHTML = ("<div class=\"ads-art\" style=\"--accent:" + accentColor + "\">" + JS.s(svgArt) + "</div>") + ("<div class=\"ads-name\" style=\"color:" + accentColor + "\">" + shortName + "</div>")
 			var _fn56 = func():
 				Combat.queueSwitchBook(i)
@@ -1767,7 +1774,7 @@ func _renderArenaEndTurn(isMyTurn = null):
 	if JS.t(btn):
 		btn.disabled = JS.or_(JS.or_((not JS.t(State.combat.get("playerTurn"))), State.combat.get("over")), (not hasActions))
 		btn.className = "arena-endturn-btn" + (" ready" if hasActions else "")
-		btn.textContent = ("⚔ End Turn (" + JS.s(len(State.combat.actionQueue)) + ")" if hasActions else "⚔ End Turn")
+		btn.textContent = ("⚔ End Turn (" + JS.s(len(State.combat.get("actionQueue"))) + ")" if hasActions else "⚔ End Turn")
 	if JS.t(label):
 		label.textContent = JS.s(queued) + " / " + JS.s(total) + " actions"
 	# Items / Deck toggle button
@@ -1851,7 +1858,7 @@ func _showPassivePanel():
 			if (JS.t(pdef[0]) and JS.t(pdef[0].get("desc"))):
 				var descEl = document.createElement("div")
 				descEl.style.cssText = "font-size:.7rem;color:#a09080;line-height:1.4;"
-				descEl.textContent = pdef[0].desc
+				descEl.textContent = pdef[0].get("desc")
 				card.appendChild(descEl)
 			if (JS.t(pdef[0]) and JS.t(pdef[0].get("detail"))):
 				var detEl = document.createElement("div")

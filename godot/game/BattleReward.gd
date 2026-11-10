@@ -52,7 +52,7 @@ func buildStatRewardPool():
 		State.player.defense += 5
 	var _fn4 = func():
 		State.player.baseMaxHPBonus = (JS.or_(State.player.get("baseMaxHPBonus"), 0)) + 15
-		State.player.hp = min(Helpers.maxHPFor("player"), State.player.hp + 15)
+		State.player.hp = min(Helpers.maxHPFor("player"), State.player.get("hp") + 15)
 	var _fn5 = func():
 		State.player.gold += 50
 	var _fn6 = func():
@@ -109,14 +109,14 @@ func buildStatRewardPool():
 		})
 	if (roll >= 0.25 and roll < 0.4):
 		var b = State.activeBook()
-		var usedSpells = (len(JS.arr(b.spells).filter(func(s = null): return not JS.t(s.get("isBuiltin")))) if JS.t(b) else 0)
-		var spellCap = (b.spellSlots if JS.t(b) else 6)
+		var usedSpells = (len(JS.arr(b.get("spells")).filter(func(s = null): return not JS.t(s.get("isBuiltin")))) if JS.t(b) else 0)
+		var spellCap = (b.get("spellSlots") if JS.t(b) else 6)
 		if usedSpells >= floori(spellCap * 0.75):
 			var _fn9 = func():
 				var bk = State.activeBook()
 				if JS.t(bk):
 					bk.spellSlots += 1
-					UI.log_("📖 Spell slot added to " + bk.name + "!", "win")
+					UI.log_("📖 Spell slot added to " + JS.s(bk.get("name")) + "!", "win")
 			pool.append({
 				"label": "Extra Spell Slot",
 				"emoji": "📖",
@@ -155,7 +155,7 @@ func grantRandomLegendary():
 	# Check all books for already-owned spells
 	var _allOwned = []
 	for b in JS.iter(JS.or_(State.player.get("spellbooks"), [])):
-		for s in JS.iter(b.spells):
+		for s in JS.iter(b.get("spells")):
 			if not JS.t(s.get("isBuiltin")):
 				_allOwned.append(s.id)
 	var owned = JSSet.new(_allOwned)
@@ -163,7 +163,7 @@ func grantRandomLegendary():
 	var spellPool = []
 	for el in JS.iter(elements):
 		for s in JS.iter(JS.values(Spells.SPELL_CATALOGUE)):
-			if not JS.eq(s.element, el):
+			if not JS.eq(s.get("element"), el):
 				continue
 			if owned.has(s.id):
 				continue
@@ -186,12 +186,12 @@ func grantRandomLegendary():
 	var pick = JS.idx(combined, floori(randf() * len(combined)))
 	if pick.get("type") == "spell":
 		var gymRarity = Incantations.rollSpellRarity()
-		Spells.addSpellById(pick.def.id, false, gymRarity)
+		Spells.addSpellById(pick.get("def").id, false, gymRarity)
 		var rarityLabel = (" (" + (JS.charAt(gymRarity, 0).to_upper() + JS.s(JS.slice(gymRarity, 1))) + ")" if gymRarity != "dim" else "")
-		UI.log_("✦ Legendary spell unlocked: " + pick.def.emoji + " " + pick.def.name + rarityLabel + "!", "win")
+		UI.log_("✦ Legendary spell unlocked: " + JS.s(pick.get("def").get("emoji")) + " " + JS.s(pick.get("def").get("name")) + rarityLabel + "!", "win")
 	else:
-		State.addPassiveToBook(pick.def.id)
-		UI.log_("✦ Legendary passive unlocked: " + pick.def.emoji + " " + pick.def.title + "!", "win")
+		State.addPassiveToBook(pick.get("def").id)
+		UI.log_("✦ Legendary passive unlocked: " + JS.s(pick.get("def").get("emoji")) + " " + JS.s(pick.get("def").title) + "!", "win")
 
 func toggleRewardLog(btn = null):
 	var panel = document.getElementById("br-log-panel")
@@ -260,7 +260,7 @@ func showPostBattleLoot(isGym = null, isSpellBattle = null, isRival = null, gold
 		var cat = JS.idx(Items.ITEM_CATALOGUE, itemId)
 		var itemCard = document.createElement("div")
 		itemCard.className = "pbl-card pbl-card-item pbl-card-reward"
-		itemCard.innerHTML = "<div class=\"pbl-card-icon\">" + JS.s(cat.emoji) + "</div><div class=\"pbl-card-body\"><div class=\"pbl-card-label\">" + JS.s(cat.name) + "</div><div class=\"pbl-card-sub\">Click to collect</div></div><div class=\"pbl-card-arrow\">›</div>"
+		itemCard.innerHTML = "<div class=\"pbl-card-icon\">" + JS.s(cat.get("emoji")) + "</div><div class=\"pbl-card-body\"><div class=\"pbl-card-label\">" + JS.s(cat.get("name")) + "</div><div class=\"pbl-card-sub\">Click to collect</div></div><div class=\"pbl-card-arrow\">›</div>"
 		var _fn15 = func():
 			var _fn14 = func():
 				_lootItemClaimed = true
@@ -274,7 +274,7 @@ func showPostBattleLoot(isGym = null, isSpellBattle = null, isRival = null, gold
 	var rewardCard = document.createElement("div")
 	rewardCard.className = "pbl-card pbl-card-reward"
 	rewardCard.id = "pbl-reward-card"
-	rewardCard.innerHTML = "<div class=\"pbl-card-icon\" style=\"color:" + JS.s(cfg.color) + "\">" + JS.s(cfg.emoji) + "</div><div class=\"pbl-card-body\"><div class=\"pbl-card-label\" style=\"color:" + JS.s(cfg.color) + "\">" + JS.s(cfg.label) + "</div><div class=\"pbl-card-sub\">Click to choose</div></div><div class=\"pbl-card-arrow\">›</div>"
+	rewardCard.innerHTML = "<div class=\"pbl-card-icon\" style=\"color:" + JS.s(cfg.get("color")) + "\">" + JS.s(cfg.get("emoji")) + "</div><div class=\"pbl-card-body\"><div class=\"pbl-card-label\" style=\"color:" + JS.s(cfg.get("color")) + "\">" + JS.s(cfg.get("label")) + "</div><div class=\"pbl-card-sub\">Click to choose</div></div><div class=\"pbl-card-arrow\">›</div>"
 	var _fn16 = func():
 		rewardCard.style.opacity = "0.5"
 		rewardCard.style.cursor = "default"
@@ -461,7 +461,7 @@ func buildMinorUpgradePool():
 		UI.updateStatsUI()
 	var _fn25 = func():
 		State.player.baseMaxHPBonus = (JS.or_(State.player.get("baseMaxHPBonus"), 0)) + 18
-		State.player.hp = min(Helpers.maxHPFor("player"), State.player.hp + 18)
+		State.player.hp = min(Helpers.maxHPFor("player"), State.player.get("hp") + 18)
 	var pool = [
 		{
 			"label": "Gold Pouch",
@@ -530,8 +530,8 @@ func buildMajorUpgradePool():
 	var lifeWeight = (0 if revives >= 3 else JS.nn(JS.idx([45, 30, 15], revives), 0))
 	var bookWeight = (75 if len(JS.or_(State.player.get("spellbooks"), [])) < 3 else 0)
 	var _spellSlotBook = State.activeBook()
-	var _usedSpells = (len(JS.arr(_spellSlotBook.spells).filter(func(s = null): return not JS.t(s.get("isBuiltin")))) if JS.t(_spellSlotBook) else 0)
-	var _spellCap = (_spellSlotBook.spellSlots if JS.t(_spellSlotBook) else 6)
+	var _usedSpells = (len(JS.arr(_spellSlotBook.get("spells")).filter(func(s = null): return not JS.t(s.get("isBuiltin")))) if JS.t(_spellSlotBook) else 0)
+	var _spellCap = (_spellSlotBook.get("spellSlots") if JS.t(_spellSlotBook) else 6)
 	var _passiveCap = JS.or_(State.player.get("passiveSlots"), 6)
 	var _showSpellSlot = _usedSpells >= floori(_spellCap * 0.75)
 	var _showPassiveSlot = len(JS.or_(State.player.get("passives"), [])) >= floori(_passiveCap * 0.75)
@@ -593,17 +593,17 @@ func buildMajorUpgradePool():
 			"_modal": true,
 			"apply": _fn30,
 		},
-	]).filter(func(c = null): return c.w > 0)
+	]).filter(func(c = null): return c.get("w") > 0)
 	# Weighted pick without replacement — return exactly 3
 	var chosen = []
 	var remaining = JS.arr(candidates)
 	var target = min(3, len(remaining))
 	while (len(chosen) < target and len(remaining) > 0):
-		var total = JS.reduce(remaining, func(s = null, c = null): return s + c.w, 0)
+		var total = JS.reduce(remaining, func(s = null, c = null): return s + c.get("w"), 0)
 		var r = randf() * total
 		var i = 0
 		while i < len(remaining):
-			r -= remaining[i].w
+			r -= remaining[i].get("w")
 			if r <= 0:
 				chosen.append(JS.idx(JS.splice(remaining, i, 1), 0))
 				break
@@ -635,22 +635,22 @@ func _showPickupBookChoice():
 		var newBadge = ("" if isOwned else "<span style=\"font-size:.55rem;background:#1a2a0a;border:1px solid #5a8a20;color:#90c040;padding:.1rem .4rem;border-radius:3px;margin-left:.4rem;\">NEW</span>")
 		var btn = document.createElement("button")
 		btn.className = "prog-choice-btn"
-		btn.innerHTML = "\n      <div class=\"pc-tag\">" + rarityLabel + "</div>\n      <div class=\"pc-name\" style=\"color:" + rarityColor + ";\">" + JS.s(cat.emoji) + " " + JS.s(cat.name) + newBadge + "</div>\n      <div class=\"pc-desc\">" + JS.s((JS.idx(cat.levelDescs, lvl) if JS.t(cat.get("levelDescs")) else cat.desc)) + "</div>\n      <div class=\"pc-desc\" style=\"color:#7a4a30;margin-top:2px;\">⚠ " + JS.s(cat.negative) + "</div>"
+		btn.innerHTML = "\n      <div class=\"pc-tag\">" + rarityLabel + "</div>\n      <div class=\"pc-name\" style=\"color:" + rarityColor + ";\">" + JS.s(cat.get("emoji")) + " " + JS.s(cat.get("name")) + newBadge + "</div>\n      <div class=\"pc-desc\">" + JS.s((JS.idx(cat.get("levelDescs"), lvl) if JS.t(cat.get("levelDescs")) else cat.get("desc"))) + "</div>\n      <div class=\"pc-desc\" style=\"color:#7a4a30;margin-top:2px;\">⚠ " + JS.s(cat.get("negative")) + "</div>"
 		var _fn31 = func():
 			if not isOwned:
 				if not JS.t(meta.get("ownedBookIds")):
 					meta.ownedBookIds = []
 				if not JS.t(meta.get("unseenBookIds")):
 					meta.unseenBookIds = []
-				meta.ownedBookIds.append(id)
-				meta.unseenBookIds.append(id)
+				meta.get("ownedBookIds").append(id)
+				meta.get("unseenBookIds").append(id)
 				Artifacts.saveMeta()
 			if len(JS.or_(State.player.get("spellbooks"), [])) < 3:
 				var instance = State.makeBookInstance(id)
 				if JS.t(instance):
-					instance.spells.append_array([{"id": "_basic", "emoji": "⚔", "name": "Basic Attack", "baseCooldown": 1, "currentCD": 0, "isBuiltin": true}, {"id": "_armor", "emoji": "🛡", "name": "Armor", "baseCooldown": 0, "currentCD": 0, "isBuiltin": true}])
-					State.player.spellbooks.append(instance)
-					UI.log_("📖 " + JS.s(cat.emoji) + " " + JS.s(cat.name) + " added as book " + JS.s(len(State.player.spellbooks)) + "!", "win")
+					instance.get("spells").append_array([{"id": "_basic", "emoji": "⚔", "name": "Basic Attack", "baseCooldown": 1, "currentCD": 0, "isBuiltin": true}, {"id": "_armor", "emoji": "🛡", "name": "Armor", "baseCooldown": 0, "currentCD": 0, "isBuiltin": true}])
+					State.player.get("spellbooks").append(instance)
+					UI.log_("📖 " + JS.s(cat.get("emoji")) + " " + JS.s(cat.get("name")) + " added as book " + JS.s(len(State.player.get("spellbooks"))) + "!", "win")
 			_afterRewardChosen()
 		btn.onclick = _fn31
 		cont.appendChild(btn)
@@ -666,7 +666,7 @@ func _renderUpgradeChoices(tier = null):
 	for opt in JS.iter(chosen):
 		var btn = document.createElement("button")
 		btn.className = "prog-choice-btn"
-		btn.innerHTML = "<div class=\"pc-tag\">" + JS.s(opt.tag) + "</div><div class=\"pc-name\">" + JS.s(opt.emoji) + " " + JS.s(opt.label) + "</div><div class=\"pc-desc\">" + JS.s(opt.desc) + "</div>"
+		btn.innerHTML = "<div class=\"pc-tag\">" + JS.s(opt.get("tag")) + "</div><div class=\"pc-name\">" + JS.s(opt.get("emoji")) + " " + JS.s(opt.get("label")) + "</div><div class=\"pc-desc\">" + JS.s(opt.get("desc")) + "</div>"
 		var _fn32 = func():
 			JS.callm(opt, "apply", [])
 			UI.updateStatsUI()
@@ -684,7 +684,7 @@ func _renderUpgradeChoices(tier = null):
 # Build weighted book discovery pool (all catalogue books minus ones already in run)
 func _buildBookDiscoveryChoices(n = null):
 	var meta = Artifacts.getMeta()
-	var inRunIds = JSSet.new(JS.filter(JS.arr(JS.or_(State.player.get("spellbooks"), [])).map(func(b = null): return b.catalogueId), JS.t))
+	var inRunIds = JSSet.new(JS.filter(JS.arr(JS.or_(State.player.get("spellbooks"), [])).map(func(b = null): return b.get("catalogueId")), JS.t))
 	var elements = [State.playerElement] + JS.arr(JS.or_(State.player.get("unlockedElements"), []))
 	var pool = []
 	for id in JS.iter(JS.keys(Spellbooks.SPELLBOOK_CATALOGUE)):
@@ -692,9 +692,9 @@ func _buildBookDiscoveryChoices(n = null):
 			continue
 		# already in run
 		var cat = JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, id)
-		var weight = JS.or_(JS.idx({"element": 3, "generic": 2, "legendary": 1}, cat.rarity), 2)
+		var weight = JS.or_(JS.idx({"element": 3, "generic": 2, "legendary": 1}, cat.get("rarity")), 2)
 		# Boost weight for matching elements
-		if (JS.t(cat.get("element")) and JS.includes(elements, cat.element)):
+		if (JS.t(cat.get("element")) and JS.includes(elements, cat.get("element"))):
 			weight += 2
 		for i in range(ceili(weight)):
 			pool.append(id)
@@ -739,27 +739,27 @@ func showBookDiscoveryScreen():
 		var newBadge = ("" if isOwned else "<span style=\"font-size:.55rem;background:#1a2a0a;border:1px solid #5a8a20;color:#90c040;padding:.1rem .4rem;border-radius:3px;margin-left:.4rem;\">NEW</span>")
 		var btn = document.createElement("button")
 		btn.className = "prog-choice-btn"
-		btn.innerHTML = "<div class=\"pc-tag\">" + rarityLabel + "</div>\n      <div class=\"pc-name\" style=\"color:" + rarityColor + ";\">" + JS.s(cat.emoji) + " " + JS.s(cat.name) + newBadge + "</div>\n      <div class=\"pc-desc\">" + JS.s((JS.idx(cat.levelDescs, lvl) if JS.t(cat.get("levelDescs")) else cat.desc)) + "</div>\n      <div style=\"font-size:.58rem;color:#6a4a3a;margin-top:.2rem;\">⚠ " + JS.s(cat.negative) + "</div>"
+		btn.innerHTML = "<div class=\"pc-tag\">" + rarityLabel + "</div>\n      <div class=\"pc-name\" style=\"color:" + rarityColor + ";\">" + JS.s(cat.get("emoji")) + " " + JS.s(cat.get("name")) + newBadge + "</div>\n      <div class=\"pc-desc\">" + JS.s((JS.idx(cat.get("levelDescs"), lvl) if JS.t(cat.get("levelDescs")) else cat.get("desc"))) + "</div>\n      <div style=\"font-size:.58rem;color:#6a4a3a;margin-top:.2rem;\">⚠ " + JS.s(cat.get("negative")) + "</div>"
 		var _fn33 = func():
 			# Add to permanent collection if not already owned
 			if not isOwned:
 				if not JS.t(meta.get("ownedBookIds")):
 					meta.ownedBookIds = []
-				meta.ownedBookIds.append(id)
+				meta.get("ownedBookIds").append(id)
 				if not JS.t(meta.get("unseenBookIds")):
 					meta.unseenBookIds = []
-				meta.unseenBookIds.append(id)
+				meta.get("unseenBookIds").append(id)
 				Artifacts.saveMeta()
-				UI.log_("✦ New spellbook discovered: " + JS.s(cat.emoji) + " " + JS.s(cat.name) + "!", "win")
+				UI.log_("✦ New spellbook discovered: " + JS.s(cat.get("emoji")) + " " + JS.s(cat.get("name")) + "!", "win")
 			else:
-				UI.log_("📖 Picked up " + JS.s(cat.emoji) + " " + JS.s(cat.name) + " for this run.", "win")
+				UI.log_("📖 Picked up " + JS.s(cat.get("emoji")) + " " + JS.s(cat.get("name")) + " for this run.", "win")
 			# Add to current run (up to 3 books per run)
 			if len(JS.or_(State.player.get("spellbooks"), [])) < 3:
 				var instance = State.makeBookInstance(id)
 				if JS.t(instance):
-					instance.spells.append_array([{"id": "_basic", "emoji": "⚔", "name": "Basic Attack", "baseCooldown": 1, "currentCD": 0, "isBuiltin": true}, {"id": "_armor", "emoji": "🛡", "name": "Armor", "baseCooldown": 0, "currentCD": 0, "isBuiltin": true}])
-					State.player.spellbooks.append(instance)
-					UI.log_("📖 " + JS.s(cat.name) + " added to your spellbooks (book " + JS.s(len(State.player.spellbooks)) + ").", "item")
+					instance.get("spells").append_array([{"id": "_basic", "emoji": "⚔", "name": "Basic Attack", "baseCooldown": 1, "currentCD": 0, "isBuiltin": true}, {"id": "_armor", "emoji": "🛡", "name": "Armor", "baseCooldown": 0, "currentCD": 0, "isBuiltin": true}])
+					State.player.get("spellbooks").append(instance)
+					UI.log_("📖 " + JS.s(cat.get("name")) + " added to your spellbooks (book " + JS.s(len(State.player.get("spellbooks"))) + ").", "item")
 			_continueGymFlow()
 		btn.onclick = _fn33
 		cont.appendChild(btn)
@@ -767,9 +767,9 @@ func showBookDiscoveryScreen():
 
 # Continue the gym flow after book discovery
 func _continueGymFlow():
-	var hasAnyUnlocked = (len(State.player.unlockedElements) > 0 if JS.t(State.player.get("unlockedElements")) else State.player.get("unlockedElements"))
+	var hasAnyUnlocked = (len(State.player.get("unlockedElements")) > 0 if JS.t(State.player.get("unlockedElements")) else State.player.get("unlockedElements"))
 	var allElements = JS.keys(Spells.STARTER_SPELL)
-	var locked = JS.arr(allElements).filter(func(e = null): return (not JS.eq(e, State.playerElement) and not JS.includes(State.player.unlockedElements, e)))
+	var locked = JS.arr(allElements).filter(func(e = null): return (not JS.eq(e, State.playerElement) and not JS.includes(State.player.get("unlockedElements"), e)))
 	if (not JS.t(hasAnyUnlocked) or len(locked) > 0):
 		showElementUnlockScreen("gym")
 	else:
@@ -799,9 +799,9 @@ func processNextLevelUp():
 		grantRandomLegendary()
 		_afterRewardChosen()
 	elif ev.get("type") == "spellchoice":
-		showSpellChoiceScreen(ev.level, JS.or_(ev.get("tier"), "secondary"), JS.or_(ev.get("forElement"), null))
+		showSpellChoiceScreen(ev.get("level"), JS.or_(ev.get("tier"), "secondary"), JS.or_(ev.get("forElement"), null))
 	elif ev.get("type") == "passivechoice":
-		showPassiveChoiceScreen(ev.level, JS.or_(ev.get("forElement"), null))
+		showPassiveChoiceScreen(ev.get("level"), JS.or_(ev.get("forElement"), null))
 	else:
 		_afterRewardChosen()
 
@@ -816,7 +816,7 @@ func closeLevelUp():
 func buildSkillPointPool():
 	var _fn34 = func():
 		State.player.baseMaxHPBonus = (JS.or_(State.player.get("baseMaxHPBonus"), 0)) + 10
-		State.player.hp = min(Helpers.maxHPFor("player"), State.player.hp + 10)
+		State.player.hp = min(Helpers.maxHPFor("player"), State.player.get("hp") + 10)
 	var _fn35 = func():
 		Helpers.applyHeal("player", 50, "✦ Skill Point Heal")
 	var _fn36 = func():
@@ -841,16 +841,16 @@ func buildSkillPointPool():
 		},
 	]
 	# Add one entry per owned spell for upgrading (skip builtins)
-	var _arr39 = JS.iter(State.player.spellbook)
+	var _arr39 = JS.iter(State.player.get("spellbook"))
 	for idx in range(len(_arr39)):
 		var s = _arr39[idx]
 		if JS.t(s.get("isBuiltin")):
 			continue
 		var rank = JS.round(((JS.or_(s.get("dmgMult"), 1.0)) - 1.0) / 0.1)
 		var _fn40 = func():
-			JS.idx(State.player.spellbook, idx).dmgMult = JS.round(((JS.or_(s.get("dmgMult"), 1.0)) + 0.1) * 100) / 100.0
+			JS.idx(State.player.get("spellbook"), idx).dmgMult = JS.round(((JS.or_(s.get("dmgMult"), 1.0)) + 0.1) * 100) / 100.0
 		opts.append({
-			"label": "Upgrade: " + JS.s(s.emoji) + " " + JS.s(s.name) + " (rank " + JS.s(rank) + ")",
+			"label": "Upgrade: " + JS.s(s.get("emoji")) + " " + JS.s(s.get("name")) + " (rank " + JS.s(rank) + ")",
 			"desc": "+10% damage multiplier. Current: " + JS.s(JS.round((JS.or_(s.get("dmgMult"), 1.0)) * 100)) + "%",
 			"apply": _fn40,
 		})
@@ -878,7 +878,7 @@ func showIncantationChoiceScreen(level = null):
 	# Collect all owned non-builtin spells that have an incantation config
 	var upgradeable = []
 	for book in JS.iter(JS.or_(State.player.get("spellbooks"), [])):
-		for s in JS.iter(book.spells):
+		for s in JS.iter(book.get("spells")):
 			if JS.t(s.get("isBuiltin")):
 				continue
 			if JS.t(JS.idx(Incantations.SPELL_INCANTATION_CONFIG, s.id)):
@@ -896,16 +896,16 @@ func showIncantationChoiceScreen(level = null):
 		var rarityInfo = JS.or_(JS.idx(Incantations.SPELL_RARITY, JS.or_(spell.get("rarity"), "dim")), Incantations.SPELL_RARITY.get("dim"))
 		var rarityColor = JS.or_(rarityInfo.get("color"), "#8a6a30")
 		var nextLevel = (JS.or_(spell.get("incantationLevel"), 1)) + 1
-		var statLabel = (JS.or_(JS.idx(_statLabels, display.stat), display.get("stat")) if JS.t(display) else "")
-		var upgradeStr = (JS.s(statLabel) + ": " + JS.s(display.prev) + " → " + JS.s(display.next) if JS.t(display) else "Level " + JS.s(JS.or_(spell.get("incantationLevel"), 1)) + " → " + JS.s(nextLevel))
+		var statLabel = (JS.or_(JS.idx(_statLabels, display.get("stat")), display.get("stat")) if JS.t(display) else "")
+		var upgradeStr = (JS.s(statLabel) + ": " + JS.s(display.get("prev")) + " → " + JS.s(display.get("next")) if JS.t(display) else "Level " + JS.s(JS.or_(spell.get("incantationLevel"), 1)) + " → " + JS.s(nextLevel))
 		var btn = document.createElement("button")
 		btn.className = "prog-choice-btn spell-btn-el"
 		btn.style.borderColor = rarityColor
 		var _incIconHTML = SpellIcons.spellIconSVG(spell, 48)
-		btn.innerHTML = ("<div class=\"pc-tag\" style=\"color:" + rarityColor + ";\">" + JS.s(rarityInfo.label) + " · Level " + JS.s(JS.or_(spell.get("incantationLevel"), 1)) + " → " + JS.s(nextLevel) + "</div>") + ("<div style=\"display:flex;align-items:center;justify-content:center;padding:6px 0 4px;\">" + _incIconHTML + "</div>") + ("<div class=\"pc-name\">" + JS.s(spell.name) + "</div>") + ("<div class=\"pc-desc\">" + (JS.or_(spell.get("desc"), "")) + "</div>") + ("<div class=\"pc-desc\" style=\"color:#c8e0ff;margin-top:2px;\">" + upgradeStr + "</div>")
+		btn.innerHTML = ("<div class=\"pc-tag\" style=\"color:" + rarityColor + ";\">" + JS.s(rarityInfo.get("label")) + " · Level " + JS.s(JS.or_(spell.get("incantationLevel"), 1)) + " → " + JS.s(nextLevel) + "</div>") + ("<div style=\"display:flex;align-items:center;justify-content:center;padding:6px 0 4px;\">" + _incIconHTML + "</div>") + ("<div class=\"pc-name\">" + JS.s(spell.get("name")) + "</div>") + ("<div class=\"pc-desc\">" + (JS.or_(spell.get("desc"), "")) + "</div>") + ("<div class=\"pc-desc\" style=\"color:#c8e0ff;margin-top:2px;\">" + upgradeStr + "</div>")
 		var _fn42 = func():
 			spell.incantationLevel = (JS.or_(spell.get("incantationLevel"), 1)) + 1
-			UI.log_("✦ Incantation: " + JS.s(spell.emoji) + " " + JS.s(spell.name) + " upgraded to level " + JS.s(spell.incantationLevel) + "!", "win")
+			UI.log_("✦ Incantation: " + JS.s(spell.get("emoji")) + " " + JS.s(spell.get("name")) + " upgraded to level " + JS.s(spell.get("incantationLevel")) + "!", "win")
 			_afterRewardChosen()
 		btn.onclick = _fn42
 		cont.appendChild(btn)
@@ -993,7 +993,7 @@ func showSpellChoiceScreen(level = null, tier = null, forElement = null):
 		},
 	}
 	for opt in JS.iter(chosen):
-		var isAOE = (JS.includes(opt.desc.to_lower(), "all") if JS.t(opt.get("desc")) else opt.get("desc"))
+		var isAOE = (JS.includes(opt.get("desc").to_lower(), "all") if JS.t(opt.get("desc")) else opt.get("desc"))
 		var el = JS.or_(opt.get("element"), "Neutral")
 		var rarity = Incantations.rollSpellRarity()
 		var cfg = JS.or_(JS.idx(_RARITY_CARD_CONFIG, rarity), _RARITY_CARD_CONFIG.get("dim"))
@@ -1009,7 +1009,7 @@ func showSpellChoiceScreen(level = null, tier = null, forElement = null):
 		if true:
 			# Kindled / Blazing / Radiant — gradient border wrapper + matching card bg
 			var isFire = (rarity == "kindled" or rarity == "blazing")
-			var isGradient = JS.includes(cfg.cardBg, "gradient")
+			var isGradient = JS.includes(cfg.get("cardBg"), "gradient")
 			var fireColor = ("rgba(255,120,0,.10)" if rarity == "kindled" else "rgba(255,30,0,.22)")
 			var fire = ("<div style=\"position:absolute;bottom:0;right:0;width:55%;height:100%;pointer-events:none;z-index:2;\n             background:linear-gradient(to left," + fireColor + ",transparent);\n             animation:incFireGlow 1.6s ease-in-out infinite;\"></div>" if isFire else "")
 			var shimmer = ("<div style=\"position:absolute;top:0;left:-80%;width:45%;height:100%;pointer-events:none;z-index:2;\n             background:linear-gradient(to right,transparent,rgba(255,255,255,.09),transparent);\n             animation:incShimmer 3.5s linear infinite;\"></div>" if isGradient else "")
@@ -1017,11 +1017,11 @@ func showSpellChoiceScreen(level = null, tier = null, forElement = null):
 			var descColor = ("rgba(255,255,255,.75)" if JS.t(cfg.get("leftTextColor")) else "rgba(220,200,180,.75)")
 			var wrapperAnim = ("animation:incBorderPulse 1.8s ease-in-out infinite;" if isFire else "")
 			btn.style.cssText = "padding:0;display:flex;flex-direction:row;flex-wrap:nowrap;align-items:stretch;overflow:hidden;gap:0;border:none;border-radius:5px;width:100%;position:relative;"
-			btn.innerHTML = "\n        " + fire + shimmer + "\n        <div style=\"flex:1;min-width:0;padding:.55rem .65rem;text-align:left;position:relative;z-index:3;\">\n          <div class=\"pc-tag\">" + tierLabel + " · " + el + (" · AOE" if JS.t(isAOE) else "") + "</div>\n          <div class=\"pc-name\" style=\"color:" + JS.s(nameColor) + ";\">" + JS.s(opt.emoji) + " " + JS.s(opt.name) + "</div>\n          <div class=\"pc-desc\" style=\"white-space:normal;color:" + descColor + ";\">" + JS.s(opt.desc) + " · CD:" + JS.s(opt.baseCooldown) + "</div>\n        </div>\n        <div style=\"display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:72px;width:72px;padding:4px 6px;flex-shrink:0;align-self:stretch;gap:2px;position:relative;z-index:3;\">\n          <div style=\"display:flex;gap:1px;\">" + JS.join(JS.arrayFrom({"length": cfg.stars}, func(_u = null, i = null): return "<span style=\"font-size:.45rem;color:" + JS.s(cfg.tagColor) + ";display:inline-block;animation:incStarPulse " + JS.s(5.5 + (i * 0.7)) + "s ease-in-out " + JS.s(i * 1.0) + "s infinite;\">✦</span>"), "") + "</div>\n          <div style=\"font-size:.62rem;color:" + JS.s(cfg.textColor) + ";font-family:'Cinzel',serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase;line-height:1.1;text-align:center;\">" + JS.s(cfg.label) + "</div>\n        </div>"
+			btn.innerHTML = "\n        " + fire + shimmer + "\n        <div style=\"flex:1;min-width:0;padding:.55rem .65rem;text-align:left;position:relative;z-index:3;\">\n          <div class=\"pc-tag\">" + tierLabel + " · " + el + (" · AOE" if JS.t(isAOE) else "") + "</div>\n          <div class=\"pc-name\" style=\"color:" + JS.s(nameColor) + ";\">" + JS.s(opt.get("emoji")) + " " + JS.s(opt.get("name")) + "</div>\n          <div class=\"pc-desc\" style=\"white-space:normal;color:" + descColor + ";\">" + JS.s(opt.get("desc")) + " · CD:" + JS.s(opt.get("baseCooldown")) + "</div>\n        </div>\n        <div style=\"display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:72px;width:72px;padding:4px 6px;flex-shrink:0;align-self:stretch;gap:2px;position:relative;z-index:3;\">\n          <div style=\"display:flex;gap:1px;\">" + JS.join(JS.arrayFrom({"length": cfg.get("stars")}, func(_u = null, i = null): return "<span style=\"font-size:.45rem;color:" + JS.s(cfg.get("tagColor")) + ";display:inline-block;animation:incStarPulse " + JS.s(5.5 + (i * 0.7)) + "s ease-in-out " + JS.s(i * 1.0) + "s infinite;\">✦</span>"), "") + "</div>\n          <div style=\"font-size:.62rem;color:" + JS.s(cfg.get("textColor")) + ";font-family:'Cinzel',serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase;line-height:1.1;text-align:center;\">" + JS.s(cfg.get("label")) + "</div>\n        </div>"
 			# Wrapper provides the gradient border (padding trick)
 			var wrapper = document.createElement("div")
-			wrapper.style.cssText = "padding:3px;background:" + JS.s(cfg.borderGrad) + ";border-radius:7px;" + wrapperAnim
-			btn.style.background = cfg.cardBg
+			wrapper.style.cssText = "padding:3px;background:" + JS.s(cfg.get("borderGrad")) + ";border-radius:7px;" + wrapperAnim
+			btn.style.background = cfg.get("cardBg")
 			wrapper.appendChild(btn)
 			cont.appendChild(wrapper)
 	# ── Render duo spell as bonus 4th option (always 'merged' rarity) ──
@@ -1030,11 +1030,11 @@ func showSpellChoiceScreen(level = null, tier = null, forElement = null):
 		var el = JS.or_(duoSpell[0].get("element"), "Duo")
 		var shimmer = "<div style=\"position:absolute;top:0;left:-80%;width:45%;height:100%;pointer-events:none;z-index:2;\n        background:linear-gradient(to right,transparent,rgba(255,255,255,.09),transparent);\n        animation:incShimmer 3.5s linear infinite;\"></div>"
 		var wrapper = document.createElement("div")
-		wrapper.style.cssText = "padding:3px;background:" + JS.s(cfg.borderGrad) + ";border-radius:7px;"
+		wrapper.style.cssText = "padding:3px;background:" + JS.s(cfg.get("borderGrad")) + ";border-radius:7px;"
 		var btn = document.createElement("button")
 		btn.className = "prog-choice-btn spell-btn-el"
 		btn.style.cssText = "padding:0;display:flex;flex-direction:row;flex-wrap:nowrap;align-items:stretch;overflow:hidden;gap:0;border:none;border-radius:5px;width:100%;position:relative;"
-		btn.style.background = cfg.cardBg
+		btn.style.background = cfg.get("cardBg")
 		var _fn46 = func():
 			var _fn45 = func(bIdx = null):
 				Spells.addSpellById(duoSpell[0].id, false, "merged", bIdx)
@@ -1042,7 +1042,7 @@ func showSpellChoiceScreen(level = null, tier = null, forElement = null):
 			var doAdd = _fn45
 			BookEditor._pickBookDest("spell", duoSpell[0], doAdd)
 		btn.onclick = _fn46
-		btn.innerHTML = shimmer + "\n      <div style=\"flex:1;min-width:0;padding:.55rem .65rem;text-align:left;position:relative;z-index:3;\">\n        <div class=\"pc-tag\" style=\"color:" + JS.s(cfg.tagColor) + ";\">Merged · " + el + "</div>\n        <div class=\"pc-name\" style=\"color:" + JS.s(cfg.leftTextColor) + ";\">" + JS.s(duoSpell[0].emoji) + " " + JS.s(duoSpell[0].name) + "</div>\n        <div class=\"pc-desc\" style=\"white-space:normal;color:rgba(255,255,255,.75);\">" + JS.s(duoSpell[0].desc) + " · CD:" + JS.s(duoSpell[0].baseCooldown) + "</div>\n      </div>\n      <div style=\"display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:72px;width:72px;padding:4px 6px;flex-shrink:0;align-self:stretch;gap:2px;position:relative;z-index:3;\">\n        <div style=\"display:flex;gap:1px;\">" + JS.join(JS.arrayFrom({"length": 5}, func(_u = null, i = null): return "<span style=\"font-size:.45rem;color:" + JS.s(cfg.tagColor) + ";display:inline-block;animation:incStarPulse " + JS.s(5.5 + (i * 0.7)) + "s ease-in-out " + JS.s(i * 1.0) + "s infinite;\">✦</span>"), "") + "</div>\n        <div style=\"font-size:.62rem;color:" + JS.s(cfg.textColor) + ";font-family:'Cinzel',serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase;line-height:1.1;text-align:center;\">" + JS.s(cfg.label) + "</div>\n      </div>"
+		btn.innerHTML = shimmer + "\n      <div style=\"flex:1;min-width:0;padding:.55rem .65rem;text-align:left;position:relative;z-index:3;\">\n        <div class=\"pc-tag\" style=\"color:" + JS.s(cfg.get("tagColor")) + ";\">Merged · " + el + "</div>\n        <div class=\"pc-name\" style=\"color:" + JS.s(cfg.get("leftTextColor")) + ";\">" + JS.s(duoSpell[0].get("emoji")) + " " + JS.s(duoSpell[0].get("name")) + "</div>\n        <div class=\"pc-desc\" style=\"white-space:normal;color:rgba(255,255,255,.75);\">" + JS.s(duoSpell[0].get("desc")) + " · CD:" + JS.s(duoSpell[0].get("baseCooldown")) + "</div>\n      </div>\n      <div style=\"display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:72px;width:72px;padding:4px 6px;flex-shrink:0;align-self:stretch;gap:2px;position:relative;z-index:3;\">\n        <div style=\"display:flex;gap:1px;\">" + JS.join(JS.arrayFrom({"length": 5}, func(_u = null, i = null): return "<span style=\"font-size:.45rem;color:" + JS.s(cfg.get("tagColor")) + ";display:inline-block;animation:incStarPulse " + JS.s(5.5 + (i * 0.7)) + "s ease-in-out " + JS.s(i * 1.0) + "s infinite;\">✦</span>"), "") + "</div>\n        <div style=\"font-size:.62rem;color:" + JS.s(cfg.get("textColor")) + ";font-family:'Cinzel',serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase;line-height:1.1;text-align:center;\">" + JS.s(cfg.get("label")) + "</div>\n      </div>"
 		wrapper.appendChild(btn)
 		cont.appendChild(wrapper)
 	var totalShown = len(chosen) + (1 if JS.t(duoSpell[0]) else 0)
@@ -1057,22 +1057,22 @@ func buildSpellChoicePool(tier = null, forElement = null):
 	# Check all books for already-owned spells
 	var _allOwned = []
 	for b in JS.iter(JS.or_(State.player.get("spellbooks"), [])):
-		for s in JS.iter(b.spells):
+		for s in JS.iter(b.get("spells")):
 			if not JS.t(s.get("isBuiltin")):
 				_allOwned.append(s.id)
 	var owned = JSSet.new(_allOwned)
-	var elements = ([forElement] if JS.t(forElement) else [State.playerElement] + JS.arr(State.player.unlockedElements))
+	var elements = ([forElement] if JS.t(forElement) else [State.playerElement] + JS.arr(State.player.get("unlockedElements")))
 	var pool = []
 	# Build owned tag set for prerequisite checking
 	var ownedTagSet = JSSet.new()
-	for s in JS.iter(State.player.spellbook):
+	for s in JS.iter(State.player.get("spellbook")):
 		var def = JS.idx(Spells.SPELL_CATALOGUE, s.id)
 		if (JS.t(def) and JS.t(def.get("tags"))):
-			for t in JS.iter(def.tags):
+			for t in JS.iter(def.get("tags")):
 				ownedTagSet.add(t)
 	for el in JS.iter(elements):
 		for s in JS.iter(JS.values(Spells.SPELL_CATALOGUE)):
-			if not JS.eq(s.element, el):
+			if not JS.eq(s.get("element"), el):
 				continue
 			if owned.has(s.id):
 				continue
@@ -1080,7 +1080,7 @@ func buildSpellChoicePool(tier = null, forElement = null):
 				continue
 			if (JS.or_(s.get("tier"), "secondary")) != tier:
 				continue
-			if (JS.t(s.get("requiresTag")) and not ownedTagSet.has(s.requiresTag)):
+			if (JS.t(s.get("requiresTag")) and not ownedTagSet.has(s.get("requiresTag"))):
 				continue
 			pool.append(s)
 	if tier == "secondary":
@@ -1110,9 +1110,9 @@ func showElementUnlockScreen(level = null):
 		}
 		var btn = document.createElement("button")
 		btn.className = "prog-choice-btn spell-btn-el"
-		btn.innerHTML = "<div class=\"pc-tag\">Second Element</div>\n      <div class=\"pc-name\">" + (JS.or_(JS.idx(elInfo, el), "✦")) + " " + JS.s(el) + "</div>\n      <div class=\"pc-desc\">Unlocks " + JS.s(el) + " spells and passives. Starter: " + (starterSpell.emoji + " " + starterSpell.name if JS.t(starterSpell) else "—") + "</div>"
+		btn.innerHTML = "<div class=\"pc-tag\">Second Element</div>\n      <div class=\"pc-name\">" + (JS.or_(JS.idx(elInfo, el), "✦")) + " " + JS.s(el) + "</div>\n      <div class=\"pc-desc\">Unlocks " + JS.s(el) + " spells and passives. Starter: " + (JS.s(starterSpell.get("emoji")) + " " + JS.s(starterSpell.get("name")) if JS.t(starterSpell) else "—") + "</div>"
 		var _fn47 = func():
-			State.player.unlockedElements.append(el)
+			State.player.get("unlockedElements").append(el)
 			# Plasma always gets its own dedicated spellbook
 			if el == "Plasma":
 				State.ensurePlasmaBook()
@@ -1156,7 +1156,7 @@ func showPassiveChoiceScreen(level = null, forElement = null):
 		var btn = document.createElement("button")
 		btn.className = "prog-choice-btn passive-btn"
 		var infoIcon = ("<span class=\"pc-info-icon\" title=\"" + JS.s(p.detail) + "\" onclick=\"event.stopPropagation()\">ℹ</span>" if JS.t(p.get("detail")) else "")
-		btn.innerHTML = "<div class=\"pc-tag\">" + (JS.or_(p.get("element"), "")) + " Passive</div><div class=\"pc-name\" style=\"display:flex;align-items:center;gap:.35rem;\">" + PassiveIcons.passiveIconSVG(p, 20) + " " + JS.s(p.title) + infoIcon + "</div><div class=\"pc-desc\">" + JS.s(p.desc) + "</div>"
+		btn.innerHTML = "<div class=\"pc-tag\">" + (JS.or_(p.get("element"), "")) + " Passive</div><div class=\"pc-name\" style=\"display:flex;align-items:center;gap:.35rem;\">" + PassiveIcons.passiveIconSVG(p, 20) + " " + JS.s(p.title) + infoIcon + "</div><div class=\"pc-desc\">" + JS.s(p.get("desc")) + "</div>"
 		var _fn50 = func():
 			var _fn48 = func():
 				State.addPassiveToBook(p.id)
@@ -1165,10 +1165,10 @@ func showPassiveChoiceScreen(level = null, forElement = null):
 			var doContinue = doAdd
 			if JS.t(p.get("pickupChoice")):
 				c.innerHTML = "<div class=\"pc-tag\" style=\"margin-bottom:1rem;\">Choose for: " + (JS.or_(p.get("emoji"), "")) + " " + JS.s(p.title) + "</div>"
-				for opt in JS.iter(p.pickupChoice):
+				for opt in JS.iter(p.get("pickupChoice")):
 					var cb = document.createElement("button")
 					cb.className = "prog-choice-btn"
-					cb.innerHTML = "<div class=\"pc-name\">" + JS.s(opt.label) + "</div>"
+					cb.innerHTML = "<div class=\"pc-name\">" + JS.s(opt.get("label")) + "</div>"
 					var _fn49 = func():
 						_applyPickupChoice(p.id, opt.value)
 						doContinue.call()
@@ -1184,7 +1184,7 @@ func showPassiveChoiceScreen(level = null, forElement = null):
 func buildPassiveChoicePool(forElement = null):
 	if forElement == null:
 		forElement = null
-	var elements = ([forElement] if JS.t(forElement) else [State.playerElement] + JS.arr(State.player.unlockedElements))
+	var elements = ([forElement] if JS.t(forElement) else [State.playerElement] + JS.arr(State.player.get("unlockedElements")))
 	var allOwnedPassives = JSSet.new(JS.or_(State.player.get("passives"), []))
 	var pool = []
 	for el in JS.iter(elements):
@@ -1215,7 +1215,7 @@ func _appendStatPad(cont = null, needed = null, doneFn = null):
 		UI.updateStatsUI()
 	var _fn54 = func():
 		State.player.baseMaxHPBonus = (JS.or_(State.player.get("baseMaxHPBonus"), 0)) + 15
-		State.player.hp = min(Helpers.maxHPFor("player"), State.player.hp + 15)
+		State.player.hp = min(Helpers.maxHPFor("player"), State.player.get("hp") + 15)
 	var pool = [
 		{"emoji": "⚔️", "label": "Attack Training", "desc": "Gain +5 Attack Power.", "apply": _fn51},
 		{"emoji": "✦", "label": "Effect Training", "desc": "Gain +5 Effect Power.", "apply": _fn52},
@@ -1225,7 +1225,7 @@ func _appendStatPad(cont = null, needed = null, doneFn = null):
 	for opt in JS.iter(pickRandom(pool, min(needed, len(pool)))):
 		var btn = document.createElement("button")
 		btn.className = "prog-choice-btn"
-		btn.innerHTML = "<div class=\"pc-tag\">Bonus</div><div class=\"pc-name\">" + JS.s(opt.emoji) + " " + JS.s(opt.label) + "</div><div class=\"pc-desc\">" + JS.s(opt.desc) + "</div>"
+		btn.innerHTML = "<div class=\"pc-tag\">Bonus</div><div class=\"pc-name\">" + JS.s(opt.get("emoji")) + " " + JS.s(opt.get("label")) + "</div><div class=\"pc-desc\">" + JS.s(opt.get("desc")) + "</div>"
 		var _fn55 = func():
 			JS.callm(opt, "apply", [])
 			doneFn.call()

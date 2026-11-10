@@ -147,13 +147,21 @@ func buildMapNodes(encounters = null, specials = null, canvasW = null, canvasH =
 	var _arr2 = JS.iter(encounters)
 	for i in range(len(_arr2)):
 		var enc = _arr2[i]
-		var nx = JS.round(W * JS.idx(combatXFracs, i))
+		var nx = JS.round(W * JS.un(JS.idx(combatXFracs, i)))
 		var ny = JS.round(gY.call(nx))
 		# _isSpecial: campfire or shop replacing this slot
 		if JS.t(enc.get("_isSpecial")):
 			var spColor = ("#d4822a" if enc.get("_specialType") == "campfire" else "#2aaa7a")
 			var spLabel = ("Campfire" if enc.get("_specialType") == "campfire" else "Shop")
-			nodes.append({"x": nx, "y": ny, "type": enc._specialType, "enc": enc, "color": spColor, "sprites": [], "label": spLabel})
+			nodes.append({
+				"x": nx,
+				"y": ny,
+				"type": enc.get("_specialType"),
+				"enc": enc,
+				"color": spColor,
+				"sprites": [],
+				"label": spLabel,
+			})
 			continue
 		var nextSlot = State.zoneBattleCount + 1
 		var slotReward = (enc.get("_rewardType") if JS.t(enc.get("_rewardType")) else BattleReward.getZoneRewardType(nextSlot, State.currentGymIdx))
@@ -170,9 +178,9 @@ func buildMapNodes(encounters = null, specials = null, canvasW = null, canvasH =
 			"type": ("pack" if JS.t(enc.get("isPack")) else "combat"),
 			"enc": enc,
 			"sprites": [],
-			"color": _rewardNodeCfg.color,
-			"label": _rewardNodeCfg.label,
-			"rewardIcon": _rewardNodeCfg.icon,
+			"color": _rewardNodeCfg.get("color"),
+			"label": _rewardNodeCfg.get("label"),
+			"rewardIcon": _rewardNodeCfg.get("icon"),
 			"rewardType": slotReward,
 		})
 	# ── Specials ──────────────────────────────────────────────────────────────
@@ -190,7 +198,7 @@ func buildMapNodes(encounters = null, specials = null, canvasW = null, canvasH =
 			"x": gx,
 			"y": gy,
 			"type": "gym",
-			"enc": sp.enc,
+			"enc": sp.get("enc"),
 			"color": "#c8a060",
 			"sprites": [],
 			"label": "Gym",
@@ -203,7 +211,7 @@ func buildMapNodes(encounters = null, specials = null, canvasW = null, canvasH =
 				"x": JS.round(W * 0.25),
 				"y": JS.round(horizY + ((H - horizY) * 0.3)),
 				"type": "rival",
-				"enc": sp.enc,
+				"enc": sp.get("enc"),
 				"color": "#9a6aee",
 				"sprites": [],
 				"label": "Rival",
@@ -222,8 +230,8 @@ func _hitNode(ex = null, ey = null):
 	for i in range(len(_mapNodes)):
 		var n = _mapNodes[i]
 		var r = _nodeRadius(n)
-		var dx = ex - n.x
-		var dy = ey - n.y
+		var dx = ex - n.get("x")
+		var dy = ey - n.get("y")
 		if ((dx * dx) + (dy * dy)) <= (r * r):
 			return i
 	return -1
@@ -267,7 +275,7 @@ func _drawNode(ctx = null, node = null, hovered = null, tick = null):
 	# Content: reward icon (animated) or special icon
 	if (type_ == "combat" or type_ == "pack"):
 		# Float animation — different phase per x position so nodes don't sync
-		var floatY = sin((tick * 0.003) + (node.x * 0.012)) * 5
+		var floatY = sin((tick * 0.003) + (node.get("x") * 0.012)) * 5
 		var scalePulse = (1 + (0.08 * sin(tick * 0.005)) if type_ == "major" else 1)
 		ctx.save()
 		ctx.font = JS.s(JS.round((r - 6) * scalePulse)) + "px serif"
@@ -293,7 +301,7 @@ func _mapHover(e = null):
 	var r = _mapCanvas.getBoundingClientRect()
 	var scaleX = _mapCanvas.width / float(r.width)
 	var scaleY = _mapCanvas.height / float(r.height)
-	_mapHovered = _hitNode((e.clientX - r.left) * scaleX, (e.clientY - r.top) * scaleY)
+	_mapHovered = _hitNode((e.clientX - JS.un(r.get("left"))) * scaleX, (e.clientY - JS.un(r.get("top"))) * scaleY)
 	_mapCanvas.style.cursor = ("pointer" if _mapHovered >= 0 else "default")
 
 func _mapClick(e = null):
@@ -303,7 +311,7 @@ func _mapClick(e = null):
 	var r = _mapCanvas.getBoundingClientRect()
 	var scaleX = _mapCanvas.width / float(r.width)
 	var scaleY = _mapCanvas.height / float(r.height)
-	var idx = _hitNode((e.clientX - r.left) * scaleX, (e.clientY - r.top) * scaleY)
+	var idx = _hitNode((e.clientX - JS.un(r.get("left"))) * scaleX, (e.clientY - JS.un(r.get("top"))) * scaleY)
 	if idx < 0:
 		return
 	_startTravel(JS.idx(_mapNodes, idx))
@@ -325,11 +333,11 @@ func _startMapLoop():
 			_mapAnimT += 1
 			var t = _mapAnimT / float(MAP_ANIM_FRAMES)
 			var ease_ = ((2 * t) * t if t < 0.5 else 1 - (pow(((-2) * t) + 2, 2) / 2.0))
-			_mapPlayerX = JS.round(_mapOriginX + ((_mapAnimTarget.x - _mapOriginX) * ease_))
-			_mapPlayerY = JS.round(_mapOriginY + ((_mapAnimTarget.y - _mapOriginY) * ease_))
+			_mapPlayerX = JS.round(_mapOriginX + ((_mapAnimTarget.get("x") - _mapOriginX) * ease_))
+			_mapPlayerY = JS.round(_mapOriginY + ((_mapAnimTarget.get("y") - _mapOriginY) * ease_))
 			if _mapAnimT >= MAP_ANIM_FRAMES:
-				_mapPlayerX = _mapAnimTarget.x
-				_mapPlayerY = _mapAnimTarget.y
+				_mapPlayerX = _mapAnimTarget.get("x")
+				_mapPlayerY = _mapAnimTarget.get("y")
 				var target = _mapAnimTarget
 				_mapAnimTarget = null
 				stopMapCanvas()
@@ -351,13 +359,13 @@ func _dispatchNode(node = null):
 		GymRival.showRivalIntro()
 		return
 	if node.get("type") == "gym":
-		if (JS.t(node.get("enc")) and JS.t(node.enc.get("_forced"))):
+		if (JS.t(node.get("enc")) and JS.t(node.get("enc").get("_forced"))):
 			GymRival.showGymIntro(true)
 		else:
 			GymRival.showGymIntro(false)
 		return
 	# combat or pack
-	BattleLoad.loadBattle(node.enc)
+	BattleLoad.loadBattle(node.get("enc"))
 
 # ═══ DRAWING ══════════════════════════════════════════════════════════════════
 # ═══════════════════════════════════════════════════════════════════════════
@@ -378,11 +386,11 @@ func _renderMap():
 	var isAirZone = State.currentZoneElement == "Air"
 	if not isAirZone:
 		for node in JS.iter(_mapNodes):
-			_drawGroundPath(ctx, _mapOriginX, _mapOriginY, node.x, node.y, node.color, W, H, horizY, node.pathBias)
+			_drawGroundPath(ctx, _mapOriginX, _mapOriginY, node.get("x"), node.get("y"), node.get("color"), W, H, horizY, node.get("pathBias"))
 	else:
 		# Air: dotted cloud walkway path to each node (from static origin)
 		for node in JS.iter(_mapNodes):
-			_drawAirCloudPath(ctx, _mapOriginX, _mapOriginY, node.x, node.y)
+			_drawAirCloudPath(ctx, _mapOriginX, _mapOriginY, node.get("x"), node.get("y"))
 	# World campfire — zone-themed, with cloud platform in Air zone
 	var _arr4 = JS.iter(_mapNodes)
 	for i in range(len(_arr4)):
@@ -390,8 +398,8 @@ func _renderMap():
 		if node.get("type") == "campfire":
 			if isAirZone:
 				# Cloud platform first, then fire on top
-				_cloudPlatform(ctx, node.x, node.y + 12, 68, 18, false)
-			_drawZoneCampfire(ctx, node.x, node.y, JS.eq(i, _mapHovered), tick)
+				_cloudPlatform(ctx, node.get("x"), node.get("y") + 12, 68, 18, false)
+			_drawZoneCampfire(ctx, node.get("x"), node.get("y"), JS.eq(i, _mapHovered), tick)
 	# Warm origin glow under player start (non-air) or player cloud (air)
 	if isAirZone:
 		_cloudPlatform(ctx, _mapOriginX, _mapOriginY - 4, 85, 20, true)
@@ -430,10 +438,10 @@ func _drawNightSky(ctx = null, W = null, H = null, horizY = null, tick = null):
 	# Stars
 	var stars = _getStarField(W, H, horizY)
 	for s in JS.iter(stars):
-		var tw = s.bright * (0.4 + (0.6 * sin((tick * s.spd) + s.ph)))
+		var tw = s.get("bright") * (0.4 + (0.6 * sin((tick * s.get("spd")) + s.get("ph"))))
 		ctx.globalAlpha = max(0, tw)
-		ctx.fillStyle = s.col
-		ctx.fillRect(s.x, s.y, s.sz, s.sz)
+		ctx.fillStyle = s.get("col")
+		ctx.fillRect(s.get("x"), s.get("y"), s.get("sz"), s.get("sz"))
 	ctx.globalAlpha = 1
 	_drawNebulae(ctx, W, horizY, tick)
 	_drawClouds(ctx, W, H, horizY, tick)
@@ -482,18 +490,18 @@ func _initClouds(W = null, H = null, horizY = null):
 	]
 	for def in JS.iter(CLOUD_DEFS):
 		_clouds.append({
-			"x": def.relW * W,
-			"y": JS.round(def.relY * horizY),
-			"speed": def.speed,
-			"opacity": def.opacity,
-			"shape": def.shape,
+			"x": def.get("relW") * W,
+			"y": JS.round(def.get("relY") * horizY),
+			"speed": def.get("speed"),
+			"opacity": def.get("opacity"),
+			"shape": def.get("shape"),
 			"wrapW": W,
 		})
 
 func _updateClouds(dt = null):
 	for c in JS.iter(_clouds):
-		c.x += c.speed * dt
-		if c.x > (c.wrapW + 200):
+		c.x += c.get("speed") * dt
+		if c.get("x") > (c.get("wrapW") + 200):
 			c.x = -200
 
 func _drawClouds(ctx = null, W = null, H = null, horizY = null, tick = null):
@@ -505,22 +513,22 @@ func _drawClouds(ctx = null, W = null, H = null, horizY = null, tick = null):
 		var ps = 3
 		# pixel scale
 		ctx.save()
-		ctx.globalAlpha = c.opacity
+		ctx.globalAlpha = c.get("opacity")
 		ctx.fillStyle = "#c8d4f8"
-		for _e6 in JS.iter(c.shape):
+		for _e6 in JS.iter(c.get("shape")):
 			var rx = JS.idx(_e6, 0)
 			var ry = JS.idx(_e6, 1)
 			var rw = JS.idx(_e6, 2)
 			var rh = JS.idx(_e6, 3)
-			ctx.fillRect(JS.round(c.x + (rx * ps)), JS.round(c.y + (ry * ps)), rw * ps, rh * ps)
+			ctx.fillRect(JS.round(c.get("x") + (rx * ps)), JS.round(c.get("y") + (ry * ps)), rw * ps, rh * ps)
 		# Slightly brighter top edge highlight
-		ctx.globalAlpha = c.opacity * 0.5
+		ctx.globalAlpha = c.get("opacity") * 0.5
 		ctx.fillStyle = "#e8eeff"
-		for _e7 in JS.iter(c.shape):
+		for _e7 in JS.iter(c.get("shape")):
 			var rx = JS.idx(_e7, 0)
 			var ry = JS.idx(_e7, 1)
 			var rw = JS.idx(_e7, 2)
-			ctx.fillRect(JS.round(c.x + (rx * ps)), JS.round(c.y + (ry * ps)), rw * ps, ps)
+			ctx.fillRect(JS.round(c.get("x") + (rx * ps)), JS.round(c.get("y") + (ry * ps)), rw * ps, ps)
 		ctx.restore()
 
 func _getStarField(W = null, H = null, horizY = null):
@@ -603,15 +611,15 @@ func _drawNebulae(ctx = null, W = null, horizY = null, tick = null):
 		{"x": W * 0.38, "y": horizY * 0.12, "rx": W * 0.08, "ry": horizY * 0.06, "col": "rgba(90,25,70,", "b": 0.038},
 	]
 	for p in JS.iter(patches):
-		var alpha = p.b + (0.018 * sin((tick * 0.0009) + p.x))
-		var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, max(p.rx, p.ry))
-		g.addColorStop(0, JS.s(JS.add(p.col, alpha * 2)) + ")")
-		g.addColorStop(1, JS.s(p.col) + "0)")
+		var alpha = p.get("b") + (0.018 * sin((tick * 0.0009) + p.get("x")))
+		var g = ctx.createRadialGradient(p.get("x"), p.get("y"), 0, p.get("x"), p.get("y"), max(p.get("rx"), p.get("ry")))
+		g.addColorStop(0, JS.s(JS.add(p.get("col"), alpha * 2)) + ")")
+		g.addColorStop(1, JS.s(p.get("col")) + "0)")
 		ctx.save()
-		ctx.scale(1, p.ry / float(p.rx))
+		ctx.scale(1, p.get("ry") / float(p.get("rx")))
 		ctx.fillStyle = g
 		ctx.beginPath()
-		ctx.arc(p.x, p.y * (p.rx / float(p.ry)), p.rx, 0, PI * 2)
+		ctx.arc(p.get("x"), p.get("y") * (p.get("rx") / float(p.get("ry"))), p.get("rx"), 0, PI * 2)
 		ctx.fill()
 		ctx.restore()
 
@@ -1149,7 +1157,7 @@ func _terrainLightning(ctx = null, W = null, H = null, horizY = null, tick = nul
 	# Lightning arc (periodic)
 	var arcPhase = JS.mod(floori(tick / 1800.0), 3)
 	if (JS.mod(tick, 1800)) < 200:
-		var ax = JS.round(W * JS.idx([0.3, 0.6, 0.75], arcPhase))
+		var ax = JS.round(W * JS.un(JS.idx([0.3, 0.6, 0.75], arcPhase)))
 		var ay1 = JS.round(horizY * 0.6)
 		ctx.strokeStyle = "#ffffaa"
 		ctx.lineWidth = 2
@@ -1793,7 +1801,7 @@ func _drawGroundPath(ctx = null, ox = null, oy = null, nx = null, ny = null, nod
 		var x = JS.idx(_d27, "x")
 		var y = JS.idx(_d27, "y")
 		var hw = max(3, JS.round(7 - ((s / float(STEPS)) * 4))) + 1
-		ctx.fillStyle = col.edge
+		ctx.fillStyle = col.get("edge")
 		ctx.fillRect(x - hw, y - 2, hw * 2, 4)
 	# Main fill
 	for s in range(0, floori(STEPS) + 1):
@@ -1801,7 +1809,7 @@ func _drawGroundPath(ctx = null, ox = null, oy = null, nx = null, ny = null, nod
 		var x = JS.idx(_d28, "x")
 		var y = JS.idx(_d28, "y")
 		var hw = max(3, JS.round(7 - ((s / float(STEPS)) * 4)))
-		ctx.fillStyle = col.main
+		ctx.fillStyle = col.get("main")
 		ctx.fillRect(x - hw, y - 1, hw * 2, 3)
 
 # Air zone: sparse stepping-stone cloud path
@@ -2456,17 +2464,17 @@ func _drawWorldCampfire(ctx = null, cx = null, cy = null, hovered = null, tick =
 			})
 	for i in range(len(_cfSparks) - 1, 0 - 1, -1):
 		var sp = _cfSparks[i]
-		sp.x += sp.vx
-		sp.y += sp.vy
+		sp.x += sp.get("vx")
+		sp.y += sp.get("vy")
 		sp.vy *= 0.97
 		sp.life -= 0.025
-		if sp.life <= 0:
+		if sp.get("life") <= 0:
 			JS.splice(_cfSparks, i, 1)
 			continue
 		ctx.save()
-		ctx.globalAlpha = sp.life * 0.8
-		ctx.fillStyle = sp.col
-		ctx.fillRect(JS.round(sp.x), JS.round(sp.y), ps - 1, ps - 1)
+		ctx.globalAlpha = sp.get("life") * 0.8
+		ctx.fillStyle = sp.get("col")
+		ctx.fillRect(JS.round(sp.get("x")), JS.round(sp.get("y")), ps - 1, ps - 1)
 		ctx.restore()
 	# Warm glow underneath
 	var glowR = (60 if JS.t(hovered) else 50) + (8 * sin(tick * 0.006))
@@ -2619,17 +2627,17 @@ func _cfSparks2(ctx = null, cx = null, cy = null, tick = null, cols = null, key 
 			})
 	for i in range(len(pool) - 1, 0 - 1, -1):
 		var s = pool[i]
-		s.x += s.vx
-		s.y += s.vy
+		s.x += s.get("vx")
+		s.y += s.get("vy")
 		s.vy *= 0.97
 		s.life -= 0.028
-		if s.life <= 0:
+		if s.get("life") <= 0:
 			JS.splice(pool, i, 1)
 			continue
 		ctx.save()
-		ctx.globalAlpha = s.life * 0.85
-		ctx.fillStyle = s.col
-		ctx.fillRect(JS.round(s.x), JS.round(s.y), 2, 2)
+		ctx.globalAlpha = s.get("life") * 0.85
+		ctx.fillStyle = s.get("col")
+		ctx.fillRect(JS.round(s.get("x")), JS.round(s.get("y")), 2, 2)
 		ctx.restore()
 
 # Shared: animated flame column
@@ -2720,7 +2728,7 @@ func _drawNodeSprites(ctx = null, cx = null, cy = null, sprites = null, hovered 
 	var isPack = (node.get("type") == "pack" if JS.t(node) else node)
 	var count = (3 if JS.t(isPack) else 1)
 	# Pick element from node or first sprite
-	var elem = (JS.or_(JS.or_(node.enc.get("element"), JS.g(JS.idx(JS.g(JS.g(node, "enc"), "members"), 0), "element")), "Fire") if (JS.t(node) and JS.t(node.get("enc"))) else "Fire")
+	var elem = (JS.or_(JS.or_(node.get("enc").get("element"), JS.g(JS.idx(JS.g(JS.g(node, "enc"), "members"), 0), "element")), "Fire") if (JS.t(node) and JS.t(node.get("enc"))) else "Fire")
 	var hatRows = Sprites.getElemHatSprite(elem)
 	var hatH = len(hatRows) * scale_
 	var pal = (JS.g(JS.idx(sprites, 0), "pal") if JS.t(JS.g(JS.idx(sprites, 0), "pal")) else Sprites.getElemPal(elem))

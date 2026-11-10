@@ -54,9 +54,9 @@ func _duoUnlocked(elementA = null, elementB = null):
 		hasPrimary[0] = false
 		hasSecondary[0] = false
 		for book in JS.iter(JS.or_(State.player.get("spellbooks"), [])):
-			for s in JS.iter(book.spells):
+			for s in JS.iter(book.get("spells")):
 				var def = JS.idx(Spells.SPELL_CATALOGUE, s.id)
-				if (not JS.t(def) or not JS.eq(def.element, element)):
+				if (not JS.t(def) or not JS.eq(def.get("element"), element)):
 					continue
 				if def.get("tier") == "primary":
 					hasPrimary[0] = true
@@ -70,14 +70,14 @@ func _duoUnlocked(elementA = null, elementB = null):
 func _eligibleDuoSpells():
 	var owned = JSSet.new()
 	for b in JS.iter(JS.or_(State.player.get("spellbooks"), [])):
-		for s in JS.iter(b.spells):
+		for s in JS.iter(b.get("spells")):
 			if not JS.t(s.get("isBuiltin")):
 				owned.add(s.id)
 	var eligible = []
 	for duo in JS.iter(DUO_CATALOGUE):
-		if not JS.t(_duoUnlocked(JS.idx(duo.elements, 0), JS.idx(duo.elements, 1))):
+		if not JS.t(_duoUnlocked(JS.idx(duo.get("elements"), 0), JS.idx(duo.get("elements"), 1))):
 			continue
-		for id in JS.iter(duo.spells):
+		for id in JS.iter(duo.get("spells")):
 			if (not owned.has(id) and JS.t(JS.idx(Spells.SPELL_CATALOGUE, id))):
 				eligible.append(JS.idx(Spells.SPELL_CATALOGUE, id))
 	return eligible
@@ -87,13 +87,13 @@ func _eligibleDuoPassives():
 	var owned = JSSet.new(JS.or_(State.player.get("passives"), []))
 	var eligible = []
 	for duo in JS.iter(DUO_CATALOGUE):
-		if not JS.t(_duoUnlocked(JS.idx(duo.elements, 0), JS.idx(duo.elements, 1))):
+		if not JS.t(_duoUnlocked(JS.idx(duo.get("elements"), 0), JS.idx(duo.get("elements"), 1))):
 			continue
-		for pid in JS.iter(duo.passives):
+		for pid in JS.iter(duo.get("passives")):
 			if not owned.has(pid):
 				var def = State._lookupPassiveDef(pid)
 				if JS.t(def):
-					eligible.append(JS.merge([def, {"element": JS.join(duo.elements, "/")}]))
+					eligible.append(JS.merge([def, {"element": JS.join(duo.get("elements"), "/")}]))
 	return eligible
 
 # ─── DUO PASSIVE ROUND TICKS ─────────────────────────────────────────────────
@@ -102,27 +102,27 @@ func _tickDuoEffects():
 	var hasScorchedEarth = Main.hasPassive("duo_scorched_earth")
 	if not hasScorchedEarth:
 		return
-	var _arr2 = JS.iter(State.combat.enemies)
+	var _arr2 = JS.iter(State.combat.get("enemies"))
 	for i in range(len(_arr2)):
 		var e = _arr2[i]
 		if not JS.t(e.get("alive")):
 			continue
 		State.setActiveEnemy(i)
 		# Scorched Earth: every 5 Burn stacks on enemy reduce all Seed timers by 1
-		var burnStacks = JS.or_(e.status.get("burnStacks"), 0)
+		var burnStacks = JS.or_(e.get("status").get("burnStacks"), 0)
 		if burnStacks >= 5:
 			var reductions = floori(burnStacks / 5.0)
-			var seeds = JS.or_(e.status.get("seeds"), [])
+			var seeds = JS.or_(e.get("status").get("seeds"), [])
 			if len(seeds) > 0:
 				for seed_ in JS.iter(seeds):
-					seed_.timer = max(0, seed_.timer - reductions)
+					seed_.timer = max(0, seed_.get("timer") - reductions)
 				UI.log_("🔥🌍 Scorched Earth: " + JS.s(reductions) + " Seed timer reduction(s) from " + JS.s(burnStacks) + " Burn", "status")
 				# Immediately bloom any seeds that hit 0
-				var toBloom = JS.arr(seeds).filter(func(seed_ = null): return seed_.timer <= 0)
+				var toBloom = JS.arr(seeds).filter(func(seed_ = null): return seed_.get("timer") <= 0)
 				for seed_ in JS.iter(toBloom):
 					Seeds._bloomSeed("enemy", seed_, i)
-				e.status.seeds = JS.arr(e.status.seeds).filter(func(seed_ = null): return seed_.timer > 0)
+				e.get("status").seeds = JS.arr(e.get("status").get("seeds")).filter(func(seed_ = null): return seed_.get("timer") > 0)
 				if JS.t(State.combat.get("over")):
 					continue
 	if not JS.t(State.combat.get("over")):
-		State.setActiveEnemy(State.combat.targetIdx)
+		State.setActiveEnemy(State.combat.get("targetIdx"))

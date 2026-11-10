@@ -115,9 +115,9 @@ func _makeParticles(count = null, spread = null):
 # ─── Arc path position helper ─────────────────────────────────────────────────
 func _arcPt(from = null, to = null, p = null):
 	p = max(0, min(1, p))
-	var x = from.x + ((to.x - from.x) * p)
-	var y0 = from.y + ((to.y - from.y) * p)
-	var arc = -((abs(to.x - from.x) * 0.22) + 10)
+	var x = from.get("x") + ((to.get("x") - from.get("x")) * p)
+	var y0 = from.get("y") + ((to.get("y") - from.get("y")) * p)
+	var arc = -((abs(to.get("x") - from.get("x")) * 0.22) + 10)
 	return {"x": x, "y": y0 + (arc * sin(p * PI))}
 
 # ─── Public API ───────────────────────────────────────────────────────────────
@@ -132,8 +132,13 @@ func triggerSpellAnim(abilityElement = null, attackerSide = null, targetEnemyIdx
 	}]))
 
 func triggerHealAnim():
-	var def = ANIM_DEFS.heal
-	ACTIVE_ANIMS.append(JS.merge([def, {"particles": _makeParticles(def.count, def.spread), "attackerSide": "player", "targetEnemyIdx": -1, "t": 0}]))
+	var def = ANIM_DEFS.get("heal")
+	ACTIVE_ANIMS.append(JS.merge([def, {
+		"particles": _makeParticles(def.get("count"), def.get("spread")),
+		"attackerSide": "player",
+		"targetEnemyIdx": -1,
+		"t": 0,
+	}]))
 
 func triggerBlockAnim(variant = null):
 	var def = JS.or_(JS.idx(ANIM_DEFS, variant), ANIM_DEFS.get("block"))
@@ -143,19 +148,19 @@ func triggerBlockAnim(variant = null):
 func _spriteCenter(side = null, enemyIdx = null, W = null, H = null):
 	if side == "player":
 		var p = Sprites.playerSpritePos(W, H)
-		return {"x": p.x + (p.w / 2.0), "y": p.y + (p.h / 2.0)}
+		return {"x": p.get("x") + (p.get("w") / 2.0), "y": p.get("y") + (p.get("h") / 2.0)}
 		return {"x": W * 0.15, "y": H * 0.7}
 	var allE = JS.or_(State.combat.get("enemies"), [])
 	var ep = Sprites.enemySpritePos(enemyIdx, allE, W, H)
-	return {"x": ep.x + (ep.w / 2.0), "y": ep.y + (ep.h / 2.0)}
+	return {"x": ep.get("x") + (ep.get("w") / 2.0), "y": ep.get("y") + (ep.get("h") / 2.0)}
 	return {"x": W * 0.72, "y": H * 0.38}
 
 # ─── FIRE: Glowing fireball with ember trail + explosion ──────────────────────
 func _drawFireball(ctx = null, a = null, W = null, H = null):
-	var from = _spriteCenter(a.attackerSide, a.targetEnemyIdx, W, H)
+	var from = _spriteCenter(a.get("attackerSide"), a.get("targetEnemyIdx"), W, H)
 	var toSide = ("enemy" if a.get("attackerSide") == "player" else "player")
-	var to = _spriteCenter(toSide, a.targetEnemyIdx, W, H)
-	var prog = a.t / float(a.dur)
+	var to = _spriteCenter(toSide, a.get("targetEnemyIdx"), W, H)
+	var prog = a.get("t") / float(a.get("dur"))
 	var HIT = 0.76
 	if prog < HIT:
 		var p = prog / float(HIT)
@@ -169,56 +174,56 @@ func _drawFireball(ctx = null, a = null, W = null, H = null):
 			var sz = max(0.5, (10 - i) * 0.55)
 			ctx.save()
 			ctx.globalAlpha = ta
-			ctx.fillStyle = ("#FFEE44" if i <= 3 else (a.c1 if i <= 6 else a.c2))
+			ctx.fillStyle = ("#FFEE44" if i <= 3 else (a.get("c1") if i <= 6 else a.get("c2")))
 			ctx.beginPath()
-			ctx.arc(tPos.x, tPos.y, sz, 0, PI * 2)
+			ctx.arc(tPos.get("x"), tPos.get("y"), sz, 0, PI * 2)
 			ctx.fill()
 			ctx.restore()
 		# Pulsing glow orb
-		var pulse = 1 + (0.18 * sin(a.t * 0.55))
-		_glow(ctx, pos.x, pos.y, 11 * pulse, a.glow, env * 0.9)
+		var pulse = 1 + (0.18 * sin(a.get("t") * 0.55))
+		_glow(ctx, pos.get("x"), pos.get("y"), 11 * pulse, a.get("glow"), env * 0.9)
 		# Bright core
 		ctx.save()
 		ctx.globalAlpha = env
 		ctx.fillStyle = "#FFEEAA"
 		ctx.beginPath()
-		ctx.arc(pos.x, pos.y, 4.5, 0, PI * 2)
+		ctx.arc(pos.get("x"), pos.get("y"), 4.5, 0, PI * 2)
 		ctx.fill()
 		ctx.restore()
 	if prog >= HIT:
-		var bp = (prog - HIT) / float(1 - HIT)
+		var bp = (prog - HIT) / float((1 - HIT))
 		var bp2 = 1 - bp
 		# Screen flash — orange-red
 		if bp < 0.18:
 			_triggerFlash(255, 110, 20, bp2 * 0.2)
 		# Central glow burst
-		_glow(ctx, to.x, to.y, 22 * (1 - (bp * 0.35)), a.burst, bp2 * 0.95)
+		_glow(ctx, to.get("x"), to.get("y"), 22 * (1 - (bp * 0.35)), a.get("burst"), bp2 * 0.95)
 		# Expanding shockwave rings
-		_ring(ctx, to.x, to.y, bp * 38, a.c1, bp2 * 0.85, 3.0)
-		_ring(ctx, to.x, to.y, bp * 24, a.burst, bp2 * 0.55, 1.5)
+		_ring(ctx, to.get("x"), to.get("y"), bp * 38, a.get("c1"), bp2 * 0.85, 3.0)
+		_ring(ctx, to.get("x"), to.get("y"), bp * 24, a.get("burst"), bp2 * 0.55, 1.5)
 		# Ember sparks flying outward with gravity
 		for i in range(18):
 			var angle = (((i / 18.0) * PI) * 2) + 0.4
 			var speed = 22 + ((JS.mod(i, 5)) * 8)
 			var grav = (bp * bp) * 14
-			var ex = to.x + ((cos(angle) * speed) * bp)
-			var ey = (to.y + ((sin(angle) * speed) * bp)) + grav
+			var ex = to.get("x") + ((cos(angle) * speed) * bp)
+			var ey = (to.get("y") + ((sin(angle) * speed) * bp)) + grav
 			var sz = max(1, 3.5 - (bp * 3))
 			ctx.save()
 			ctx.globalAlpha = bp2 * 0.9
-			ctx.fillStyle = ("#FFEE00" if (JS.mod(i, 3)) == 0 else (a.c1 if (JS.mod(i, 3)) == 1 else a.c2))
+			ctx.fillStyle = ("#FFEE00" if (JS.mod(i, 3)) == 0 else (a.get("c1") if (JS.mod(i, 3)) == 1 else a.get("c2")))
 			ctx.fillRect(JS.round(ex) - 1, JS.round(ey) - 1, sz + 1, sz + 1)
 			ctx.restore()
 
 # ─── LIGHTNING: Instant branching bolt + electric sparks ──────────────────────
 func _drawLightning(ctx = null, a = null, W = null, H = null):
-	var from = _spriteCenter(a.attackerSide, a.targetEnemyIdx, W, H)
+	var from = _spriteCenter(a.get("attackerSide"), a.get("targetEnemyIdx"), W, H)
 	var toSide = ("enemy" if a.get("attackerSide") == "player" else "player")
-	var to = _spriteCenter(toSide, a.targetEnemyIdx, W, H)
-	var prog = a.t / float(a.dur)
+	var to = _spriteCenter(toSide, a.get("targetEnemyIdx"), W, H)
+	var prog = a.get("t") / float(a.get("dur"))
 	var fade = (1 if prog < 0.2 else max(0, 1 - ((prog - 0.2) / 0.8)))
 	# Screen flash on very first frame
-	if a.t <= 1:
+	if a.get("t") <= 1:
 		_triggerFlash(255, 255, 180, 0.3)
 	# Helper: draw a jittered zigzag segment
 	var _fn1 = func(x1 = null, y1 = null, x2 = null, y2 = null, segs = null, amp = null, lw = null, col = null, al = null):
@@ -234,63 +239,63 @@ func _drawLightning(ctx = null, a = null, W = null, H = null):
 			var t = i / float(segs)
 			var bx = x1 + ((x2 - x1) * t)
 			var by = y1 + ((y2 - y1) * t)
-			var j = ((JS.mod(((i * 173) + 7) + (a.t * 3), (amp * 2) + 1)) - amp if i < segs else 0)
+			var j = ((JS.mod(((i * 173) + 7) + (a.get("t") * 3), (amp * 2) + 1)) - amp if i < segs else 0)
 			ctx.lineTo(JS.round(bx + j), JS.round(by - (j * 0.5)))
 		ctx.stroke()
 		ctx.restore()
 	var zigzag = _fn1
 	# Outer glow (wide, faint)
-	zigzag.call(from.x, from.y, to.x, to.y, 8, 14, 8, "rgba(255,230,50,0.18)", 1)
+	zigzag.call(from.get("x"), from.get("y"), to.get("x"), to.get("y"), 8, 14, 8, "rgba(255,230,50,0.18)", 1)
 	# Mid bolt
-	zigzag.call(from.x, from.y, to.x, to.y, 8, 12, 3, a.c1, 0.95)
+	zigzag.call(from.get("x"), from.get("y"), to.get("x"), to.get("y"), 8, 12, 3, a.get("c1"), 0.95)
 	# Inner white core
-	zigzag.call(from.x, from.y, to.x, to.y, 8, 10, 1.5, "#FFFFFF", 1.0)
+	zigzag.call(from.get("x"), from.get("y"), to.get("x"), to.get("y"), 8, 10, 1.5, "#FFFFFF", 1.0)
 	# Branch 1 — splits off at ~35% toward target
-	var b1x = from.x + ((to.x - from.x) * 0.35)
-	var b1y = from.y + ((to.y - from.y) * 0.35)
-	var b1ex = (b1x + ((to.y - from.y) * 0.3)) + 24
-	var b1ey = (b1y - ((to.x - from.x) * 0.12)) + 18
-	zigzag.call(b1x, b1y, b1ex, b1ey, 4, 8, 1.8, a.c1, 0.65)
+	var b1x = from.get("x") + ((to.get("x") - from.get("x")) * 0.35)
+	var b1y = from.get("y") + ((to.get("y") - from.get("y")) * 0.35)
+	var b1ex = (b1x + ((to.get("y") - from.get("y")) * 0.3)) + 24
+	var b1ey = (b1y - ((to.get("x") - from.get("x")) * 0.12)) + 18
+	zigzag.call(b1x, b1y, b1ex, b1ey, 4, 8, 1.8, a.get("c1"), 0.65)
 	zigzag.call(b1x, b1y, b1ex, b1ey, 4, 6, 0.9, "#FFFFFF", 0.75)
 	# Branch 2 — splits off at ~62%
-	var b2x = from.x + ((to.x - from.x) * 0.62)
-	var b2y = from.y + ((to.y - from.y) * 0.62)
-	var b2ex = (b2x - ((to.y - from.y) * 0.22)) - 18
-	var b2ey = (b2y + ((to.x - from.x) * 0.08)) + 14
-	zigzag.call(b2x, b2y, b2ex, b2ey, 4, 9, 1.4, a.c1, 0.5)
+	var b2x = from.get("x") + ((to.get("x") - from.get("x")) * 0.62)
+	var b2y = from.get("y") + ((to.get("y") - from.get("y")) * 0.62)
+	var b2ex = (b2x - ((to.get("y") - from.get("y")) * 0.22)) - 18
+	var b2ey = (b2y + ((to.get("x") - from.get("x")) * 0.08)) + 14
+	zigzag.call(b2x, b2y, b2ex, b2ey, 4, 9, 1.4, a.get("c1"), 0.5)
 	# Impact glow + radiating sparks
 	var impFade = (1 if prog < 0.45 else max(0, 1 - ((prog - 0.45) / 0.55)))
-	_glow(ctx, to.x, to.y, 15, a.glow, impFade * 0.9)
+	_glow(ctx, to.get("x"), to.get("y"), 15, a.get("glow"), impFade * 0.9)
 	for i in range(10):
-		var angle = (((i / 10.0) * PI) * 2) + (a.t * 0.45)
+		var angle = (((i / 10.0) * PI) * 2) + (a.get("t") * 0.45)
 		var dist = (9 + ((JS.mod(i, 3)) * 6)) * (0.8 + (prog * 0.6))
 		ctx.save()
 		ctx.globalAlpha = max(0, impFade * 0.75)
 		ctx.strokeStyle = "#FFFF66"
 		ctx.lineWidth = 1
 		ctx.beginPath()
-		ctx.moveTo(to.x, to.y)
-		ctx.lineTo(JS.round(to.x + (cos(angle) * dist)), JS.round(to.y + (sin(angle) * dist)))
+		ctx.moveTo(to.get("x"), to.get("y"))
+		ctx.lineTo(JS.round(to.get("x") + (cos(angle) * dist)), JS.round(to.get("y") + (sin(angle) * dist)))
 		ctx.stroke()
 		ctx.restore()
 
 # ─── ICE: Staggered crystal shards + shatter burst ───────────────────────────
 func _drawIceShards(ctx = null, a = null, W = null, H = null):
-	var from = _spriteCenter(a.attackerSide, a.targetEnemyIdx, W, H)
+	var from = _spriteCenter(a.get("attackerSide"), a.get("targetEnemyIdx"), W, H)
 	var toSide = ("enemy" if a.get("attackerSide") == "player" else "player")
-	var to = _spriteCenter(toSide, a.targetEnemyIdx, W, H)
-	var prog = a.t / float(a.dur)
+	var to = _spriteCenter(toSide, a.get("targetEnemyIdx"), W, H)
+	var prog = a.get("t") / float(a.get("dur"))
 	var SHARDS = 5
-	var angle = atan2(to.y - from.y, to.x - from.x)
+	var angle = atan2(to.get("y") - from.get("y"), to.get("x") - from.get("x"))
 	for si in range(ceili(SHARDS)):
 		var delay = si * 0.055
-		var sp = max(0, (prog - delay) / float(1 - delay))
+		var sp = max(0, (prog - delay) / float((1 - delay)))
 		if sp <= 0:
 			continue
 		var HIT = 0.78
 		var yOff = (JS.mod((si * 137) + 31, 13)) - 6
-		var fromOff = {"x": from.x, "y": from.y + yOff}
-		var toOff = {"x": to.x, "y": to.y + (yOff * 0.3)}
+		var fromOff = {"x": from.get("x"), "y": from.get("y") + yOff}
+		var toOff = {"x": to.get("x"), "y": to.get("y") + (yOff * 0.3)}
 		if sp < HIT:
 			var p = sp / float(HIT)
 			var pos = _arcPt(fromOff, toOff, p)
@@ -298,11 +303,11 @@ func _drawIceShards(ctx = null, a = null, W = null, H = null):
 			# Elongated crystal shard (rotated rect)
 			ctx.save()
 			ctx.globalAlpha = env * 0.88
-			ctx.translate(JS.round(pos.x), JS.round(pos.y))
+			ctx.translate(JS.round(pos.get("x")), JS.round(pos.get("y")))
 			ctx.rotate(angle)
-			ctx.fillStyle = a.c2
+			ctx.fillStyle = a.get("c2")
 			ctx.fillRect(-6, -2, 12, 4)
-			ctx.fillStyle = a.c1
+			ctx.fillStyle = a.get("c1")
 			ctx.fillRect(-6, -2, 10, 2)
 			ctx.fillStyle = "#FFFFFF"
 			ctx.fillRect(-5, -2, 6, 1)
@@ -313,12 +318,12 @@ func _drawIceShards(ctx = null, a = null, W = null, H = null):
 				var tPos = _arcPt(fromOff, toOff, max(0, p - 0.13))
 				ctx.save()
 				ctx.globalAlpha = (1 - p) * 0.45
-				ctx.fillStyle = a.burst
-				ctx.fillRect(JS.round(tPos.x) - 1, JS.round(tPos.y) - 1, 3, 2)
+				ctx.fillStyle = a.get("burst")
+				ctx.fillRect(JS.round(tPos.get("x")) - 1, JS.round(tPos.get("y")) - 1, 3, 2)
 				ctx.restore()
 		else:
 			# Shatter
-			var bp = (sp - HIT) / float(1 - HIT)
+			var bp = (sp - HIT) / float((1 - HIT))
 			var bp2 = 1 - bp
 			if bp2 <= 0:
 				continue
@@ -328,21 +333,21 @@ func _drawIceShards(ctx = null, a = null, W = null, H = null):
 				var grav = (bp * bp) * 8
 				ctx.save()
 				ctx.globalAlpha = bp2 * 0.85
-				ctx.fillStyle = (a.c1 if (JS.mod(i, 2)) == 0 else a.burst)
-				ctx.fillRect(JS.round(to.x + (cos(sAngle) * dist)) - 1, JS.round((to.y + (sin(sAngle) * dist)) + grav) - 1, 2, 3)
+				ctx.fillStyle = (a.get("c1") if (JS.mod(i, 2)) == 0 else a.get("burst"))
+				ctx.fillRect(JS.round(to.get("x") + (cos(sAngle) * dist)) - 1, JS.round((to.get("y") + (sin(sAngle) * dist)) + grav) - 1, 2, 3)
 				ctx.restore()
-			_ring(ctx, to.x, to.y, (bp * 20) + (si * 2), a.c2, bp2 * 0.55, 1.5)
+			_ring(ctx, to.get("x"), to.get("y"), (bp * 20) + (si * 2), a.get("c2"), bp2 * 0.55, 1.5)
 	# Frost sparkle lingers at impact
 	if prog > 0.68:
 		var fp = (prog - 0.68) / 0.32
-		_glow(ctx, to.x, to.y, 13 * (1 - (fp * 0.4)), a.burst, (1 - fp) * 0.75)
+		_glow(ctx, to.get("x"), to.get("y"), 13 * (1 - (fp * 0.4)), a.get("burst"), (1 - fp) * 0.75)
 
 # ─── WATER: Sinusoidal wave stream + bubble splash ────────────────────────────
 func _drawWaterWave(ctx = null, a = null, W = null, H = null):
-	var from = _spriteCenter(a.attackerSide, a.targetEnemyIdx, W, H)
+	var from = _spriteCenter(a.get("attackerSide"), a.get("targetEnemyIdx"), W, H)
 	var toSide = ("enemy" if a.get("attackerSide") == "player" else "player")
-	var to = _spriteCenter(toSide, a.targetEnemyIdx, W, H)
-	var prog = a.t / float(a.dur)
+	var to = _spriteCenter(toSide, a.get("targetEnemyIdx"), W, H)
+	var prog = a.get("t") / float(a.get("dur"))
 	var HIT = 0.74
 	# Sinusoidal stream of water drops
 	var DROPS = 14
@@ -357,28 +362,28 @@ func _drawWaterWave(ctx = null, a = null, W = null, H = null):
 		var sz = 2.5 + ((JS.mod(i, 4)) * 0.4)
 		ctx.save()
 		ctx.globalAlpha = env * (0.5 + ((JS.mod(i, 3)) * 0.14))
-		ctx.fillStyle = (a.c1 if dp < 0.55 else a.c2)
+		ctx.fillStyle = (a.get("c1") if dp < 0.55 else a.get("c2"))
 		ctx.beginPath()
-		ctx.arc(base.x, base.y + wave, sz, 0, PI * 2)
+		ctx.arc(base.get("x"), base.get("y") + wave, sz, 0, PI * 2)
 		ctx.fill()
 		ctx.restore()
 	if prog >= HIT:
-		var bp = (prog - HIT) / float(1 - HIT)
+		var bp = (prog - HIT) / float((1 - HIT))
 		var bp2 = 1 - bp
-		_glow(ctx, to.x, to.y, 18, a.glow, bp2 * 0.85)
-		_ring(ctx, to.x, to.y, bp * 28, a.c1, bp2 * 0.85, 2.5)
-		_ring(ctx, to.x, to.y, bp * 16, a.burst, bp2 * 0.5, 1.0)
+		_glow(ctx, to.get("x"), to.get("y"), 18, a.get("glow"), bp2 * 0.85)
+		_ring(ctx, to.get("x"), to.get("y"), bp * 28, a.get("c1"), bp2 * 0.85, 2.5)
+		_ring(ctx, to.get("x"), to.get("y"), bp * 16, a.get("burst"), bp2 * 0.5, 1.0)
 		# Upward bubbles
 		for i in range(9):
 			var age = bp - (i * 0.07)
 			if age <= 0:
 				continue
-			var bx = (to.x + (JS.mod((i * 37) + 7, 22))) - 11
-			var by = (to.y - (age * 28)) - (i * 2)
+			var bx = (to.get("x") + (JS.mod((i * 37) + 7, 22))) - 11
+			var by = (to.get("y") - (age * 28)) - (i * 2)
 			var br = 2 + (JS.mod(i, 3))
 			ctx.save()
 			ctx.globalAlpha = max(0, 1 - (age * 2.2)) * 0.72
-			ctx.strokeStyle = a.burst
+			ctx.strokeStyle = a.get("burst")
 			ctx.lineWidth = 1
 			ctx.beginPath()
 			ctx.arc(bx, by, br, 0, PI * 2)
@@ -391,26 +396,26 @@ func _drawWaterWave(ctx = null, a = null, W = null, H = null):
 			var grav = (bp * bp) * 15
 			ctx.save()
 			ctx.globalAlpha = bp2 * 0.8
-			ctx.fillStyle = (a.c1 if (JS.mod(i, 2)) == 0 else a.burst)
-			ctx.fillRect(JS.round(to.x + (cos(dAngle) * dist)) - 1, JS.round((to.y + (sin(dAngle) * dist)) + grav) - 1, 2, 2)
+			ctx.fillStyle = (a.get("c1") if (JS.mod(i, 2)) == 0 else a.get("burst"))
+			ctx.fillRect(JS.round(to.get("x") + (cos(dAngle) * dist)) - 1, JS.round((to.get("y") + (sin(dAngle) * dist)) + grav) - 1, 2, 2)
 			ctx.restore()
 
 # ─── EARTH: Tumbling rocks with dust + shockwave ──────────────────────────────
 func _drawEarthSlam(ctx = null, a = null, W = null, H = null):
-	var from = _spriteCenter(a.attackerSide, a.targetEnemyIdx, W, H)
+	var from = _spriteCenter(a.get("attackerSide"), a.get("targetEnemyIdx"), W, H)
 	var toSide = ("enemy" if a.get("attackerSide") == "player" else "player")
-	var to = _spriteCenter(toSide, a.targetEnemyIdx, W, H)
-	var prog = a.t / float(a.dur)
+	var to = _spriteCenter(toSide, a.get("targetEnemyIdx"), W, H)
+	var prog = a.get("t") / float(a.get("dur"))
 	var HIT = 0.7
 	var ROCKS = 3
 	for ri in range(ceili(ROCKS)):
 		var delay = ri * 0.075
-		var rp = max(0, (prog - delay) / float(1 - delay))
+		var rp = max(0, (prog - delay) / float((1 - delay)))
 		if rp <= 0:
 			continue
 		var yOff = (JS.mod((ri * 97) + 13, 9)) - 4
-		var fromOff = {"x": from.x, "y": from.y + yOff}
-		var toOff = {"x": to.x, "y": to.y}
+		var fromOff = {"x": from.get("x"), "y": from.get("y") + yOff}
+		var toOff = {"x": to.get("x"), "y": to.get("y")}
 		if rp < HIT:
 			var p = rp / float(HIT)
 			var pos = _arcPt(fromOff, toOff, p)
@@ -424,7 +429,7 @@ func _drawEarthSlam(ctx = null, a = null, W = null, H = null):
 				ctx.globalAlpha = ((1 - (ti / 5.0)) * 0.28) * env
 				ctx.fillStyle = "#AA8844"
 				ctx.beginPath()
-				ctx.arc(tPos.x, tPos.y, 4 + (ti * 1.5), 0, PI * 2)
+				ctx.arc(tPos.get("x"), tPos.get("y"), 4 + (ti * 1.5), 0, PI * 2)
 				ctx.fill()
 				ctx.restore()
 			# Rock chunk (rotated rect with highlight)
@@ -432,15 +437,15 @@ func _drawEarthSlam(ctx = null, a = null, W = null, H = null):
 			var rh = 5 + (ri * 2)
 			ctx.save()
 			ctx.globalAlpha = env * 0.92
-			ctx.translate(JS.round(pos.x), JS.round(pos.y))
+			ctx.translate(JS.round(pos.get("x")), JS.round(pos.get("y")))
 			ctx.rotate(spin)
-			ctx.fillStyle = a.c2
+			ctx.fillStyle = a.get("c2")
 			ctx.fillRect((-rw) / 2.0, (-rh) / 2.0, rw, rh)
-			ctx.fillStyle = a.c1
+			ctx.fillStyle = a.get("c1")
 			ctx.fillRect((-rw) / 2.0, (-rh) / 2.0, rw, 2)
 			ctx.restore()
 		else:
-			var bp = (rp - HIT) / float(1 - HIT)
+			var bp = (rp - HIT) / float((1 - HIT))
 			var bp2 = 1 - bp
 			if bp2 <= 0:
 				continue
@@ -451,22 +456,22 @@ func _drawEarthSlam(ctx = null, a = null, W = null, H = null):
 				var grav = (bp * bp) * 18
 				ctx.save()
 				ctx.globalAlpha = bp2 * 0.88
-				ctx.fillStyle = (a.c1 if (JS.mod(i, 2)) == 0 else a.c2)
-				ctx.fillRect(JS.round((to.x + (cos(dAngle) * dist)) + (yOff * 0.4)) - 1, JS.round((to.y + (sin(dAngle) * dist)) + grav) - 1, 3, 2)
+				ctx.fillStyle = (a.get("c1") if (JS.mod(i, 2)) == 0 else a.get("c2"))
+				ctx.fillRect(JS.round((to.get("x") + (cos(dAngle) * dist)) + (yOff * 0.4)) - 1, JS.round((to.get("y") + (sin(dAngle) * dist)) + grav) - 1, 3, 2)
 				ctx.restore()
 			# Dust cloud at impact
-			_glow(ctx, to.x, to.y, 16 * bp2, "#BB9944", bp2 * 0.55)
+			_glow(ctx, to.get("x"), to.get("y"), 16 * bp2, "#BB9944", bp2 * 0.55)
 			# Shockwave ring on first rock impact only
 			if ri == 0:
-				_ring(ctx, to.x, to.y, bp * 32, a.burst, bp2 * 0.8, 2.5)
-				_ring(ctx, to.x, to.y, bp * 20, a.c1, bp2 * 0.4, 1.2)
+				_ring(ctx, to.get("x"), to.get("y"), bp * 32, a.get("burst"), bp2 * 0.8, 2.5)
+				_ring(ctx, to.get("x"), to.get("y"), bp * 20, a.get("c1"), bp2 * 0.4, 1.2)
 
 # ─── NATURE: Growing vine tendrils + thorn burst ─────────────────────────────
 func _drawVineLash(ctx = null, a = null, W = null, H = null):
-	var from = _spriteCenter(a.attackerSide, a.targetEnemyIdx, W, H)
+	var from = _spriteCenter(a.get("attackerSide"), a.get("targetEnemyIdx"), W, H)
 	var toSide = ("enemy" if a.get("attackerSide") == "player" else "player")
-	var to = _spriteCenter(toSide, a.targetEnemyIdx, W, H)
-	var prog = a.t / float(a.dur)
+	var to = _spriteCenter(toSide, a.get("targetEnemyIdx"), W, H)
+	var prog = a.get("t") / float(a.get("dur"))
 	var HIT = 0.7
 	# Vine grows from attacker toward target
 	if prog < (HIT + 0.1):
@@ -474,7 +479,7 @@ func _drawVineLash(ctx = null, a = null, W = null, H = null):
 		var SEGS = 18
 		# Shadow vine (dark, offset)
 		ctx.save()
-		ctx.strokeStyle = a.c2
+		ctx.strokeStyle = a.get("c2")
 		ctx.lineWidth = 3
 		ctx.globalAlpha = 0.75
 		ctx.beginPath()
@@ -482,15 +487,15 @@ func _drawVineLash(ctx = null, a = null, W = null, H = null):
 		while i <= JS.round(SEGS * drawFrac):
 			var p = i / float(SEGS)
 			var pt = _arcPt(from, to, p)
-			var wig = (sin(((p * PI) * 3.5) + (a.t * 0.18)) * 6) * sin(p * PI)
+			var wig = (sin(((p * PI) * 3.5) + (a.get("t") * 0.18)) * 6) * sin(p * PI)
 			if i == 0:
-				ctx.moveTo(pt.x, pt.y + wig)
+				ctx.moveTo(pt.get("x"), pt.get("y") + wig)
 			else:
-				ctx.lineTo(pt.x, pt.y + wig)
+				ctx.lineTo(pt.get("x"), pt.get("y") + wig)
 			i += 1
 		ctx.stroke()
 		# Highlight vine (brighter, thinner)
-		ctx.strokeStyle = a.c1
+		ctx.strokeStyle = a.get("c1")
 		ctx.lineWidth = 1.5
 		ctx.globalAlpha = 0.6
 		ctx.stroke()
@@ -501,28 +506,28 @@ func _drawVineLash(ctx = null, a = null, W = null, H = null):
 			if lp <= 0:
 				continue
 			var lPos = _arcPt(from, to, lp)
-			var wig = (sin(((lp * PI) * 3.5) + (a.t * 0.18)) * 6) * sin(lp * PI)
+			var wig = (sin(((lp * PI) * 3.5) + (a.get("t") * 0.18)) * 6) * sin(lp * PI)
 			ctx.save()
 			ctx.globalAlpha = 0.78
-			ctx.fillStyle = (a.c1 if (JS.mod(i_2, 2)) == 0 else a.c2)
-			ctx.fillRect(JS.round(lPos.x) - 2, JS.round(lPos.y + wig) - 2, 5, 3)
+			ctx.fillStyle = (a.get("c1") if (JS.mod(i_2, 2)) == 0 else a.get("c2"))
+			ctx.fillRect(JS.round(lPos.get("x")) - 2, JS.round(lPos.get("y") + wig) - 2, 5, 3)
 			ctx.restore()
 	# Impact: thorn burst + leaf scatter
 	if prog > HIT:
-		var bp = (prog - HIT) / float(1 - HIT)
+		var bp = (prog - HIT) / float((1 - HIT))
 		var bp2 = 1 - bp
-		_glow(ctx, to.x, to.y, 15, a.glow, bp2 * 0.85)
+		_glow(ctx, to.get("x"), to.get("y"), 15, a.get("glow"), bp2 * 0.85)
 		# Thorn spikes radiating outward
 		for i in range(12):
 			var sAngle = (((i / 12.0) * PI) * 2) + 0.4
 			var len_ = (15 + ((JS.mod(i, 3)) * 7)) * bp
 			ctx.save()
 			ctx.globalAlpha = bp2 * 0.88
-			ctx.strokeStyle = (a.c1 if (JS.mod(i, 2)) == 0 else a.c2)
+			ctx.strokeStyle = (a.get("c1") if (JS.mod(i, 2)) == 0 else a.get("c2"))
 			ctx.lineWidth = max(0.5, 2.2 - (bp * 1.5))
 			ctx.beginPath()
-			ctx.moveTo(to.x, to.y)
-			ctx.lineTo(JS.round(to.x + (cos(sAngle) * len_)), JS.round(to.y + (sin(sAngle) * len_)))
+			ctx.moveTo(to.get("x"), to.get("y"))
+			ctx.lineTo(JS.round(to.get("x") + (cos(sAngle) * len_)), JS.round(to.get("y") + (sin(sAngle) * len_)))
 			ctx.stroke()
 			ctx.restore()
 		# Leaf scatter with gravity
@@ -532,72 +537,72 @@ func _drawVineLash(ctx = null, a = null, W = null, H = null):
 			var grav = (bp * bp) * 10
 			ctx.save()
 			ctx.globalAlpha = bp2 * 0.82
-			ctx.fillStyle = (a.c1 if (JS.mod(i, 2)) == 0 else a.c2)
-			ctx.fillRect(JS.round(to.x + (cos(lAngle) * dist)) - 1, JS.round((to.y + (sin(lAngle) * dist)) + grav) - 1, 4, 3)
+			ctx.fillStyle = (a.get("c1") if (JS.mod(i, 2)) == 0 else a.get("c2"))
+			ctx.fillRect(JS.round(to.get("x") + (cos(lAngle) * dist)) - 1, JS.round((to.get("y") + (sin(lAngle) * dist)) + grav) - 1, 4, 3)
 			ctx.restore()
 
 # ─── PLASMA: Pulsing orb with orbiting satellites + ring explosion ─────────────
 func _drawPlasmaOrb(ctx = null, a = null, W = null, H = null):
-	var from = _spriteCenter(a.attackerSide, a.targetEnemyIdx, W, H)
+	var from = _spriteCenter(a.get("attackerSide"), a.get("targetEnemyIdx"), W, H)
 	var toSide = ("enemy" if a.get("attackerSide") == "player" else "player")
-	var to = _spriteCenter(toSide, a.targetEnemyIdx, W, H)
-	var prog = a.t / float(a.dur)
+	var to = _spriteCenter(toSide, a.get("targetEnemyIdx"), W, H)
+	var prog = a.get("t") / float(a.get("dur"))
 	var HIT = 0.74
 	if prog < HIT:
 		var p = prog / float(HIT)
 		var pos = _arcPt(from, to, p)
 		var env = sin(p * PI)
-		var pulse = 1 + (0.22 * sin(a.t * 0.55))
+		var pulse = 1 + (0.22 * sin(a.get("t") * 0.55))
 		# Energy trail
 		for i in range(6, 1 - 1, -1):
 			var tp = max(0, p - (i * 0.038))
 			var tPos = _arcPt(from, to, tp)
 			ctx.save()
 			ctx.globalAlpha = ((1 - (i / 7.0)) * 0.42) * env
-			ctx.fillStyle = a.c2
+			ctx.fillStyle = a.get("c2")
 			ctx.beginPath()
-			ctx.arc(tPos.x, tPos.y, 4 - (i * 0.45), 0, PI * 2)
+			ctx.arc(tPos.get("x"), tPos.get("y"), 4 - (i * 0.45), 0, PI * 2)
 			ctx.fill()
 			ctx.restore()
 		# Pulsing glow
-		_glow(ctx, pos.x, pos.y, 13 * pulse, a.glow, env * 0.92)
+		_glow(ctx, pos.get("x"), pos.get("y"), 13 * pulse, a.get("glow"), env * 0.92)
 		# Core orb
 		ctx.save()
 		ctx.globalAlpha = env
-		ctx.fillStyle = a.burst
+		ctx.fillStyle = a.get("burst")
 		ctx.beginPath()
-		ctx.arc(pos.x, pos.y, 6, 0, PI * 2)
+		ctx.arc(pos.get("x"), pos.get("y"), 6, 0, PI * 2)
 		ctx.fill()
 		ctx.fillStyle = "#FFFFFF"
 		ctx.beginPath()
-		ctx.arc(pos.x - 2, pos.y - 2, 2, 0, PI * 2)
+		ctx.arc(pos.get("x") - 2, pos.get("y") - 2, 2, 0, PI * 2)
 		ctx.fill()
 		# specular
 		ctx.restore()
 		# 3 orbiting satellite sparks
 		for i in range(3):
-			var oAngle = (a.t * 0.28) + (((i / 3.0) * PI) * 2)
+			var oAngle = (a.get("t") * 0.28) + (((i / 3.0) * PI) * 2)
 			var oR = 14 * pulse
-			var sx = pos.x + (cos(oAngle) * oR)
-			var sy = pos.y + ((sin(oAngle) * oR) * 0.55)
+			var sx = pos.get("x") + (cos(oAngle) * oR)
+			var sy = pos.get("y") + ((sin(oAngle) * oR) * 0.55)
 			ctx.save()
 			ctx.globalAlpha = env * 0.78
-			ctx.fillStyle = (a.c1 if (JS.mod(i, 2)) == 0 else a.c2)
+			ctx.fillStyle = (a.get("c1") if (JS.mod(i, 2)) == 0 else a.get("c2"))
 			ctx.beginPath()
 			ctx.arc(sx, sy, 2.8, 0, PI * 2)
 			ctx.fill()
 			ctx.restore()
 	if prog >= HIT:
-		var bp = (prog - HIT) / float(1 - HIT)
+		var bp = (prog - HIT) / float((1 - HIT))
 		var bp2 = 1 - bp
 		# Screen flash — purple
 		if bp < 0.18:
 			_triggerFlash(200, 40, 255, bp2 * 0.18)
-		_glow(ctx, to.x, to.y, 24 * (1 - (bp * 0.35)), a.burst, bp2 * 0.95)
+		_glow(ctx, to.get("x"), to.get("y"), 24 * (1 - (bp * 0.35)), a.get("burst"), bp2 * 0.95)
 		# Three expanding rings
-		_ring(ctx, to.x, to.y, bp * 40, a.c1, bp2 * 0.85, 3.0)
-		_ring(ctx, to.x, to.y, bp * 26, a.burst, bp2 * 0.62, 2.0)
-		_ring(ctx, to.x, to.y, bp * 14, "#FFFFFF", bp2 * 0.32, 1.0)
+		_ring(ctx, to.get("x"), to.get("y"), bp * 40, a.get("c1"), bp2 * 0.85, 3.0)
+		_ring(ctx, to.get("x"), to.get("y"), bp * 26, a.get("burst"), bp2 * 0.62, 2.0)
+		_ring(ctx, to.get("x"), to.get("y"), bp * 14, "#FFFFFF", bp2 * 0.32, 1.0)
 		# Energy sparks scatter
 		for i in range(16):
 			var sAngle = (((i / 16.0) * PI) * 2) + 0.6
@@ -605,23 +610,23 @@ func _drawPlasmaOrb(ctx = null, a = null, W = null, H = null):
 			var sz = 2 + (JS.mod(i, 2))
 			ctx.save()
 			ctx.globalAlpha = bp2 * 0.88
-			ctx.fillStyle = (a.c1 if (JS.mod(i, 2)) == 0 else a.c2)
-			ctx.fillRect(JS.round(to.x + (cos(sAngle) * dist)) - 1, JS.round(to.y + (sin(sAngle) * dist)) - 1, sz, sz)
+			ctx.fillStyle = (a.get("c1") if (JS.mod(i, 2)) == 0 else a.get("c2"))
+			ctx.fillRect(JS.round(to.get("x") + (cos(sAngle) * dist)) - 1, JS.round(to.get("y") + (sin(sAngle) * dist)) - 1, sz, sz)
 			ctx.restore()
 
 # ─── AIR: Wind slash streaks + swirl burst ────────────────────────────────────
 func _drawWindSlash(ctx = null, a = null, W = null, H = null):
-	var from = _spriteCenter(a.attackerSide, a.targetEnemyIdx, W, H)
+	var from = _spriteCenter(a.get("attackerSide"), a.get("targetEnemyIdx"), W, H)
 	var toSide = ("enemy" if a.get("attackerSide") == "player" else "player")
-	var to = _spriteCenter(toSide, a.targetEnemyIdx, W, H)
-	var prog = a.t / float(a.dur)
+	var to = _spriteCenter(toSide, a.get("targetEnemyIdx"), W, H)
+	var prog = a.get("t") / float(a.get("dur"))
 	var HIT = 0.66
-	var travelAngle = atan2(to.y - from.y, to.x - from.x)
+	var travelAngle = atan2(to.get("y") - from.get("y"), to.get("x") - from.get("x"))
 	var perpAngle = travelAngle + (PI / 2.0)
 	var SLASHES = 5
 	for si in range(ceili(SLASHES)):
 		var delay = si * 0.055
-		var sp = max(0, min(1, (prog - delay) / float(1 - delay)))
+		var sp = max(0, min(1, (prog - delay) / float((1 - delay))))
 		if sp <= 0:
 			continue
 		if sp < HIT:
@@ -632,13 +637,13 @@ func _drawWindSlash(ctx = null, a = null, W = null, H = null):
 			# vertical spread
 			var slashLen = 12 + (si * 2.5)
 			# Slash line (oriented along travel direction)
-			var sx1 = (pos.x + (cos(perpAngle) * slashOff)) - ((cos(travelAngle) * slashLen) * 0.5)
-			var sy1 = (pos.y + (sin(perpAngle) * slashOff)) - ((sin(travelAngle) * slashLen) * 0.5)
-			var sx2 = (pos.x + (cos(perpAngle) * slashOff)) + ((cos(travelAngle) * slashLen) * 0.5)
-			var sy2 = (pos.y + (sin(perpAngle) * slashOff)) + ((sin(travelAngle) * slashLen) * 0.5)
+			var sx1 = (pos.get("x") + (cos(perpAngle) * slashOff)) - ((cos(travelAngle) * slashLen) * 0.5)
+			var sy1 = (pos.get("y") + (sin(perpAngle) * slashOff)) - ((sin(travelAngle) * slashLen) * 0.5)
+			var sx2 = (pos.get("x") + (cos(perpAngle) * slashOff)) + ((cos(travelAngle) * slashLen) * 0.5)
+			var sy2 = (pos.get("y") + (sin(perpAngle) * slashOff)) + ((sin(travelAngle) * slashLen) * 0.5)
 			ctx.save()
 			ctx.globalAlpha = env * (0.55 + (si * 0.07))
-			ctx.strokeStyle = (a.c1 if (JS.mod(si, 2)) == 0 else a.burst)
+			ctx.strokeStyle = (a.get("c1") if (JS.mod(si, 2)) == 0 else a.get("burst"))
 			ctx.lineWidth = max(0.8, 2.2 - (si * 0.2))
 			ctx.beginPath()
 			ctx.moveTo(sx1, sy1)
@@ -648,13 +653,13 @@ func _drawWindSlash(ctx = null, a = null, W = null, H = null):
 			# Afterimage trail (faint copy slightly behind)
 			if p > 0.18:
 				var tPos = _arcPt(from, to, p - 0.12)
-				var atx1 = (tPos.x + (cos(perpAngle) * slashOff)) - ((cos(travelAngle) * slashLen) * 0.4)
-				var aty1 = (tPos.y + (sin(perpAngle) * slashOff)) - ((sin(travelAngle) * slashLen) * 0.4)
-				var atx2 = (tPos.x + (cos(perpAngle) * slashOff)) + ((cos(travelAngle) * slashLen) * 0.4)
-				var aty2 = (tPos.y + (sin(perpAngle) * slashOff)) + ((sin(travelAngle) * slashLen) * 0.4)
+				var atx1 = (tPos.get("x") + (cos(perpAngle) * slashOff)) - ((cos(travelAngle) * slashLen) * 0.4)
+				var aty1 = (tPos.get("y") + (sin(perpAngle) * slashOff)) - ((sin(travelAngle) * slashLen) * 0.4)
+				var atx2 = (tPos.get("x") + (cos(perpAngle) * slashOff)) + ((cos(travelAngle) * slashLen) * 0.4)
+				var aty2 = (tPos.get("y") + (sin(perpAngle) * slashOff)) + ((sin(travelAngle) * slashLen) * 0.4)
 				ctx.save()
 				ctx.globalAlpha = env * 0.22
-				ctx.strokeStyle = a.c1
+				ctx.strokeStyle = a.get("c1")
 				ctx.lineWidth = 1
 				ctx.beginPath()
 				ctx.moveTo(atx1, aty1)
@@ -663,11 +668,11 @@ func _drawWindSlash(ctx = null, a = null, W = null, H = null):
 				ctx.restore()
 	# Impact: expanding spiral wind burst
 	if prog >= HIT:
-		var bp = (prog - HIT) / float(1 - HIT)
+		var bp = (prog - HIT) / float((1 - HIT))
 		var bp2 = 1 - bp
-		_glow(ctx, to.x, to.y, 15, a.glow, bp2 * 0.82)
-		_ring(ctx, to.x, to.y, bp * 30, a.c1, bp2 * 0.85, 2.0)
-		_ring(ctx, to.x, to.y, bp * 18, a.burst, bp2 * 0.5, 1.0)
+		_glow(ctx, to.get("x"), to.get("y"), 15, a.get("glow"), bp2 * 0.82)
+		_ring(ctx, to.get("x"), to.get("y"), bp * 30, a.get("c1"), bp2 * 0.85, 2.0)
+		_ring(ctx, to.get("x"), to.get("y"), bp * 18, a.get("burst"), bp2 * 0.5, 1.0)
 		# Spiral wind streaks
 		for i in range(14):
 			var sAngle = (((i / 14.0) * PI) * 2) + ((bp * PI) * 2.5)
@@ -675,94 +680,94 @@ func _drawWindSlash(ctx = null, a = null, W = null, H = null):
 			var r2 = r1 + 10
 			ctx.save()
 			ctx.globalAlpha = bp2 * 0.65
-			ctx.strokeStyle = (a.c1 if (JS.mod(i, 2)) == 0 else a.burst)
+			ctx.strokeStyle = (a.get("c1") if (JS.mod(i, 2)) == 0 else a.get("burst"))
 			ctx.lineWidth = 1
 			ctx.beginPath()
-			ctx.moveTo(to.x + (cos(sAngle) * r1), to.y + ((sin(sAngle) * r1) * 0.55))
-			ctx.lineTo(to.x + (cos(sAngle + 0.55) * r2), to.y + ((sin(sAngle + 0.55) * r2) * 0.55))
+			ctx.moveTo(to.get("x") + (cos(sAngle) * r1), to.get("y") + ((sin(sAngle) * r1) * 0.55))
+			ctx.lineTo(to.get("x") + (cos(sAngle + 0.55) * r2), to.get("y") + ((sin(sAngle + 0.55) * r2) * 0.55))
 			ctx.stroke()
 			ctx.restore()
 
 # ─── ARC (Neutral) — particles fly arc path + glow impact ────────────────────
 func _drawArc(ctx = null, a = null, W = null, H = null):
-	var from = _spriteCenter(a.attackerSide, a.targetEnemyIdx, W, H)
+	var from = _spriteCenter(a.get("attackerSide"), a.get("targetEnemyIdx"), W, H)
 	var toSide = ("enemy" if a.get("attackerSide") == "player" else "player")
-	var to = _spriteCenter(toSide, a.targetEnemyIdx, W, H)
-	var prog = a.t / float(a.dur)
-	for p in JS.iter(a.particles):
-		var pt = min(1, max(0, prog + p.offset))
+	var to = _spriteCenter(toSide, a.get("targetEnemyIdx"), W, H)
+	var prog = a.get("t") / float(a.get("dur"))
+	for p in JS.iter(a.get("particles")):
+		var pt = min(1, max(0, prog + p.get("offset")))
 		if (pt <= 0 or pt >= 1):
 			continue
 		var pos = _arcPt(from, to, pt)
 		var env = sin(pt * PI)
 		ctx.save()
-		ctx.globalAlpha = env * p.alpha
-		ctx.fillStyle = (a.c1 if pt < 0.55 else a.c2)
+		ctx.globalAlpha = env * p.get("alpha")
+		ctx.fillStyle = (a.get("c1") if pt < 0.55 else a.get("c2"))
 		var sz = max(1, JS.round(p.size * (1 - (pt * 0.35))))
-		ctx.fillRect(JS.round(pos.x) - (sz >> 1), JS.round(pos.y) - (sz >> 1), sz, sz)
+		ctx.fillRect(JS.round(pos.get("x")) - (sz >> 1), JS.round(pos.get("y")) - (sz >> 1), sz, sz)
 		ctx.restore()
 	if prog > 0.7:
 		var bp = (prog - 0.7) / 0.3
-		_glow(ctx, to.x, to.y, 12, a.burst, (1 - bp) * 0.75)
-		_ring(ctx, to.x, to.y, bp * 18, a.c1, (1 - bp) * 0.7, 1.5)
+		_glow(ctx, to.get("x"), to.get("y"), 12, a.get("burst"), (1 - bp) * 0.75)
+		_ring(ctx, to.get("x"), to.get("y"), bp * 18, a.get("c1"), (1 - bp) * 0.7, 1.5)
 
 # ─── RISE (Heal) — particles float upward with glow ──────────────────────────
 func _drawRise(ctx = null, a = null, W = null, H = null):
 	var center = _spriteCenter("player", 0, W, H)
-	var prog = a.t / float(a.dur)
+	var prog = a.get("t") / float(a.get("dur"))
 	# Screen flash — soft green
 	if JS.eq(a.get("t"), 1):
 		_triggerFlash(50, 220, 80, 0.15)
 	# Rising particles
-	var _arr2 = JS.iter(a.particles)
+	var _arr2 = JS.iter(a.get("particles"))
 	for i in range(len(_arr2)):
 		var p = _arr2[i]
-		var delay = (i / float(len(a.particles))) * 0.28
-		var pt = max(0, (prog - delay) / float(1 - delay))
+		var delay = (i / float(len(a.get("particles")))) * 0.28
+		var pt = max(0, (prog - delay) / float((1 - delay)))
 		if (pt <= 0 or pt >= 1):
 			continue
-		var x = center.x + p.yOff
-		var y = (center.y - (pt * 38)) - 4
+		var x = center.get("x") + p.get("yOff")
+		var y = (center.get("y") - (pt * 38)) - 4
 		ctx.save()
-		ctx.globalAlpha = sin(pt * PI) * p.alpha
-		ctx.fillStyle = (a.c1 if pt < 0.5 else a.c2)
+		ctx.globalAlpha = sin(pt * PI) * p.get("alpha")
+		ctx.fillStyle = (a.get("c1") if pt < 0.5 else a.get("c2"))
 		ctx.fillRect(JS.round(x), JS.round(y), p.size, p.size)
 		ctx.restore()
 	# Central glow
 	if prog < 0.55:
-		_glow(ctx, center.x, center.y, 16, a.burst, (1 - (prog / 0.55)) * 0.55)
+		_glow(ctx, center.get("x"), center.get("y"), 16, a.get("burst"), (1 - (prog / 0.55)) * 0.55)
 
 # ─── SHIELD (Block / Armor) — pulsing glow border with corner sparks ──────────
 func _drawShield(ctx = null, a = null, W = null, H = null):
 	var pp = Sprites.playerSpritePos(W, H)
-	var prog = a.t / float(a.dur)
+	var prog = a.get("t") / float(a.get("dur"))
 	var grow = min(1, prog * 3.5)
 	var fade = (prog / 0.3 if prog < 0.3 else 1 - ((prog - 0.3) / 0.7))
 	var pad = 6 * grow
 	# Glow fill
 	ctx.save()
 	ctx.globalAlpha = fade * 0.45
-	ctx.fillStyle = a.burst
-	ctx.fillRect(pp.x - pad, pp.y - pad, pp.w + (pad * 2), pp.h + (pad * 2))
+	ctx.fillStyle = a.get("burst")
+	ctx.fillRect(pp.get("x") - pad, pp.get("y") - pad, pp.get("w") + (pad * 2), pp.get("h") + (pad * 2))
 	# Bright border
 	ctx.globalAlpha = fade * 0.9
-	ctx.strokeStyle = a.c1
+	ctx.strokeStyle = a.get("c1")
 	ctx.lineWidth = max(1, JS.round(2.5 * grow))
-	ctx.strokeRect(pp.x - pad, pp.y - pad, pp.w + (pad * 2), pp.h + (pad * 2))
+	ctx.strokeRect(pp.get("x") - pad, pp.get("y") - pad, pp.get("w") + (pad * 2), pp.get("h") + (pad * 2))
 	ctx.restore()
 	# Corner spark dots
 	var corners = [
-		[pp.x - pad, pp.y - pad],
-		[(pp.x + pp.w) + pad, pp.y - pad],
-		[pp.x - pad, (pp.y + pp.h) + pad],
-		[(pp.x + pp.w) + pad, (pp.y + pp.h) + pad],
+		[pp.get("x") - pad, pp.get("y") - pad],
+		[(pp.get("x") + pp.get("w")) + pad, pp.get("y") - pad],
+		[pp.get("x") - pad, (pp.get("y") + pp.get("h")) + pad],
+		[(pp.get("x") + pp.get("w")) + pad, (pp.get("y") + pp.get("h")) + pad],
 	]
 	for _e3 in JS.iter(corners):
 		var cx = JS.idx(_e3, 0)
 		var cy = JS.idx(_e3, 1)
 		ctx.save()
-		ctx.globalAlpha = fade * (0.6 + (0.4 * sin(a.t * 0.4)))
-		ctx.fillStyle = a.burst
+		ctx.globalAlpha = fade * (0.6 + (0.4 * sin(a.get("t") * 0.4)))
+		ctx.fillStyle = a.get("burst")
 		ctx.fillRect(JS.round(cx) - 2, JS.round(cy) - 2, 4, 4)
 		ctx.restore()
 
@@ -794,7 +799,7 @@ func tickAnims(ctx = null, W = null, H = null):
 			"shield":
 				_drawShield(ctx, a, W, H)
 		a.t += 1
-		if a.t >= a.dur:
+		if a.get("t") >= a.get("dur"):
 			JS.splice(ACTIVE_ANIMS, i, 1)
 	# Screen flash overlay — drawn after all anims, decays per frame
 	if _flashAlpha > 0.006:
@@ -1057,7 +1062,7 @@ func _cfEnvEarth(ctx = null, W = null, H = null, gY = null, t = null):
 		var mh = gY - my
 		var px = mx - (mw / 2.0)
 		while px < (mx + (mw / 2.0)):
-			var h2 = mh * max(0, 1 - pow((px - mx) / float(mw / 2.0), 2))
+			var h2 = mh * max(0, 1 - pow((px - mx) / float((mw / 2.0)), 2))
 			ctx.fillRect(JS.round(px), JS.round((my + mh) - h2), 1, JS.round(h2))
 			px += 1
 	ctx.restore()

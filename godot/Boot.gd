@@ -3,13 +3,16 @@ extends Node
 
 func _ready() -> void:
 	randomize()
+	var args := OS.get_cmdline_user_args()
+	for a in args:
+		if a.begins_with("--driver="): localStorage.memory_only = true   # scripted runs never touch real saves
+		if a.begins_with("--seed="): seed(a.substr(7).to_int())
 	InlineJS.setup(GameModules.GLOBALS)
 	document.load_page("res://web/index.html", ["res://web/styles.css"])
 	for m in GameModules.ORDER:
 		var mod := get_node_or_null("/root/" + m)
 		if mod != null: mod._boot()
 	_version_label()
-	var args := OS.get_cmdline_user_args()
 	for a in args:
 		if a.begins_with("--driver="):
 			var d = load("res://dev/Driver.gd").new()

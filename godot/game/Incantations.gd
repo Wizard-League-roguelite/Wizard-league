@@ -265,7 +265,7 @@ func incantatedValue(spellObj = null, baseValue = null):
 	var cfg = JS.idx(SPELL_INCANTATION_CONFIG, spellObj.id)
 	if not JS.t(cfg):
 		return baseValue
-	return baseValue + _incantationBonus(JS.or_(spellObj.get("incantationLevel"), 1), cfg.baseScale, cfg.decay)
+	return baseValue + _incantationBonus(JS.or_(spellObj.get("incantationLevel"), 1), cfg.get("baseScale"), cfg.get("decay"))
 
 # Returns "Label: value" string showing the CURRENT incantated stat for display in spell buttons.
 func incantationStatDisplay(spellObj = null):
@@ -276,7 +276,7 @@ func incantationStatDisplay(spellObj = null):
 	if base == null:
 		return null
 	var curLevel = JS.or_(spellObj.get("incantationLevel"), 1)
-	var val = base + _incantationBonus(curLevel, cfg.baseScale, cfg.decay)
+	var val = base + _incantationBonus(curLevel, cfg.get("baseScale"), cfg.get("decay"))
 	var fmt = null
 	if (cfg.get("scaledStat") == "rootChance" or cfg.get("scaledStat") == "lifeStealPct"):
 		fmt = JS.s(JS.round(val * 100)) + "%"
@@ -288,7 +288,7 @@ func incantationStatDisplay(spellObj = null):
 		fmt = JS.toFixed(val, 1)
 	else:
 		fmt = JS.s(JS.round(val))
-	return JS.s(JS.or_(JS.idx(_STAT_LABELS, cfg.scaledStat), cfg.get("scaledStat"))) + ": " + fmt
+	return JS.s(JS.or_(JS.idx(_STAT_LABELS, cfg.get("scaledStat")), cfg.get("scaledStat"))) + ": " + fmt
 
 # Returns { stat, prev, next } display strings for the upgrade popup.
 func incantationUpgradeDisplay(spellObj = null):
@@ -299,8 +299,8 @@ func incantationUpgradeDisplay(spellObj = null):
 	var base = JS.idx(_INCANTATION_BASE_VALUES, spellObj.id)
 	if base == null:
 		return null
-	var prevBonus = _incantationBonus(curLevel, cfg.baseScale, cfg.decay)
-	var nextBonus = _incantationBonus(curLevel + 1, cfg.baseScale, cfg.decay)
+	var prevBonus = _incantationBonus(curLevel, cfg.get("baseScale"), cfg.get("decay"))
+	var nextBonus = _incantationBonus(curLevel + 1, cfg.get("baseScale"), cfg.get("decay"))
 	var prevVal = base + prevBonus
 	var nextVal = base + nextBonus
 	var _fn1 = func(v = null):
@@ -316,4 +316,4 @@ func incantationUpgradeDisplay(spellObj = null):
 			return JS.s(JS.round(v))
 		return JS.s(JS.round(v))
 	var fmt = _fn1
-	return {"stat": cfg.scaledStat, "prev": fmt.call(prevVal), "next": fmt.call(nextVal)}
+	return {"stat": cfg.get("scaledStat"), "prev": fmt.call(prevVal), "next": fmt.call(nextVal)}

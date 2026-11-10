@@ -220,16 +220,20 @@ func _scan_styles(n: DomNode) -> void:
 		if c.nodeType == DomNode.ELEMENT and c.tag == "style": _register_sheet(c)
 
 func _register_sheet(el: DomNode) -> void:
-	var text := el.textContent
+	var text = el.textContent
 	if _sheets_seen.get(el.get_instance_id(), "") == text: return
 	_sheets_seen[el.get_instance_id()] = text
 	css.add_sheet(text)
 	mark_style(root)
 
 # ───────────────────────── frame ─────────────────────────
+var perf_flush_usec := 0
+
 func _process(_dt: float) -> void:
 	if not ready_done: return
+	var t0 := Time.get_ticks_usec()
 	flush()
+	perf_flush_usec = Time.get_ticks_usec() - t0
 
 func ensure_layout() -> void:
 	if _style_dirty or css.generation != _css_generation: _restyle_pass()

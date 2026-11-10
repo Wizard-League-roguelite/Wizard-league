@@ -133,7 +133,7 @@ func _lobbyMY(y = null, W = null, H = null):
 	# old horizon 60%, new horizon 30% (leaves sky gap above castle)
 	if y <= ho:
 		return (y / float(ho)) * hn
-	return hn + (((y - ho) / float(1.0 - ho)) * (1.0 - hn))
+	return hn + (((y - ho) / float((1.0 - ho))) * (1.0 - hn))
 
 # Returns the pixel Y for the bottom of the drawbridge — capped on mobile so bridge isn't stretched
 func _lobbyBridgeBotY(W = null, H = null):
@@ -878,8 +878,8 @@ func showBetweenRuns_map():
 	canvas.style.width = JS.s(cssW) + "px"
 	canvas.style.height = JS.s(cssH) + "px"
 	# Start player at return position (e.g. tailor) or default plaza
-	var _startX = (_lobbyReturnPos.x if JS.t(_lobbyReturnPos) else LOBBY_PLAZA.x)
-	var _startY = (_lobbyReturnPos.y if JS.t(_lobbyReturnPos) else LOBBY_PLAZA.y)
+	var _startX = (_lobbyReturnPos.get("x") if JS.t(_lobbyReturnPos) else LOBBY_PLAZA.get("x"))
+	var _startY = (_lobbyReturnPos.get("y") if JS.t(_lobbyReturnPos) else LOBBY_PLAZA.get("y"))
 	_lobbyReturnPos = null
 	_lobbyPlayerX = _startX
 	_lobbyPlayerY = _startY
@@ -953,11 +953,11 @@ func _lobbyMovePlayer():
 		_lobbyWalking = false
 		if len(_lobbyWaypointQueue) > 0:
 			var next = _lobbyWaypointQueue.pop_front()
-			_lobbyTargetX = next.x
-			_lobbyTargetY = next.y
+			_lobbyTargetX = next.get("x")
+			_lobbyTargetY = next.get("y")
 			_lobbyWalking = true
 			if JS.t(next.get("finalDest")):
-				_lobbyWalkDest = next.finalDest
+				_lobbyWalkDest = next.get("finalDest")
 		elif JS.t(_lobbyWalkDest):
 			var dest = _lobbyWalkDest
 			_lobbyWalkDest = null
@@ -995,31 +995,31 @@ func _drawShootingStars(ctx = null, W = null, H = null):
 		})
 	ctx.save()
 	var _fn10 = func(s = null):
-		s.x += s.vx
-		s.y += s.vy
+		s.x += s.get("vx")
+		s.y += s.get("vy")
 		s.life += 1
-		var progress = s.life / float(s.maxLife)
+		var progress = s.get("life") / float(s.get("maxLife"))
 		# Fade in then fade out
 		var alpha = (progress / 0.2 if progress < 0.2 else 1 - ((progress - 0.2) / 0.8))
 		# Tail — gradient from bright head to transparent tail
-		var tailX = s.x - (s.vx * (s.len / float(JS.hypot([s.vx, s.vy]))))
-		var tailY = s.y - (s.vy * (s.len / float(JS.hypot([s.vx, s.vy]))))
-		var grad = ctx.createLinearGradient(tailX, tailY, s.x, s.y)
+		var tailX = s.get("x") - (s.get("vx") * (s.get("len") / float(JS.hypot([s.get("vx"), s.get("vy")]))))
+		var tailY = s.get("y") - (s.get("vy") * (s.get("len") / float(JS.hypot([s.get("vx"), s.get("vy")]))))
+		var grad = ctx.createLinearGradient(tailX, tailY, s.get("x"), s.get("y"))
 		grad.addColorStop(0, "transparent")
 		grad.addColorStop(0.6, "rgba(200,200,255," + JS.s(alpha * 0.3) + ")")
 		grad.addColorStop(1, "rgba(255,255,255," + JS.s(alpha) + ")")
 		ctx.beginPath()
 		ctx.moveTo(tailX, tailY)
-		ctx.lineTo(s.x, s.y)
+		ctx.lineTo(s.get("x"), s.get("y"))
 		ctx.strokeStyle = grad
 		ctx.lineWidth = 1.5
 		ctx.stroke()
 		# Bright head dot
 		ctx.fillStyle = "rgba(255,255,255," + JS.s(alpha) + ")"
 		ctx.beginPath()
-		ctx.arc(s.x, s.y, 1.5, 0, PI * 2)
+		ctx.arc(s.get("x"), s.get("y"), 1.5, 0, PI * 2)
 		ctx.fill()
-		return (s.life < s.maxLife and s.y < (H * 0.42))
+		return (s.get("life") < s.get("maxLife") and s.get("y") < (H * 0.42))
 	_lobbyShootingStars = JS.arr(_lobbyShootingStars).filter(_fn10)
 	ctx.restore()
 
@@ -1157,7 +1157,7 @@ func _drawStoneBlocks(ctx = null, rx = null, ry = null, rw = null, rh = null, bl
 	ctx.rect(rx, ry, rw, rh)
 	ctx.clip()
 	var mortar = 1
-	var rows = ceili(rh / float(blockH + mortar)) + 1
+	var rows = ceili(rh / float((blockH + mortar))) + 1
 	for row in range(0, floori(rows) + 1):
 		var rowY = ry + (row * (blockH + mortar))
 		var offset = (0 if (JS.mod(row, 2)) == 0 else blockH * 0.55)
@@ -1470,8 +1470,8 @@ func _drawLobbycastle(ctx = null, W = null, H = null):
 	ctx.restore()
 
 func _drawLobbyFountain(ctx = null, W = null, H = null):
-	var cx = LOBBY_FOUNTAIN.x * W
-	var cy = _lobbyMY(LOBBY_FOUNTAIN.y, W, H) * H
+	var cx = LOBBY_FOUNTAIN.get("x") * W
+	var cy = _lobbyMY(LOBBY_FOUNTAIN.get("y"), W, H) * H
 	var r = max(22, W * 0.055)
 	var t = _lobbyTick
 	ctx.save()
@@ -1570,8 +1570,8 @@ func _drawLobbyPaths(ctx = null, W = null, H = null):
 func _drawLobbyPathsActual(ctx = null, W = null, H = null):
 	var my = func(y = null): return _lobbyMY(y, W, H) * H
 	# shorthand: fractional Y → pixel Y
-	var fcx = LOBBY_FOUNTAIN.x * W
-	var fcy = my.call(LOBBY_FOUNTAIN.y)
+	var fcx = LOBBY_FOUNTAIN.get("x") * W
+	var fcy = my.call(LOBBY_FOUNTAIN.get("y"))
 	var pathW = max(5, W * 0.012)
 	var branchW = pathW * 0.75
 	# side branches slightly thinner
@@ -1593,53 +1593,53 @@ func _drawLobbyPathsActual(ctx = null, W = null, H = null):
 	# ── LEFT TRUNK: fountain → archive (farthest left) ──────────────────────
 	var archLoc = JS.find(LOBBY_LOCATIONS, func(l = null): return l.get("id") == "archive")
 	var guildLoc = JS.find(LOBBY_LOCATIONS, func(l = null): return l.get("id") == "guild")
-	var _d13 = edgePt.call(archLoc.x * W, my.call(archLoc.y))
+	var _d13 = edgePt.call(archLoc.get("x") * W, my.call(archLoc.get("y")))
 	var ls0x = JS.idx(_d13, 0)
 	var ls0y = JS.idx(_d13, 1)
 	var ls_cpx = 0.14 * W
 	var ls_cpy = my.call(0.79)
 	# trunk control point
-	var ls_ex = archLoc.x * W
-	var ls_ey = my.call(archLoc.y)
+	var ls_ex = archLoc.get("x") * W
+	var ls_ey = my.call(archLoc.get("y"))
 	_drawCobblestonePath(ctx, ls0x, ls0y, ls_cpx, ls_cpy, ls_ex, ls_ey, pathW)
 	# Branch off trunk at t≈0.40 → guild
 	var _d14 = bezPt.call(ls0x, ls0y, ls_cpx, ls_cpy, ls_ex, ls_ey, 0.4)
 	var ljx = JS.idx(_d14, 0)
 	var ljy = JS.idx(_d14, 1)
-	var gl_ex = guildLoc.x * W
-	var gl_ey = my.call(guildLoc.y)
+	var gl_ex = guildLoc.get("x") * W
+	var gl_ey = my.call(guildLoc.get("y"))
 	_drawCobblestonePath(ctx, ljx, ljy, ((ljx + gl_ex) * 0.5) + (W * 0.02), (ljy + gl_ey) * 0.5, gl_ex, gl_ey, branchW)
 	# ── RIGHT TRUNK: fountain → vault (farthest right) ──────────────────────
 	var vaultLoc = JS.find(LOBBY_LOCATIONS, func(l = null): return l.get("id") == "vault")
 	var tailorLoc = JS.find(LOBBY_LOCATIONS, func(l = null): return l.get("id") == "tailor")
-	var _d15 = edgePt.call(vaultLoc.x * W, my.call(vaultLoc.y))
+	var _d15 = edgePt.call(vaultLoc.get("x") * W, my.call(vaultLoc.get("y")))
 	var rs0x = JS.idx(_d15, 0)
 	var rs0y = JS.idx(_d15, 1)
 	var rs_cpx = 0.86 * W
 	var rs_cpy = my.call(0.79)
-	var rs_ex = vaultLoc.x * W
-	var rs_ey = my.call(vaultLoc.y)
+	var rs_ex = vaultLoc.get("x") * W
+	var rs_ey = my.call(vaultLoc.get("y"))
 	_drawCobblestonePath(ctx, rs0x, rs0y, rs_cpx, rs_cpy, rs_ex, rs_ey, pathW)
 	# Branch off trunk at t≈0.40 → tailor
 	var _d16 = bezPt.call(rs0x, rs0y, rs_cpx, rs_cpy, rs_ex, rs_ey, 0.4)
 	var rjx = JS.idx(_d16, 0)
 	var rjy = JS.idx(_d16, 1)
-	var tl_ex = tailorLoc.x * W
-	var tl_ey = my.call(tailorLoc.y)
+	var tl_ex = tailorLoc.get("x") * W
+	var tl_ey = my.call(tailorLoc.get("y"))
 	_drawCobblestonePath(ctx, rjx, rjy, ((rjx + tl_ex) * 0.5) - (W * 0.02), (rjy + tl_ey) * 0.5, tl_ex, tl_ey, branchW)
 	# ── BOTTOM PATHS: direct from plaza edge ────────────────────────────────
 	var _arr17 = JS.iter(["library", "talents"])
 	for i in range(len(_arr17)):
 		var id = _arr17[i]
 		var loc = JS.find(LOBBY_LOCATIONS, func(l = null): return JS.eq(l.id, id))
-		var _d18 = edgePt.call(loc.x * W, my.call(loc.y))
+		var _d18 = edgePt.call(loc.get("x") * W, my.call(loc.get("y")))
 		var sx = JS.idx(_d18, 0)
 		var sy = JS.idx(_d18, 1)
 		var cpx = (0.22 * W if JS.eq(i, 0) else 0.76 * W)
-		_drawCobblestonePath(ctx, sx, sy, cpx, my.call(0.96), loc.x * W, my.call(loc.y), pathW)
+		_drawCobblestonePath(ctx, sx, sy, cpx, my.call(0.96), loc.get("x") * W, my.call(loc.get("y")), pathW)
 	# ── BRIDGE PATH: plaza top edge → drawbridge bottom ─────────────────────
 	var castleLoc = JS.find(LOBBY_LOCATIONS, func(l = null): return l.get("id") == "castle")
-	var _d19 = edgePt.call(castleLoc.x * W, my.call(castleLoc.y))
+	var _d19 = edgePt.call(castleLoc.get("x") * W, my.call(castleLoc.get("y")))
 	var bp0x = JS.idx(_d19, 0)
 	var bp0y = JS.idx(_d19, 1)
 	var bridgeBotX = 0.5 * W
@@ -1652,8 +1652,8 @@ func _drawLobbyPathsActual(ctx = null, W = null, H = null):
 	var _d20 = bezPt.call(bp0x, bp0y, 0.5 * W, bpCPy, bridgeBotX, bridgeBotY, 0.55)
 	var vjx = JS.idx(_d20, 0)
 	var vjy = JS.idx(_d20, 1)
-	var vl_ex = veilLoc.x * W
-	var vl_ey = my.call(veilLoc.y)
+	var vl_ex = veilLoc.get("x") * W
+	var vl_ey = my.call(veilLoc.get("y"))
 	_drawCobblestonePath(ctx, vjx, vjy, (vjx + vl_ex) * 0.5, ((vjy + vl_ey) * 0.5) - (H * 0.01), vl_ex, vl_ey, branchW)
 	# Thin perspective elliptical ring (drawn last to cap all path starts cleanly)
 	_drawCobblestoneRing(ctx, fcx, fcy, plazaRX, plazaRY, pathW)
@@ -1769,7 +1769,7 @@ func _drawCobblestoneRing(ctx = null, cx = null, cy = null, rX = null, rY = null
 	# Polygon cobblestones along the ellipse — perspective-scaled
 	var circumference = PI * ((3 * (rX + rY)) - sqrt(((3 * rX) + rY) * (rX + (3 * rY))))
 	var stoneR = max(2, sw * 0.85)
-	var nStones = max(24, ceili(circumference / float(stoneR * 1.55)))
+	var nStones = max(24, ceili(circumference / float((stoneR * 1.55))))
 	for s in range(ceili(nStones)):
 		var angle = ((s / float(nStones)) * PI) * 2
 		var px = cx + (cos(angle) * rX)
@@ -1799,13 +1799,13 @@ func _drawLobbyForeground(ctx = null, W = null, H = null):
 		ctx.lineWidth = lw
 		ctx.lineCap = "round"
 		ctx.beginPath()
-		ctx.moveTo(JS.idx(JS.idx(spts, 0), 0) + off, JS.idx(JS.idx(spts, 0), 1))
+		ctx.moveTo(JS.un(JS.idx(JS.idx(spts, 0), 0)) + off, JS.idx(JS.idx(spts, 0), 1))
 		for i in range(1, len(spts)):
 			var mp = [
-				((JS.idx(JS.idx(spts, i - 1), 0) + JS.idx(spts[i], 0)) / 2.0) + off,
-				(JS.idx(JS.idx(spts, i - 1), 1) + JS.idx(spts[i], 1)) / 2.0,
+				((JS.un(JS.idx(JS.idx(spts, i - 1), 0)) + JS.un(JS.idx(spts[i], 0))) / 2.0) + off,
+				(JS.un(JS.idx(JS.idx(spts, i - 1), 1)) + JS.un(JS.idx(spts[i], 1))) / 2.0,
 			]
-			ctx.quadraticCurveTo(JS.idx(mp, 0), JS.idx(mp, 1), JS.idx(spts[i], 0) + off, JS.idx(spts[i], 1))
+			ctx.quadraticCurveTo(JS.idx(mp, 0), JS.idx(mp, 1), JS.un(JS.idx(spts[i], 0)) + off, JS.idx(spts[i], 1))
 		ctx.stroke()
 	var drawStream = _fn23
 	drawStream.call("#050a12", 44, 0)
@@ -1890,9 +1890,9 @@ func _drawLobbyForeground(ctx = null, W = null, H = null):
 		{"x": 0.99, "y": 0.79, "s": 0.5},
 	]
 	for tr in JS.iter(edgeTrees):
-		var txp = tr.x * W
-		var typ = my.call(tr.y)
-		var trs = tr.s * max(16, W * 0.022)
+		var txp = tr.get("x") * W
+		var typ = my.call(tr.get("y"))
+		var trs = tr.get("s") * max(16, W * 0.022)
 		ctx.fillStyle = "#1a0e06"
 		ctx.fillRect(JS.round(txp - (trs * 0.16)), JS.round(typ - (trs * 1.2)), JS.round(trs * 0.32), JS.round(trs * 1.2))
 		ctx.fillStyle = "#061208"
@@ -1956,9 +1956,9 @@ func _lobbyBuildingHasNotif(id = null):
 	if id == "talents":
 		var talents = JS.or_(meta.get("talents"), {})
 		for key in JS.iter(JS.keys(JS.or_(Talents.TALENT_TREE, {}))):
-			for node in JS.iter(Talents.TALENT_TREE[key].nodes):
+			for node in JS.iter(Talents.TALENT_TREE[key].get("nodes")):
 				var lvl = JS.or_(JS.idx(talents, node.id), 0)
-				if (lvl < node.maxLevel and phos >= JS.callm(node, "cost", [lvl + 1])):
+				if (lvl < node.get("maxLevel") and phos >= JS.callm(node, "cost", [lvl + 1])):
 					return true
 		return false
 	return false
@@ -1966,8 +1966,8 @@ func _lobbyBuildingHasNotif(id = null):
 # ── Building dispatcher ────────────────────────────────────────────────────
 func _drawLobbyBuilding(ctx = null, loc = null, W = null, H = null):
 	var hovered = JS.eq(_lobbyHoveredId, loc.id)
-	var bx = JS.round(loc.x * W)
-	var by = JS.round(_lobbyMY(loc.y, W, H) * H)
+	var bx = JS.round(loc.get("x") * W)
+	var by = JS.round(_lobbyMY(loc.get("y"), W, H) * H)
 	var bs = max(14, JS.round(min(W * (0.05 if W < H else 0.034), H * 0.06)))
 	var t = _lobbyTick
 	ctx.save()
@@ -1993,7 +1993,7 @@ func _drawLobbyBuilding(ctx = null, loc = null, W = null, H = null):
 	ctx.textBaseline = "top"
 	var _veilLocked = (loc.get("id") == "veil" and not (true and Veil._veilIsUnlocked()))
 	ctx.fillStyle = (("#9a8a90" if hovered else "#4a3a45") if _veilLocked else ("#c8a060" if hovered else "#6a5030"))
-	ctx.fillText(("Ruined Portal" if _veilLocked else loc.label), bx, by + max(4, bs * 0.15))
+	ctx.fillText(("Ruined Portal" if _veilLocked else loc.get("label")), bx, by + max(4, bs * 0.15))
 	ctx.restore()
 	# Notification dot — drawn after restore so it's always on top
 	if _lobbyBuildingHasNotif(loc.id):
@@ -2544,7 +2544,7 @@ func _drawBuildingTailor(ctx = null, bx = null, by = null, bs = null, hov = null
 	ctx.fill()
 	# Awning stripes
 	var numS = 4
-	var sw2 = awW2 / float(numS * 2)
+	var sw2 = awW2 / float((numS * 2))
 	for i_2 in range(ceili(numS)):
 		ctx.fillStyle = "#2e1010"
 		var sx2 = awX + ((i_2 * sw2) * 2)
@@ -2560,7 +2560,7 @@ func _drawBuildingTailor(ctx = null, bx = null, by = null, bs = null, hov = null
 	for i_2 in range(ceili(numSc)):
 		ctx.fillStyle = "#200a0a"
 		ctx.beginPath()
-		ctx.arc(JS.round((awX - (bs * 0.06)) + ((i_2 * (awW2 + (bs * 0.12))) / float(numSc - 1))), JS.round(awY + awH2), JS.round(max(3, bs * 0.08)), 0, PI)
+		ctx.arc(JS.round((awX - (bs * 0.06)) + ((i_2 * (awW2 + (bs * 0.12))) / float((numSc - 1)))), JS.round(awY + awH2), JS.round(max(3, bs * 0.08)), 0, PI)
 		ctx.fill()
 	# Hanging scissors sign
 	ctx.strokeStyle = "#281808"
@@ -2668,7 +2668,7 @@ func _drawBuildingVeil(ctx = null, bx = null, by = null, bs = null, hov = null, 
 	var ay = by - ah
 	var pulse = 0.5 + (0.5 * sin(t * 0.04))
 	var mistCfg = Mist.getMistConfig()
-	var active = mistCfg.active
+	var active = mistCfg.get("active")
 	# Archway glow backdrop
 	var glow = ctx.createRadialGradient(bx, by - (ah * 0.5), 0, bx, by - (ah * 0.5), aw * 0.8)
 	glow.addColorStop(0, "rgba(" + ("120,40,220" if JS.t(active) else "60,20,110") + "," + JS.s(0.22 + (pulse * 0.12)) + ")")
@@ -2754,7 +2754,7 @@ func _drawLobbyPlayer(ctx = null, W = null, H = null):
 	# Bob when walking
 	var bobY = (JS.round(sin(_lobbyTick * 0.25) * 2) if JS.t(_lobbyWalking) else 0)
 	# Get player sprite rows based on wizard archetype
-	var _archId = (Characters._wizBuild.archetype if (true and JS.t(Characters._wizBuild)) else "arcanist")
+	var _archId = (Characters._wizBuild.get("archetype") if (true and JS.t(Characters._wizBuild)) else "arcanist")
 	var rows = Sprites.getPlayerCharSprite(_archId)
 	var sprW = 24 * scale_
 	var sprH = len(rows) * scale_
@@ -2794,35 +2794,35 @@ func _lobbyGetPlayerPal():
 	var b = Characters._wizBuild
 	if not JS.t(b):
 		return ["#aa6622", "#cc8833", "#eebb55", "#ffdd88"]
-	var outfit = JS.find(Characters.WIZ_OUTFIT_COLORS, func(o = null): return JS.eq(o.id, b.outfit))
+	var outfit = JS.find(Characters.WIZ_OUTFIT_COLORS, func(o = null): return JS.eq(o.id, b.get("outfit")))
 	if JS.t(outfit):
-		return [outfit.p0, outfit.p1, outfit.p2, outfit.p3]
+		return [outfit.get("p0"), outfit.get("p1"), outfit.get("p2"), outfit.get("p3")]
 	return ["#aa6622", "#cc8833", "#eebb55", "#ffdd88"]
 
 func _lobbyBuildColorMap():
 	var b = Characters._wizBuild
 	if not JS.t(b):
 		return null
-	var hatClr = JS.find(Characters.WIZ_HAT_COLORS, func(c = null): return JS.eq(c.id, b.hatColor))
-	var outClr = JS.find(Characters.WIZ_OUTFIT_COLORS, func(c = null): return JS.eq(c.id, b.outfit))
-	var beardClr = JS.find(Characters.WIZ_BEARD_COLORS, func(c = null): return JS.eq(c.id, b.beardColor))
-	var staffClr = JS.find(Characters.WIZ_STAFF_COLORS, func(c = null): return JS.eq(c.id, b.staffColor))
-	var glowClr = JS.find(Characters.WIZ_STAFF_GLOWS, func(g = null): return JS.eq(g.id, b.staffGlow))
-	var eyeClr = JS.find(Characters.WIZ_EYE_COLORS, func(e = null): return JS.eq(e.id, b.eyeColor))
+	var hatClr = JS.find(Characters.WIZ_HAT_COLORS, func(c = null): return JS.eq(c.id, b.get("hatColor")))
+	var outClr = JS.find(Characters.WIZ_OUTFIT_COLORS, func(c = null): return JS.eq(c.id, b.get("outfit")))
+	var beardClr = JS.find(Characters.WIZ_BEARD_COLORS, func(c = null): return JS.eq(c.id, b.get("beardColor")))
+	var staffClr = JS.find(Characters.WIZ_STAFF_COLORS, func(c = null): return JS.eq(c.id, b.get("staffColor")))
+	var glowClr = JS.find(Characters.WIZ_STAFF_GLOWS, func(g = null): return JS.eq(g.id, b.get("staffGlow")))
+	var eyeClr = JS.find(Characters.WIZ_EYE_COLORS, func(e = null): return JS.eq(e.id, b.get("eyeColor")))
 	var showBeard = b.get("beardStyle") != "none"
 	return {
 		".": null,
-		"1": (outClr.p0 if JS.t(outClr) else "#aa6622"),
-		"2": (outClr.p1 if JS.t(outClr) else "#cc8833"),
-		"3": (outClr.p2 if JS.t(outClr) else "#eebb55"),
-		"4": (outClr.p3 if JS.t(outClr) else "#ffdd88"),
-		"h": (hatClr.color if JS.t(hatClr) else "#2244aa"),
+		"1": (outClr.get("p0") if JS.t(outClr) else "#aa6622"),
+		"2": (outClr.get("p1") if JS.t(outClr) else "#cc8833"),
+		"3": (outClr.get("p2") if JS.t(outClr) else "#eebb55"),
+		"4": (outClr.get("p3") if JS.t(outClr) else "#ffdd88"),
+		"h": (hatClr.get("color") if JS.t(hatClr) else "#2244aa"),
 		"s": SpriteData.SKIN_C,
-		"e": (eyeClr.color if JS.t(eyeClr) else "#ff2222"),
+		"e": (eyeClr.get("color") if JS.t(eyeClr) else "#ff2222"),
 		"b": SpriteData.BOOT_C,
-		"w": (beardClr.color if (showBeard and JS.t(beardClr)) else null),
-		"f": (staffClr.color if JS.t(staffClr) else "#8b5a2b"),
-		"g": (glowClr.color if JS.t(glowClr) else null),
+		"w": (beardClr.get("color") if (showBeard and JS.t(beardClr)) else null),
+		"f": (staffClr.get("color") if JS.t(staffClr) else "#8b5a2b"),
+		"g": (glowClr.get("color") if JS.t(glowClr) else null),
 	}
 
 func _lobbyHover(e = null):
@@ -2831,14 +2831,14 @@ func _lobbyHover(e = null):
 	if not JS.t(canvas):
 		return
 	var r = canvas.getBoundingClientRect()
-	var mx = (e.clientX - r.left) * (canvas.width / float(r.width))
-	var my = (e.clientY - r.top) * (canvas.height / float(r.height))
+	var mx = (e.clientX - JS.un(r.get("left"))) * (canvas.width / float(r.width))
+	var my = (e.clientY - JS.un(r.get("top"))) * (canvas.height / float(r.height))
 	var W = canvas.width
 	var H = canvas.height
 	hit[0] = null
 	for loc in JS.iter(LOBBY_LOCATIONS):
-		var lx = loc.x * W
-		var ly = _lobbyMY(loc.y, W, H) * H
+		var lx = loc.get("x") * W
+		var ly = _lobbyMY(loc.get("y"), W, H) * H
 		var dist = sqrt((pow(mx - lx, 2)) + (pow(my - ly, 2)))
 		var radius = (W * 0.14 if loc.get("id") == "castle" else max(28, W * 0.065))
 		if dist < radius:
@@ -2904,8 +2904,8 @@ func _lobbyClick(e = null):
 	if not JS.t(canvas):
 		return
 	var r = canvas.getBoundingClientRect()
-	var mx = (e.clientX - r.left) * (canvas.width / float(r.width))
-	var my = (e.clientY - r.top) * (canvas.height / float(r.height))
+	var mx = (e.clientX - JS.un(r.get("left"))) * (canvas.width / float(r.width))
+	var my = (e.clientY - JS.un(r.get("top"))) * (canvas.height / float(r.height))
 	var W = canvas.width
 	var H = canvas.height
 	# Refresh-bg button
@@ -2918,20 +2918,20 @@ func _lobbyClick(e = null):
 		return
 	hit[0] = null
 	for loc in JS.iter(LOBBY_LOCATIONS):
-		var lx = loc.x * W
-		var ly = _lobbyMY(loc.y, W, H) * H
+		var lx = loc.get("x") * W
+		var ly = _lobbyMY(loc.get("y"), W, H) * H
 		var dist = sqrt((pow(mx - lx, 2)) + (pow(my - ly, 2)))
 		var radius = (W * 0.14 if loc.get("id") == "castle" else max(28, W * 0.065))
 		if dist < radius:
 			hit[0] = loc
 	if not JS.t(hit[0]):
 		return
-	var destX = hit[0].x
-	var destY = (0.68 if hit[0].get("id") == "castle" else hit[0].y)
+	var destX = hit[0].get("x")
+	var destY = (0.68 if hit[0].get("id") == "castle" else hit[0].get("y"))
 	var route = _buildLobbyRoute(hit[0].id, destX, destY)
-	var first = route.pop_front()
-	_lobbyTargetX = first.x
-	_lobbyTargetY = first.y
+	var first = JS.orf(route.pop_front(), func(): return {"x": destX, "y": destY, "finalDest": hit[0].id})
+	_lobbyTargetX = first.get("x")
+	_lobbyTargetY = first.get("y")
 	_lobbyWaypointQueue = route
 	_lobbyWalking = true
 	_lobbyWalkDest = JS.or_(first.get("finalDest"), null)
@@ -2956,7 +2956,7 @@ func _openLobbyLocation(id = null):
 	if id == "tailor":
 		var tailorLoc = JS.find(LOBBY_LOCATIONS, func(l = null): return l.get("id") == "tailor")
 		if JS.t(tailorLoc):
-			_lobbyReturnPos = {"x": tailorLoc.x, "y": tailorLoc.y}
+			_lobbyReturnPos = {"x": tailorLoc.get("x"), "y": tailorLoc.get("y")}
 		stopLobbyMap()
 		Characters._wizBuilderFromLobby = true
 		Characters.showCharacterScreen()
@@ -2967,7 +2967,7 @@ func _openLobbyLocation(id = null):
 		return
 	var meta = Artifacts.getMeta()
 	var loc = JS.find(LOBBY_LOCATIONS, func(l = null): return JS.eq(l.id, id))
-	var title = (loc.label if JS.t(loc) else "")
+	var title = (loc.get("label") if JS.t(loc) else "")
 	var phosLabel = "<div class=\"lobby-phos-bar\">✦ " + JS.s(JS.or_(meta.get("phos"), 0)) + " Phos available</div>"
 	if id == "archive":
 		var history = JS.or_(meta.get("runHistory"), [])
@@ -2975,7 +2975,7 @@ func _openLobbyLocation(id = null):
 		if not JS.t(len(history)):
 			html += "<div class=\"brun-empty\">No runs recorded yet.</div>"
 		else:
-			html += JS.join(JS.arr(history).map(func(r = null): return "\n        <div class=\"brun-hist-row\">\n          <div class=\"brun-hist-el\">" + (JS.or_(r.get("emoji"), "⚔")) + " " + (JS.or_(r.get("element"), "?")) + " <span style=\"color:#4a6a8a;font-size:.6rem;margin-left:.3rem;\">" + ("→ " + JS.s(r.zone) + " Zone" if (JS.t(r.get("zone")) and not JS.eq(r.zone, r.element)) else "") + "</span></div>\n          <div class=\"brun-hist-stats\">\n            <span>" + JS.s(JS.or_(r.get("battles"), 0)) + " battles</span>\n            <span style=\"color:#c8a830\">" + JS.s(JS.or_(r.get("gold"), 0)) + "g</span>\n            <span style=\"color:#a080ff\">" + JS.s(JS.or_(r.get("phos"), 0)) + "✦</span>\n          </div>\n          <div style=\"display:flex;gap:.8rem;font-size:.6rem;color:#555;margin-top:.2rem;\">\n            <span>⚔ " + JS.s(JS.or_(r.get("dmgDealt"), 0)) + " dealt</span><span>🛡 " + JS.s(JS.or_(r.get("dmgTaken"), 0)) + " taken</span>\n          </div>\n          <div class=\"brun-hist-date\">" + (JS.or_(r.get("date"), "")) + "</div>\n        </div>"), "")
+			html += JS.join(JS.arr(history).map(func(r = null): return "\n        <div class=\"brun-hist-row\">\n          <div class=\"brun-hist-el\">" + (JS.or_(r.get("emoji"), "⚔")) + " " + (JS.or_(r.get("element"), "?")) + " <span style=\"color:#4a6a8a;font-size:.6rem;margin-left:.3rem;\">" + ("→ " + JS.s(r.get("zone")) + " Zone" if (JS.t(r.get("zone")) and not JS.eq(r.get("zone"), r.get("element"))) else "") + "</span></div>\n          <div class=\"brun-hist-stats\">\n            <span>" + JS.s(JS.or_(r.get("battles"), 0)) + " battles</span>\n            <span style=\"color:#c8a830\">" + JS.s(JS.or_(r.get("gold"), 0)) + "g</span>\n            <span style=\"color:#a080ff\">" + JS.s(JS.or_(r.get("phos"), 0)) + "✦</span>\n          </div>\n          <div style=\"display:flex;gap:.8rem;font-size:.6rem;color:#555;margin-top:.2rem;\">\n            <span>⚔ " + JS.s(JS.or_(r.get("dmgDealt"), 0)) + " dealt</span><span>🛡 " + JS.s(JS.or_(r.get("dmgTaken"), 0)) + " taken</span>\n          </div>\n          <div class=\"brun-hist-date\">" + (JS.or_(r.get("date"), "")) + "</div>\n        </div>"), "")
 		content.innerHTML = html
 		panel.style.display = "block"
 	elif id == "vault":

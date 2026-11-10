@@ -16,8 +16,8 @@ func rivalDmg():
 func showRivalIntro():
 	var hp = rivalHP()
 	var dmg = rivalDmg()
-	var dialogue = JS.idx(Encounters.RIVAL.dialogue, min(State.currentGymIdx, len(Encounters.RIVAL.dialogue) - 1))
-	document.getElementById("rival-title").textContent = Encounters.RIVAL.emoji + " Rival " + Encounters.RIVAL.name
+	var dialogue = JS.idx(Encounters.RIVAL.get("dialogue"), min(State.currentGymIdx, len(Encounters.RIVAL.get("dialogue")) - 1))
+	document.getElementById("rival-title").textContent = JS.s(Encounters.RIVAL.get("emoji")) + " Rival " + JS.s(Encounters.RIVAL.get("name"))
 	document.getElementById("rival-dialogue").textContent = "\"" + JS.s(dialogue) + "\""
 	document.getElementById("rival-hp-display").textContent = hp
 	document.getElementById("rival-dmg-display").textContent = dmg
@@ -28,8 +28,8 @@ func startRivalBattle():
 	var hp = rivalHP()
 	var dmg = rivalDmg()
 	var rivEnc = {
-		"name": Encounters.RIVAL.name,
-		"emoji": Encounters.RIVAL.emoji,
+		"name": Encounters.RIVAL.get("name"),
+		"emoji": Encounters.RIVAL.get("emoji"),
 		"element": State.playerElement,
 		"color": "#9a6aee",
 		"difficulty": "rival",
@@ -47,10 +47,10 @@ func showGymIntro(forced = null):
 	if not JS.t(gym):
 		return
 	var bHP = Helpers.gymBossDisplayHP()
-	document.getElementById("gym-title").textContent = "🏛 Gym " + JS.s(State.currentGymIdx + 1) + " — " + JS.s(gym.name)
+	document.getElementById("gym-title").textContent = "🏛 Gym " + JS.s(State.currentGymIdx + 1) + " — " + JS.s(gym.get("name"))
 	document.getElementById("gym-boss-hp-display").textContent = bHP
-	document.getElementById("gym-boss-dmg-display").textContent = JS.s(Helpers.gymBossDisplayDmg()) + " → " + JS.s(gym.phase2Dmg) + " (phase 2)"
-	document.getElementById("gym-subtitle").textContent = gym.signature
+	document.getElementById("gym-boss-dmg-display").textContent = JS.s(Helpers.gymBossDisplayDmg()) + " → " + JS.s(gym.get("phase2Dmg")) + " (phase 2)"
+	document.getElementById("gym-subtitle").textContent = gym.get("signature")
 	if JS.t(forced):
 		document.getElementById("gym-warn-txt").textContent = ("Skipped " + JS.s(State.gymSkips) + "× — +" + JS.s(State.gymSkips * Constants.GYM_SKIP_BONUS) + " HP on boss." if State.gymSkips > 0 else "Zone battle " + JS.s(State.zoneBattleCount) + " — no more delays.")
 		document.getElementById("gym-skip-btn").style.display = "none"
@@ -61,7 +61,7 @@ func showGymIntro(forced = null):
 		document.getElementById("gym-warn-txt").textContent = ("Skipped " + JS.s(State.gymSkips) + "× — boss has +" + JS.s(State.gymSkips * Constants.GYM_SKIP_BONUS) + " HP." if State.gymSkips > 0 else "")
 		document.getElementById("gym-skip-btn").style.display = "block"
 		document.getElementById("gym-challenge-btn").className = "btn-gym"
-		document.getElementById("gym-challenge-btn").textContent = "Challenge " + JS.s(gym.name)
+		document.getElementById("gym-challenge-btn").textContent = "Challenge " + JS.s(gym.get("name"))
 		document.getElementById("gym-subtitle").textContent += "  (" + JS.s(battlesLeft) + " battle" + ("" if battlesLeft == 1 else "s") + " until forced)"
 	UI.showScreen("gym-screen")
 
@@ -70,25 +70,25 @@ func startGymBattle():
 	if not JS.t(gym):
 		return
 	BattleLoad.loadBattle({
-		"name": gym.name,
-		"emoji": gym.emoji,
-		"element": gym.element,
-		"color": gym.color,
+		"name": gym.get("name"),
+		"emoji": gym.get("emoji"),
+		"element": gym.get("element"),
+		"color": gym.get("color"),
 		"difficulty": "gym",
 		"diffClass": "diff-hard",
 		"enemyMaxHP": Helpers.gymBossHP(),
-		"enemyDmg": gym.baseDmg,
-		"gold": gym.gold,
+		"enemyDmg": gym.get("baseDmg"),
+		"gold": gym.get("gold"),
 		"type": "wizard",
 		"isGym": true,
-		"signature": gym.signature,
-		"gymPassive": gym.passive,
-		"gymPhase2Passive": gym.phase2Passive,
-		"gymEntryEffect": gym.entryEffect,
+		"signature": gym.get("signature"),
+		"gymPassive": gym.get("passive"),
+		"gymPhase2Passive": gym.get("phase2Passive"),
+		"gymEntryEffect": gym.get("entryEffect"),
 		"gymHitCounter": 0,
 		"gymPhase2": false,
-		"gymPhase2Dmg": gym.phase2Dmg,
-		"gymChargeInterval": gym.chargeInterval,
+		"gymPhase2Dmg": gym.get("phase2Dmg"),
+		"gymChargeInterval": gym.get("chargeInterval"),
 	})
 
 func skipGym():

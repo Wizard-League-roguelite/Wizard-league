@@ -55,22 +55,22 @@ func spawnP(x = null, y = null, opts = null):
 	})
 
 func tickP():
-	_particles = JS.arr(_particles).filter(func(p = null): return p.life > 0)
+	_particles = JS.arr(_particles).filter(func(p = null): return p.get("life") > 0)
 	for p in JS.iter(_particles):
-		p.x += p.vx
-		p.y += p.vy
-		p.life -= p.decay
-		_ctx.fillStyle = "rgba(" + JS.s(p.r) + "," + JS.s(p.g) + "," + JS.s(p.b) + "," + JS.s(max(0, p.life * 0.7)) + ")"
-		_ctx.fillRect(p.x - (p.size / 2.0), p.y - (p.size / 2.0), p.size, p.size)
+		p.x += p.get("vx")
+		p.y += p.get("vy")
+		p.life -= p.get("decay")
+		_ctx.fillStyle = "rgba(" + JS.s(p.get("r")) + "," + JS.s(p.get("g")) + "," + JS.s(p.get("b")) + "," + JS.s(max(0, p.get("life") * 0.7)) + ")"
+		_ctx.fillRect(p.get("x") - (p.size / 2.0), p.get("y") - (p.size / 2.0), p.size, p.size)
 
 # t progress through this line's window; returns 0-1 alpha
 func narAlpha(t = null, in0 = null, in1 = null, out0 = null, out1 = null):
 	if (t < in0 or t > out1):
 		return 0
 	if t < in1:
-		return (t - in0) / float(in1 - in0)
+		return (t - in0) / float((in1 - in0))
 	if t > out0:
-		return 1 - ((t - out0) / float(out1 - out0))
+		return 1 - ((t - out0) / float((out1 - out0)))
 	return 1
 
 func drawNarLine(text = null, alpha = null):
@@ -309,12 +309,12 @@ func tick(ts = null):
 	var el = ts - _startTime
 	var sec = el / 1000.0
 	_ctx.clearRect(0, 0, W(), H())
-	if el < T.voidEnd:
-		sceneVoid(el / float(T.voidEnd), sec)
-	elif el < T.riseEnd:
-		sceneRise((el - T.voidEnd) / float(T.riseEnd - T.voidEnd), sec)
-	elif el < T.eyesEnd:
-		sceneEyes((el - T.riseEnd) / float(T.eyesEnd - T.riseEnd), sec)
+	if el < T.get("voidEnd"):
+		sceneVoid(el / float(T.get("voidEnd")), sec)
+	elif el < T.get("riseEnd"):
+		sceneRise((el - T.get("voidEnd")) / float((T.get("riseEnd") - T.get("voidEnd"))), sec)
+	elif el < T.get("eyesEnd"):
+		sceneEyes((el - T.get("riseEnd")) / float((T.get("eyesEnd") - T.get("riseEnd"))), sec)
 	else:
 		endIntro()
 		return

@@ -32,23 +32,23 @@ func markSpellSeen(id = null):
 	var meta = Artifacts.getMeta()
 	if not JS.t(meta.get("seenSpells")):
 		meta.seenSpells = []
-	if not JS.includes(meta.seenSpells, id):
-		meta.seenSpells.append(id)
+	if not JS.includes(meta.get("seenSpells"), id):
+		meta.get("seenSpells").append(id)
 		Artifacts.saveMeta()
 
 func markPassiveSeen(id = null):
 	var meta = Artifacts.getMeta()
 	if not JS.t(meta.get("seenPassives")):
 		meta.seenPassives = []
-	if not JS.includes(meta.seenPassives, id):
-		meta.seenPassives.append(id)
+	if not JS.includes(meta.get("seenPassives"), id):
+		meta.get("seenPassives").append(id)
 		Artifacts.saveMeta()
 
 # ─── DATA HELPERS ──────────────────────────────────────────────────────────
 func _libSpellsFor(el = null):
 	if el == "Duo":
 		return JS.arr(JS.values(Spells.SPELL_CATALOGUE)).filter(func(s = null): return s.get("tier") == "merged")
-	return JS.arr(JS.values(Spells.SPELL_CATALOGUE)).filter(func(s = null): return JS.eq(s.element, el))
+	return JS.arr(JS.values(Spells.SPELL_CATALOGUE)).filter(func(s = null): return JS.eq(s.get("element"), el))
 
 func _libPassivesFor(el = null):
 	if el == "Duo":
@@ -113,7 +113,7 @@ func _libSpellFormulaHtml(spell = null):
 	var cfg = JS.idx(Incantations.SPELL_INCANTATION_CONFIG, spell.id)
 	var base = JS.idx(Incantations._INCANTATION_BASE_VALUES, spell.id)
 	if (JS.t(cfg) and base != null):
-		var label = JS.or_(JS.idx(Incantations._STAT_LABELS, cfg.scaledStat), cfg.get("scaledStat"))
+		var label = JS.or_(JS.idx(Incantations._STAT_LABELS, cfg.get("scaledStat")), cfg.get("scaledStat"))
 		var isFloat = (((((cfg.get("scaledStat") == "frostStacks" or cfg.get("scaledStat") == "shockStacks") or cfg.get("scaledStat") == "frostApplied") or cfg.get("scaledStat") == "multiplier") or cfg.get("scaledStat") == "lifeStealPct") or cfg.get("scaledStat") == "rootChance")
 		var _fn1 = func(v = null):
 			if (cfg.get("scaledStat") == "rootChance" or cfg.get("scaledStat") == "lifeStealPct"):
@@ -123,17 +123,17 @@ func _libSpellFormulaHtml(spell = null):
 			return (JS.toFixed(v, 1) if isFloat else JS.round(v))
 		var fmtVal = _fn1
 		var baseDisp = fmtVal.call(base)
-		var lv2Disp = fmtVal.call(base + cfg.baseScale)
-		var decayNote = (" (×" + JS.s(cfg.decay) + " decay)" if cfg.decay < 1 else "")
-		lines.append("<div style=\"color:#a0c0ff;font-size:.62rem;\"><span style=\"color:#6a8aaa;\">Incantation:</span> " + JS.s(label) + " — base " + JS.s(baseDisp) + ", lv2 " + JS.s(lv2Disp) + ", +" + JS.s(cfg.baseScale) + decayNote + "</div>")
+		var lv2Disp = fmtVal.call(base + cfg.get("baseScale"))
+		var decayNote = (" (×" + JS.s(cfg.get("decay")) + " decay)" if cfg.get("decay") < 1 else "")
+		lines.append("<div style=\"color:#a0c0ff;font-size:.62rem;\"><span style=\"color:#6a8aaa;\">Incantation:</span> " + JS.s(label) + " — base " + JS.s(baseDisp) + ", lv2 " + JS.s(lv2Disp) + ", +" + JS.s(cfg.get("baseScale")) + decayNote + "</div>")
 	# Tags
-	if (JS.t(spell.get("tags")) and JS.t(len(spell.tags))):
-		lines.append("<div style=\"color:#888;font-size:.58rem;\">Tags: " + JS.join(spell.tags, ", ") + "</div>")
+	if (JS.t(spell.get("tags")) and JS.t(len(spell.get("tags")))):
+		lines.append("<div style=\"color:#888;font-size:.58rem;\">Tags: " + JS.join(spell.get("tags"), ", ") + "</div>")
 	# CD
-	lines.append("<div style=\"color:#666;font-size:.58rem;\">Cooldown: " + JS.s(spell.baseCooldown) + " turn" + ("s" if not JS.eq(spell.get("baseCooldown"), 1) else "") + "</div>")
+	lines.append("<div style=\"color:#666;font-size:.58rem;\">Cooldown: " + JS.s(spell.get("baseCooldown")) + " turn" + ("s" if not JS.eq(spell.get("baseCooldown"), 1) else "") + "</div>")
 	if not JS.t(len(lines)):
 		return "<div style=\"color:#666;font-size:.62rem;\">No formula data.</div>"
-	return "<div style=\"font-family:'Cinzel',serif;font-size:.65rem;color:#c8a060;margin-bottom:.3rem;display:flex;align-items:center;gap:.3rem;\">" + SpellIcons.spellIconSVG(spell, 18) + " " + JS.s(spell.name) + "</div>" + JS.join(lines, "")
+	return "<div style=\"font-family:'Cinzel',serif;font-size:.65rem;color:#c8a060;margin-bottom:.3rem;display:flex;align-items:center;gap:.3rem;\">" + SpellIcons.spellIconSVG(spell, 18) + " " + JS.s(spell.get("name")) + "</div>" + JS.join(lines, "")
 
 # Build formula HTML for a passive
 func _libPassiveFormulaHtml(passive = null):
@@ -298,8 +298,8 @@ func _libSimulateSpell(spell = null):
 	if (not JS.t(spell) or (JS.typeof_(spell.get("execute"))) != "function"):
 		return []
 	var events = []
-	var simAtk = max(0, State.player.attackPower)
-	var simEfx = max(0, State.player.effectPower)
+	var simAtk = max(0, State.player.get("attackPower"))
+	var simEfx = max(0, State.player.get("effectPower"))
 	# Minimal spell context — mirrors makeSpellCtx without touching real game state
 	var _fn6 = func():
 		pass
@@ -386,14 +386,14 @@ func _libSimulateSpell(spell = null):
 		_saved[k] = JS.idx(window, k)
 	# Save the slice of combat/status we will temporarily overwrite
 	var _sc = {
-		"enemies": State.combat.enemies,
-		"enemy": State.combat.enemy,
-		"activeEnemyIdx": State.combat.activeEnemyIdx,
-		"targetIdx": State.combat.targetIdx,
-		"over": State.combat.over,
+		"enemies": State.combat.get("enemies"),
+		"enemy": State.combat.get("enemy"),
+		"activeEnemyIdx": State.combat.get("activeEnemyIdx"),
+		"targetIdx": State.combat.get("targetIdx"),
+		"over": State.combat.get("over"),
 	}
-	var _ssPlayer = State.status.player
-	var _ssEnemy = State.status.enemy
+	var _ssPlayer = State.status.get("player")
+	var _ssEnemy = State.status.get("enemy")
 	for k in JS.iter(_noopKeys):
 		var _fn11 = func():
 			pass
@@ -433,11 +433,11 @@ func _libSimulateSpell(spell = null):
 	for k in JS.iter(JS.arr(_noopKeys) + JS.arr(_captureKeys)):
 		if JS.idx(_saved, k) != null:
 			window[k] = JS.idx(_saved, k)
-	State.combat.enemies = _sc.enemies
-	State.combat.enemy = _sc.enemy
-	State.combat.activeEnemyIdx = _sc.activeEnemyIdx
-	State.combat.targetIdx = _sc.targetIdx
-	State.combat.over = _sc.over
+	State.combat.enemies = _sc.get("enemies")
+	State.combat.enemy = _sc.get("enemy")
+	State.combat.activeEnemyIdx = _sc.get("activeEnemyIdx")
+	State.combat.targetIdx = _sc.get("targetIdx")
+	State.combat.over = _sc.get("over")
 	State.status.player = _ssPlayer
 	State.status.enemy = _ssEnemy
 	return events
@@ -445,35 +445,35 @@ func _libSimulateSpell(spell = null):
 # Build the combat-preview section of the tooltip HTML
 func _libCombatPreviewHtml(spell = null):
 	var html = [null]
-	var simAtk = State.player.attackPower
+	var simAtk = State.player.get("attackPower")
 	var events = _libSimulateSpell(spell)
 	var dmgEvents = JS.arr(events).filter(func(e = null): return e.get("type") == "damage")
 	var meltEvents = JS.arr(events).filter(func(e = null): return e.get("type") == "melt")
 	var healEvents = JS.arr(events).filter(func(e = null): return e.get("type") == "heal")
-	var totalDmg = JS.reduce(dmgEvents, func(s = null, e = null): return s + e.total, 0) + JS.reduce(meltEvents, func(s = null, e = null): return s + (JS.or_(e.get("hpDmg"), 0)), 0)
+	var totalDmg = JS.reduce(dmgEvents, func(s = null, e = null): return s + e.get("total"), 0) + JS.reduce(meltEvents, func(s = null, e = null): return s + (JS.or_(e.get("hpDmg"), 0)), 0)
 	var effectEmojiMap = {"burn": "🔥", "frost": "❄️", "stun": "💫", "shock": "⚡", "root": "🌿", "foam": "🫧", "block": "🛡️"}
-	html[0] = "<div style=\"font-family:'Cinzel',serif;font-size:.65rem;color:#c8a060;margin-bottom:.35rem;padding-bottom:.25rem;border-bottom:1px solid #2a2010;\">\n    ⚔️ " + JS.s(spell.emoji) + " " + JS.s(spell.name) + " — Combat Preview\n  </div>"
+	html[0] = "<div style=\"font-family:'Cinzel',serif;font-size:.65rem;color:#c8a060;margin-bottom:.35rem;padding-bottom:.25rem;border-bottom:1px solid #2a2010;\">\n    ⚔️ " + JS.s(spell.get("emoji")) + " " + JS.s(spell.get("name")) + " — Combat Preview\n  </div>"
 	html[0] += "<div style=\"font-size:.52rem;color:#6a4a20;margin-bottom:.3rem;\">vs. Dummy Enemy &nbsp;·&nbsp; 50 HP &nbsp;·&nbsp; 50 Armor</div>"
 	html[0] += "<div style=\"font-size:.58rem;line-height:1.75;color:#c0a870;\">"
 	html[0] += "<div style=\"color:#7080a0;margin-bottom:.2rem;\">🧙 You cast the spell...</div>"
 	if ((len(dmgEvents) == 0 and len(meltEvents) == 0) and len(healEvents) == 0):
 		html[0] += "<div style=\"color:#6a5a40;font-style:italic;\">No direct damage — buff / effect spell</div>"
 	for ev in JS.iter(dmgEvents):
-		var simEfx = State.player.effectPower
+		var simEfx = State.player.get("effectPower")
 		# Build breakdown suffix
 		var breakdown = null
 		if JS.t(ev.get("_isPlasma")):
-			var base = max(0, (ev.dmgPerHit - simAtk) - simEfx)
+			var base = max(0, (ev.get("dmgPerHit") - simAtk) - simEfx)
 			breakdown = "(" + JS.s(base) + " base + " + JS.s(simAtk) + " ATK + " + JS.s(simEfx) + " EFX)"
 		else:
-			var base = max(0, ev.dmgPerHit - simAtk)
+			var base = max(0, ev.get("dmgPerHit") - simAtk)
 			breakdown = "(" + JS.s(base) + " base + " + JS.s(simAtk) + " ATK)"
 		if JS.t(ev.get("isAOE")):
-			html[0] += "<div>💥 AoE hit → <span style=\"color:#ffcc88;font-weight:bold;\">" + JS.s(ev.dmgPerHit) + " dmg</span> <span style=\"color:#443a28;font-size:.5rem;\">each · " + breakdown + "</span></div>"
-		elif ev.hits > 1:
-			html[0] += "<div>⚔️ " + JS.s(ev.hits) + " hits × <span style=\"color:#ffcc88;\">" + JS.s(ev.dmgPerHit) + "</span> = <span style=\"color:#ffdd99;font-weight:bold;\">" + JS.s(ev.total) + " dmg</span> <span style=\"color:#3e3020;font-size:.5rem;\">" + breakdown + "</span></div>"
+			html[0] += "<div>💥 AoE hit → <span style=\"color:#ffcc88;font-weight:bold;\">" + JS.s(ev.get("dmgPerHit")) + " dmg</span> <span style=\"color:#443a28;font-size:.5rem;\">each · " + breakdown + "</span></div>"
+		elif ev.get("hits") > 1:
+			html[0] += "<div>⚔️ " + JS.s(ev.get("hits")) + " hits × <span style=\"color:#ffcc88;\">" + JS.s(ev.get("dmgPerHit")) + "</span> = <span style=\"color:#ffdd99;font-weight:bold;\">" + JS.s(ev.get("total")) + " dmg</span> <span style=\"color:#3e3020;font-size:.5rem;\">" + breakdown + "</span></div>"
 		else:
-			html[0] += "<div>⚔️ <span style=\"color:#ffdd99;font-weight:bold;\">" + JS.s(ev.total) + " dmg</span> <span style=\"color:#3e3020;font-size:.5rem;\">" + breakdown + "</span></div>"
+			html[0] += "<div>⚔️ <span style=\"color:#ffdd99;font-weight:bold;\">" + JS.s(ev.get("total")) + " dmg</span> <span style=\"color:#3e3020;font-size:.5rem;\">" + breakdown + "</span></div>"
 		# Effects from this hit — multiply per-hit stacks by number of hits
 		var efGrp = {}
 		for ef in JS.iter(JS.or_(ev.get("effects"), [])):
@@ -481,22 +481,22 @@ func _libCombatPreviewHtml(spell = null):
 		for _e14 in JS.iter(JS.entries(efGrp)):
 			var type_ = JS.idx(_e14, 0)
 			var perHit = JS.idx(_e14, 1)
-			var total = perHit * ev.hits
-			var detail = (JS.s(perHit) + " × " + JS.s(ev.hits) + " hits = <span style=\"color:#d4aa60;\">" + JS.s(total) + "</span>" if ev.hits > 1 else "<span style=\"color:#d4aa60;\">" + JS.s(total) + "</span>")
+			var total = perHit * ev.get("hits")
+			var detail = (JS.s(perHit) + " × " + JS.s(ev.get("hits")) + " hits = <span style=\"color:#d4aa60;\">" + JS.s(total) + "</span>" if ev.get("hits") > 1 else "<span style=\"color:#d4aa60;\">" + JS.s(total) + "</span>")
 			html[0] += "<div style=\"padding-left:.6rem;color:#a09060;\">" + (JS.or_(JS.idx(effectEmojiMap, type_), "✦")) + " " + detail + " " + JS.s(type_) + "</div>"
 	for ev in JS.iter(meltEvents):
-		if (ev.armorDestroyed > 0 and ev.hpDmg > 0):
-			html[0] += "<div>⚒️ Melt → strips <span style=\"color:#aaddff;\">" + JS.s(ev.armorDestroyed) + " armor</span>, then <span style=\"color:#ffdd99;font-weight:bold;\">" + JS.s(ev.hpDmg) + " HP dmg</span></div>"
-		elif ev.armorDestroyed > 0:
-			html[0] += "<div>⚒️ Melt → strips <span style=\"color:#aaddff;\">" + JS.s(ev.armorDestroyed) + " armor</span> <span style=\"color:#3e3020;font-size:.5rem;\">(no HP dmg — not enough pts)</span></div>"
+		if (ev.get("armorDestroyed") > 0 and ev.get("hpDmg") > 0):
+			html[0] += "<div>⚒️ Melt → strips <span style=\"color:#aaddff;\">" + JS.s(ev.get("armorDestroyed")) + " armor</span>, then <span style=\"color:#ffdd99;font-weight:bold;\">" + JS.s(ev.get("hpDmg")) + " HP dmg</span></div>"
+		elif ev.get("armorDestroyed") > 0:
+			html[0] += "<div>⚒️ Melt → strips <span style=\"color:#aaddff;\">" + JS.s(ev.get("armorDestroyed")) + " armor</span> <span style=\"color:#3e3020;font-size:.5rem;\">(no HP dmg — not enough pts)</span></div>"
 		else:
-			html[0] += "<div>⚒️ Melt → <span style=\"color:#ffdd99;font-weight:bold;\">" + JS.s(ev.hpDmg) + " HP dmg</span></div>"
+			html[0] += "<div>⚒️ Melt → <span style=\"color:#ffdd99;font-weight:bold;\">" + JS.s(ev.get("hpDmg")) + " HP dmg</span></div>"
 	for ev in JS.iter(healEvents):
-		html[0] += "<div>💚 Heal self → <span style=\"color:#88ee88;\">+" + JS.s(ev.amount) + " HP</span></div>"
+		html[0] += "<div>💚 Heal self → <span style=\"color:#88ee88;\">+" + JS.s(ev.get("amount")) + " HP</span></div>"
 	if (totalDmg > 0 and len(JS.arr(events).filter(func(e = null): return e.get("type") != "heal")) > 1):
 		html[0] += "<div style=\"margin-top:.25rem;padding-top:.25rem;border-top:1px solid #2a2010;color:#ffee99;font-weight:bold;\">Total: " + JS.s(totalDmg) + " dmg</div>"
 	html[0] += "</div>"
-	var simEfxFooter = State.player.effectPower
+	var simEfxFooter = State.player.get("effectPower")
 	html[0] += "<div style=\"font-size:.44rem;color:#3a2818;margin-top:.3rem;padding-top:.25rem;border-top:1px solid #1a1208;\">Simulated · ATK: " + JS.s(simAtk) + " &nbsp;·&nbsp; EFX: " + JS.s(simEfxFooter) + "</div>"
 	return html[0]
 
@@ -519,7 +519,7 @@ func _libSpellRow(spell = null, revealed = null):
 		var tierCol = JS.or_(JS.idx(tierColors, tier), "#555")
 		var hasFormula = JS.idx(Incantations.SPELL_INCANTATION_CONFIG, spell.id)
 		var infoHint = ("<span style=\"font-size:.44rem;color:#4a6a8a;margin-left:.3rem;\" title=\"Hover for formula\">ℹ</span>" if JS.t(hasFormula) else "")
-		row.innerHTML = "\n      <span style=\"flex-shrink:0;\">" + SpellIcons.spellIconSVG(spell, 20) + "</span>\n      <div style=\"flex:1;min-width:0;\">\n        <div style=\"display:flex;align-items:center;gap:.3rem;flex-wrap:wrap;margin-bottom:.18rem;\">\n          <span style=\"font-size:.68rem;color:#c8a060;font-family:'Cinzel',serif;\">" + JS.s(spell.name) + infoHint + "</span>\n          <span style=\"font-size:.44rem;color:" + tierCol + ";border:1px solid " + tierCol + ";border-radius:2px;padding:.04rem .22rem;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;\">" + tier + "</span>\n          <span style=\"font-size:.46rem;color:#444;margin-left:auto;flex-shrink:0;\">CD:" + JS.s(spell.baseCooldown) + "</span>\n        </div>\n        <div style=\"font-size:.6rem;color:#5a5a5a;line-height:1.5;white-space:normal;\">" + (JS.or_(spell.get("desc"), "")) + "</div>\n      </div>"
+		row.innerHTML = "\n      <span style=\"flex-shrink:0;\">" + SpellIcons.spellIconSVG(spell, 20) + "</span>\n      <div style=\"flex:1;min-width:0;\">\n        <div style=\"display:flex;align-items:center;gap:.3rem;flex-wrap:wrap;margin-bottom:.18rem;\">\n          <span style=\"font-size:.68rem;color:#c8a060;font-family:'Cinzel',serif;\">" + JS.s(spell.get("name")) + infoHint + "</span>\n          <span style=\"font-size:.44rem;color:" + tierCol + ";border:1px solid " + tierCol + ";border-radius:2px;padding:.04rem .22rem;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;\">" + tier + "</span>\n          <span style=\"font-size:.46rem;color:#444;margin-left:auto;flex-shrink:0;\">CD:" + JS.s(spell.get("baseCooldown")) + "</span>\n        </div>\n        <div style=\"font-size:.6rem;color:#5a5a5a;line-height:1.5;white-space:normal;\">" + (JS.or_(spell.get("desc"), "")) + "</div>\n      </div>"
 		var _fn15 = func():
 			var preview = _libCombatPreviewHtml(spell)
 			var formula = _libSpellFormulaHtml(spell)

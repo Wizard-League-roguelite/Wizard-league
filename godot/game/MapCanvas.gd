@@ -73,7 +73,7 @@ func showMap():
 		JS.setTimeout(BattleLoad._loadGauntletBoss, 400)
 		return
 	var _gymDef = Encounters.currentGymDef()
-	State._setZoneElement((_gymDef.element if (JS.t(_gymDef) and JS.t(_gymDef.get("element"))) else State.playerElement))
+	State._setZoneElement((_gymDef.get("element") if (JS.t(_gymDef) and JS.t(_gymDef.get("element"))) else State.playerElement))
 	# ── Sandbox zone switcher ──
 	var sandboxBar = document.getElementById("sandbox-zone-bar")
 	if JS.t(sandboxBar):
@@ -84,8 +84,8 @@ func showMap():
 			for i in range(len(_arr1)):
 				var gym = _arr1[i]
 				var btn = document.createElement("button")
-				btn.textContent = gym.emoji + " " + gym.element
-				btn.style.cssText = "background:" + (gym.color + "33" if JS.eq(i, State.currentGymIdx) else "#111") + ";border:1px solid " + JS.s((gym.color if JS.eq(i, State.currentGymIdx) else "#333")) + ";color:" + JS.s((gym.color if JS.eq(i, State.currentGymIdx) else "#888")) + ";border-radius:4px;padding:2px 7px;font-size:.58rem;font-family:'Cinzel',serif;cursor:pointer;"
+				btn.textContent = JS.s(gym.get("emoji")) + " " + JS.s(gym.get("element"))
+				btn.style.cssText = "background:" + (JS.s(gym.get("color")) + "33" if JS.eq(i, State.currentGymIdx) else "#111") + ";border:1px solid " + JS.s((gym.get("color") if JS.eq(i, State.currentGymIdx) else "#333")) + ";color:" + JS.s((gym.get("color") if JS.eq(i, State.currentGymIdx) else "#888")) + ";border-radius:4px;padding:2px 7px;font-size:.58rem;font-family:'Cinzel',serif;cursor:pointer;"
 				var _fn2 = func():
 					State.currentGymIdx = i
 					State.gymDefeated = false
@@ -95,7 +95,7 @@ func showMap():
 					State._completedNodeIds = JSSet.new()
 					State._pendingNodeId = -1
 					State._zoneIntroPlayed = false
-					State._setZoneElement(gym.element)
+					State._setZoneElement(gym.get("element"))
 					showMap()
 				btn.onclick = _fn2
 				sandboxBar.appendChild(btn)
@@ -103,19 +103,19 @@ func showMap():
 			sandboxBar.style.display = "none"
 	# ── HP bar ──
 	var pMax = Helpers.maxHPFor("player")
-	var pPct = max(0, (State.player.hp / float(pMax)) * 100)
-	document.getElementById("map-player-hp").textContent = "HP " + JS.s(State.player.hp) + "/" + JS.s(pMax)
+	var pPct = max(0, (State.player.get("hp") / float(pMax)) * 100)
+	document.getElementById("map-player-hp").textContent = "HP " + JS.s(State.player.get("hp")) + "/" + JS.s(pMax)
 	var bar = document.getElementById("map-hp-bar")
 	bar.style.width = JS.s(pPct) + "%"
 	bar.style.background = UI.hpColor(pPct)
 	# ── Lives ──
 	var livesEl = document.getElementById("map-lives-inline")
 	if JS.t(livesEl):
-		livesEl.textContent = "❤".repeat(max(0, State.player.revives))
+		livesEl.textContent = "❤".repeat(max(0, State.player.get("revives")))
 	# ── Gold ──
 	var goldEl = document.getElementById("map-gold-inline")
 	if JS.t(goldEl):
-		goldEl.textContent = "💰 " + JS.s(State.player.gold) + "g"
+		goldEl.textContent = "💰 " + JS.s(State.player.get("gold")) + "g"
 	# ── Stats strip (ATK / EFX / DEF) ──
 	var statsStrip = document.getElementById("map-stats-strip")
 	if JS.t(statsStrip):
@@ -140,22 +140,22 @@ func showMap():
 			zonePill.style.borderColor = "#5a4aaa"
 			zonePill.style.color = "#9a7aff"
 		elif JS.t(gym):
-			zonePill.textContent = "Zone " + JS.s(State.currentGymIdx + 1) + " · " + JS.s(gym.element) + " · Battle " + JS.s(State.zoneBattleCount)
-			zonePill.style.borderColor = gym.color + "55"
-			zonePill.style.color = gym.color
+			zonePill.textContent = "Zone " + JS.s(State.currentGymIdx + 1) + " · " + JS.s(gym.get("element")) + " · Battle " + JS.s(State.zoneBattleCount)
+			zonePill.style.borderColor = JS.s(gym.get("color")) + "55"
+			zonePill.style.color = gym.get("color")
 	# ── Gym warning banner (compressed) ──
 	var banner = document.getElementById("gym-warning-banner")
 	if (JS.t(gym) and not JS.t(State.gymDefeated)):
 		var remaining = Constants.GYM_ZONE_FORCE - State.zoneBattleCount
 		if Helpers.gymIsForced():
-			banner.innerHTML = "⚠ " + JS.s(gym.name) + " — FORCED FIGHT"
+			banner.innerHTML = "⚠ " + JS.s(gym.get("name")) + " — FORCED FIGHT"
 			banner.style.cssText = "display:block;background:#1a0a0a;border-color:#6a1a1a;color:#aa4444;border-radius:6px;padding:.35rem .7rem;font-size:.65rem;text-align:center;width:100%;max-width:640px;"
 		elif (Helpers.gymShouldAppear() and remaining <= 3):
-			banner.innerHTML = "⚠ " + JS.s(gym.name) + " — " + JS.s(remaining) + " battle" + ("" if remaining == 1 else "s") + " until forced"
+			banner.innerHTML = "⚠ " + JS.s(gym.get("name")) + " — " + JS.s(remaining) + " battle" + ("" if remaining == 1 else "s") + " until forced"
 			banner.style.cssText = "display:block;background:#1a0a0a;border-color:#6a1a1a;color:#aa4444;border-radius:6px;padding:.35rem .7rem;font-size:.65rem;text-align:center;width:100%;max-width:640px;"
 		elif Helpers.gymShouldAppear():
-			banner.innerHTML = "🏛 " + JS.s(gym.name) + " is ready"
-			banner.style.cssText = "display:block;background:" + JS.s(gym.color) + "11;border-color:" + JS.s(gym.color) + "44;color:" + JS.s(gym.color) + ";border-radius:6px;padding:.35rem .7rem;font-size:.65rem;text-align:center;width:100%;max-width:640px;"
+			banner.innerHTML = "🏛 " + JS.s(gym.get("name")) + " is ready"
+			banner.style.cssText = "display:block;background:" + JS.s(gym.get("color")) + "11;border-color:" + JS.s(gym.get("color")) + "44;color:" + JS.s(gym.get("color")) + ";border-radius:6px;padding:.35rem .7rem;font-size:.65rem;text-align:center;width:100%;max-width:640px;"
 		else:
 			banner.style.display = "none"
 	elif JS.t(State.gymDefeated):
@@ -175,7 +175,7 @@ func showMap():
 		generateZoneGraph()
 	# ── Safety: if player is stranded on the gym node (no successors), reset ──
 	if (JS.t(State._zoneGraph) and State._playerNodeId >= 0):
-		var _curNode = JS.find(State._zoneGraph.nodes, func(n = null): return JS.eq(n.id, State._playerNodeId))
+		var _curNode = JS.find(State._zoneGraph.get("nodes"), func(n = null): return JS.eq(n.id, State._playerNodeId))
 		if (JS.t(_curNode) and _curNode.get("type") == "gym"):
 			State._zoneGraph = null
 			State._playerNodeId = -1
@@ -356,7 +356,7 @@ func _injectMapRewardStyles():
 func makeCombatCard(enc = null):
 	# Special encounter slots (campfire / shop replacing a battle)
 	if JS.t(enc.get("_isSpecial")):
-		return makeSpecialCard(enc._specialType)
+		return makeSpecialCard(enc.get("_specialType"))
 	_injectMapRewardStyles()
 	var card = document.createElement("div")
 	card.className = "encounter-card"
@@ -364,8 +364,8 @@ func makeCombatCard(enc = null):
 	var nextSlot = State.zoneBattleCount + 1
 	var rewardType = BattleReward.getZoneRewardType(nextSlot, State.currentGymIdx)
 	var cfg = JS.or_(JS.idx(_MAP_REWARD_CFG, rewardType), _MAP_REWARD_CFG.get("minor"))
-	var gold = (enc.gold if JS.t(enc.get("isPack")) else JS.or_(enc.get("gold"), 0))
-	card.innerHTML = "\n    <div style=\"line-height:1;animation:" + JS.s(cfg.anim) + ";\">" + _nodeIcon(cfg.iconType, cfg.color, 48) + "</div>\n    <div style=\"font-family:'Cinzel',serif;font-size:.78rem;color:" + JS.s(cfg.color) + ";letter-spacing:.08em;margin-top:.1rem;\">" + JS.s(cfg.label) + "</div>\n    <div style=\"font-size:.58rem;color:#444;margin-top:.1rem;\">⚔ Battle · " + JS.s(gold) + "g</div>\n  "
+	var gold = (enc.get("gold") if JS.t(enc.get("isPack")) else JS.or_(enc.get("gold"), 0))
+	card.innerHTML = "\n    <div style=\"line-height:1;animation:" + JS.s(cfg.get("anim")) + ";\">" + _nodeIcon(cfg.get("iconType"), cfg.get("color"), 48) + "</div>\n    <div style=\"font-family:'Cinzel',serif;font-size:.78rem;color:" + JS.s(cfg.get("color")) + ";letter-spacing:.08em;margin-top:.1rem;\">" + JS.s(cfg.get("label")) + "</div>\n    <div style=\"font-size:.58rem;color:#444;margin-top:.1rem;\">⚔ Battle · " + JS.s(gold) + "g</div>\n  "
 	card.onclick = func(): return BattleLoad.loadBattle(enc)
 	return card
 
@@ -378,7 +378,7 @@ func makeGymCard(forced = null):
 	var bHP = Helpers.gymBossDisplayHP()
 	var battlesLeft = Constants.GYM_ZONE_FORCE - State.zoneBattleCount
 	var skipNote = (" (+" + JS.s(State.gymSkips * Constants.GYM_SKIP_BONUS) + " skip HP)" if State.gymSkips > 0 else "")
-	card.innerHTML = "<div class=\"enc-left\"><div class=\"enc-name\" style=\"color:" + JS.s(("#cc4444" if JS.t(forced) else gym.color)) + "\">🏛 Gym " + JS.s(State.currentGymIdx + 1) + " — " + JS.s(gym.name) + "</div><div class=\"enc-desc\" style=\"color:" + ("#7a2a2a" if JS.t(forced) else "#888") + "\">" + JS.s(gym.element) + " · HP:" + JS.s(bHP) + skipNote + " · Dmg:" + JS.s(Helpers.gymBossDisplayDmg()) + " · " + ("MUST FIGHT NOW" if JS.t(forced) else "zone battle " + JS.s(State.zoneBattleCount) + "/" + JS.s(Constants.GYM_ZONE_FORCE)) + "</div><div style=\"font-size:.57rem;color:#555;margin-top:2px;\">" + JS.s(gym.signature) + "</div></div><div class=\"enc-right\" style=\"color:" + JS.s(("#cc4444" if JS.t(forced) else gym.color)) + ";font-family:'Cinzel',serif;font-size:.62rem;\">" + ("FORCED" if JS.t(forced) else "BOSS") + "</div>"
+	card.innerHTML = "<div class=\"enc-left\"><div class=\"enc-name\" style=\"color:" + JS.s(("#cc4444" if JS.t(forced) else gym.get("color"))) + "\">🏛 Gym " + JS.s(State.currentGymIdx + 1) + " — " + JS.s(gym.get("name")) + "</div><div class=\"enc-desc\" style=\"color:" + ("#7a2a2a" if JS.t(forced) else "#888") + "\">" + JS.s(gym.get("element")) + " · HP:" + JS.s(bHP) + skipNote + " · Dmg:" + JS.s(Helpers.gymBossDisplayDmg()) + " · " + ("MUST FIGHT NOW" if JS.t(forced) else "zone battle " + JS.s(State.zoneBattleCount) + "/" + JS.s(Constants.GYM_ZONE_FORCE)) + "</div><div style=\"font-size:.57rem;color:#555;margin-top:2px;\">" + JS.s(gym.get("signature")) + "</div></div><div class=\"enc-right\" style=\"color:" + JS.s(("#cc4444" if JS.t(forced) else gym.get("color"))) + ";font-family:'Cinzel',serif;font-size:.62rem;\">" + ("FORCED" if JS.t(forced) else "BOSS") + "</div>"
 	card.onclick = func(): return GymRival.showGymIntro(forced)
 	return card
 
@@ -393,7 +393,7 @@ func makeSpecialCard(type_ = null):
 		var rHP = GymRival.rivalHP()
 		var rDmg = GymRival.rivalDmg()
 		card.style.borderColor = "#3a1a6a"
-		card.innerHTML = "<div class=\"enc-left\"><div class=\"enc-name\" style=\"color:#9a6aee\">🧢 Rival " + JS.s(Encounters.RIVAL.name) + "</div><div class=\"enc-desc\" style=\"color:#6a4a90\">" + JS.s(State.playerElement) + " · HP:" + JS.s(rHP) + " · Dmg:" + JS.s(rDmg) + "/turn</div><div style=\"font-size:.57rem;color:#4a3a60;margin-top:2px;\">Reward: ✦ Passive Ability</div></div><div class=\"enc-right\" style=\"color:#9a6aee;font-family:'Cinzel',serif;font-size:.62rem;\">RIVAL</div>"
+		card.innerHTML = "<div class=\"enc-left\"><div class=\"enc-name\" style=\"color:#9a6aee\">🧢 Rival " + JS.s(Encounters.RIVAL.get("name")) + "</div><div class=\"enc-desc\" style=\"color:#6a4a90\">" + JS.s(State.playerElement) + " · HP:" + JS.s(rHP) + " · Dmg:" + JS.s(rDmg) + "/turn</div><div style=\"font-size:.57rem;color:#4a3a60;margin-top:2px;\">Reward: ✦ Passive Ability</div></div><div class=\"enc-right\" style=\"color:#9a6aee;font-family:'Cinzel',serif;font-size:.62rem;\">RIVAL</div>"
 		card.onclick = func(): return GymRival.showRivalIntro()
 	else:
 		card.classList.add("card-shop")
@@ -405,7 +405,7 @@ func makeSpecialCard(type_ = null):
 # ── Graph generation ──────────────────────────────────────────────────────────
 func generateZoneGraph():
 	var gym = Encounters.currentGymDef()
-	var zoneEl = (gym.element if JS.t(gym) else State.playerElement)
+	var zoneEl = (gym.get("element") if JS.t(gym) else State.playerElement)
 	# Rival tier
 	var rivalTier = (min(max(BattleReward._zoneRivalSlot, 4), ZN_TIERS - 2) if (true and BattleReward._zoneRivalSlot > 0) else 7)
 	# Per-node independent campfire/shop chances — max 4 of each per zone.
@@ -478,7 +478,7 @@ func generateZoneGraph():
 						cfCount += 1
 				elif ((shCount < MAX_SH and roll >= 0.14) and roll < 0.27):
 					# Spacing check: no shop within 3 tiers on same or adjacent column
-					var shopTooClose = JS.some(shopPlacements, func(s = null): return (abs(s.col - col) <= 1 and (t - s.tier) < 4))
+					var shopTooClose = JS.some(shopPlacements, func(s = null): return (abs(s.get("col") - col) <= 1 and (t - JS.un(s.get("tier"))) < 4))
 					if not shopTooClose:
 						type_ = "shop"
 						shCount += 1
@@ -509,14 +509,14 @@ func generateZoneGraph():
 			edges.append([a, b])
 	var addEdge = _fn6
 	for t in range(1, ceili(ZN_TIERS)):
-		var froms = JS.sort(JS.arr(tierNodes[t]), func(a = null, b = null): return a.col - b.col)
-		var tos = JS.sort(JS.arr(JS.idx(tierNodes, t + 1)), func(a = null, b = null): return a.col - b.col)
+		var froms = JS.sort(JS.arr(tierNodes[t]), func(a = null, b = null): return a.get("col") - b.get("col"))
+		var tos = JS.sort(JS.arr(JS.idx(tierNodes, t + 1)), func(a = null, b = null): return a.get("col") - b.get("col"))
 		var toHit = JSSet.new()
 		# Each from → closest to
 		for fn in JS.iter(froms):
 			var best = JS.idx(tos, 0)
 			for tn in JS.iter(tos):
-				if abs(tn.col - fn.col) < abs(best.col - fn.col):
+				if abs(tn.get("col") - fn.get("col")) < abs(best.get("col") - fn.get("col")):
 					best = tn
 			addEdge.call(fn.id, best.id)
 			toHit.add(best.id)
@@ -525,7 +525,7 @@ func generateZoneGraph():
 			if not toHit.has(tn.id):
 				var best = JS.idx(froms, 0)
 				for fn in JS.iter(froms):
-					if abs(fn.col - tn.col) < abs(best.col - tn.col):
+					if abs(fn.get("col") - tn.get("col")) < abs(best.get("col") - tn.get("col")):
 						best = fn
 				addEdge.call(best.id, tn.id)
 				toHit.add(tn.id)
@@ -533,7 +533,7 @@ func generateZoneGraph():
 		if ((len(froms) > 1 and len(tos) > 1) and randf() < 0.35):
 			var fi = floori(randf() * len(froms))
 			var ti = floori(randf() * len(tos))
-			if abs(JS.idx(froms, fi).col - JS.idx(tos, ti).col) <= 1:
+			if abs(JS.idx(froms, fi).get("col") - JS.idx(tos, ti).get("col")) <= 1:
 				addEdge.call(JS.idx(froms, fi).id, JS.idx(tos, ti).id)
 	State._zoneGraph = {"nodes": nodes, "edges": edges}
 	# Zone 2+: player hasn't picked a starting tile yet — hide wizard until they choose
@@ -550,9 +550,9 @@ func generateZoneGraph():
 
 func _pickZoneGraphEnc(zoneEl = null):
 	var _rel = func(e = null): return JS.includes(Constants.RELEASED_ELEMENTS, JS.or_(e.get("campType"), e.get("element")))
-	var zoneSingles = JS.arr(Encounters.ENCOUNTER_POOL).filter(func(e = null): return (JS.eq(e.campType, zoneEl) and JS.t(_rel.call(e))))
-	var crossSingles = JS.arr(Encounters.ENCOUNTER_POOL).filter(func(e = null): return (not JS.eq(e.campType, zoneEl) and JS.t(_rel.call(e))))
-	var zonePacks = JS.arr(Encounters.PACK_POOL).filter(func(p = null): return (JS.eq(p.element, zoneEl) and JS.t(_rel.call(p))))
+	var zoneSingles = JS.arr(Encounters.ENCOUNTER_POOL).filter(func(e = null): return (JS.eq(e.get("campType"), zoneEl) and JS.t(_rel.call(e))))
+	var crossSingles = JS.arr(Encounters.ENCOUNTER_POOL).filter(func(e = null): return (not JS.eq(e.get("campType"), zoneEl) and JS.t(_rel.call(e))))
+	var zonePacks = JS.arr(Encounters.PACK_POOL).filter(func(p = null): return (JS.eq(p.get("element"), zoneEl) and JS.t(_rel.call(p))))
 	var pool = (zoneSingles if JS.t(len(zoneSingles)) else JS.filter(Encounters.ENCOUNTER_POOL, _rel))
 	if (JS.t(len(zonePacks)) and randf() < 0.2):
 		return JS.merge([JS.idx(zonePacks, floori(randf() * len(zonePacks)))])
@@ -590,21 +590,21 @@ func _drawZoneBgTall(canvas = null, W = null, H = null, nodePositions = null, ed
 			if (not JS.t(f) or not JS.t(t)):
 				continue
 			# Gentle S-curve control point: perpendicular offset at midpoint
-			var mx = (f.x + t.x) * 0.5
-			var my = (f.y + t.y) * 0.5
-			var dx = t.x - f.x
-			var dy = t.y - f.y
+			var mx = (f.get("x") + t.get("x")) * 0.5
+			var my = (f.get("y") + t.get("y")) * 0.5
+			var dx = t.get("x") - f.get("x")
+			var dy = t.get("y") - f.get("y")
 			var dist = JS.or_(sqrt((dx * dx) + (dy * dy)), 1)
 			var perp = min(dist * 0.12, 28)
 			# Alternate curve direction using endpoint hash for variety
 			var side = (1 if (JS.mod((fid * 7) + (tid * 13), 2)) == 0 else -1)
 			var cpx = mx + ((((-dy) / float(dist)) * perp) * side)
 			var cpy = my + (((dx / float(dist)) * perp) * side)
-			LobbyMap._drawCobblestonePath(ctx, f.x, f.y, cpx, cpy, t.x, t.y, 10)
+			LobbyMap._drawCobblestonePath(ctx, f.get("x"), f.get("y"), cpx, cpy, t.get("x"), t.get("y"), 10)
 
 func _znColToX(col = null, w = null):
 	var margin = w * 0.13
-	return margin + ((col / float(ZN_COLS - 1)) * (w - (margin * 2)))
+	return margin + ((col / float((ZN_COLS - 1))) * (w - (margin * 2)))
 
 func _znTierToY(tier = null, stageH = null):
 	# Gym (tier ZN_TIERS) sits just inside the terrain; tier 1 near the bottom.
@@ -612,7 +612,7 @@ func _znTierToY(tier = null, stageH = null):
 	var topY = JS.round(stageH * ZN_SKY_FRAC) + 30
 	# just below sky horizon
 	var bottomY = stageH - ZN_PAD
-	var frac = (tier - 1) / float(ZN_TIERS - 1)
+	var frac = (tier - 1) / float((ZN_TIERS - 1))
 	# 0 = tier 1, 1 = gym
 	return JS.round(bottomY - (frac * (bottomY - topY)))
 
@@ -641,7 +641,7 @@ func drawZoneMap():
 	var edges = JS.idx(State._zoneGraph, "edges")
 	var nodePositions = {}
 	for n in JS.iter(nodes):
-		nodePositions[n.id] = {"x": _znColToX(n.col, stageW), "y": _znTierToY(n.tier, stageH)}
+		nodePositions[n.id] = {"x": _znColToX(n.get("col"), stageW), "y": _znTierToY(n.get("tier"), stageH)}
 	# Background + cobblestone paths (drawn together on one canvas)
 	bgC.width = stageW
 	bgC.height = stageH
@@ -679,9 +679,9 @@ func drawZoneMap():
 			el.classList.add("zn-available")
 		var circle = document.createElement("div")
 		circle.className = "zn-circle"
-		circle.style.borderColor = cfg.color
-		circle.style.setProperty("--zn-glow", cfg.color + "bb")
-		circle.innerHTML = _nodeIcon(cfg.iconType, cfg.color)
+		circle.style.borderColor = cfg.get("color")
+		circle.style.setProperty("--zn-glow", JS.s(cfg.get("color")) + "bb")
+		circle.innerHTML = _nodeIcon(cfg.get("iconType"), cfg.get("color"))
 		if isDone:
 			var chk = document.createElement("div")
 			chk.className = "zn-done-check"
@@ -689,7 +689,7 @@ func drawZoneMap():
 			circle.appendChild(chk)
 		var lbl = document.createElement("div")
 		lbl.className = "zn-label"
-		lbl.textContent = cfg.label
+		lbl.textContent = cfg.get("label")
 		el.appendChild(circle)
 		el.appendChild(lbl)
 		if isAvail:
@@ -704,8 +704,8 @@ func drawZoneMap():
 		zoneLbl.className = "zn-zone-label"
 		stage.appendChild(zoneLbl)
 	var gymDef = Encounters.currentGymDef()
-	zoneLbl.textContent = ("Zone " + JS.s(State.currentGymIdx + 1) + " — " + JS.s(gymDef.element) if JS.t(gymDef) else "Zone Start")
-	zoneLbl.style.cssText = "position:absolute;bottom:6px;left:50%;transform:translateX(-50%);\n    font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;\n    color:" + JS.s((gymDef.color if JS.t(gymDef) else "#c8a060")) + "88;text-shadow:0 1px 6px #000;pointer-events:none;white-space:nowrap;"
+	zoneLbl.textContent = ("Zone " + JS.s(State.currentGymIdx + 1) + " — " + JS.s(gymDef.get("element")) if JS.t(gymDef) else "Zone Start")
+	zoneLbl.style.cssText = "position:absolute;bottom:6px;left:50%;transform:translateX(-50%);\n    font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;\n    color:" + JS.s((gymDef.get("color") if JS.t(gymDef) else "#c8a060")) + "88;text-shadow:0 1px 6px #000;pointer-events:none;white-space:nowrap;"
 	overlay.style.display = "block"
 	# Hide old canvas hint text
 	var hint = document.getElementById("map-hint")
@@ -713,10 +713,10 @@ func drawZoneMap():
 		hint.style.display = "none"
 
 func _znNodeCfg(node = null, gym = null):
-	var zoneColor = (gym.color if JS.t(gym) else "#7060b0")
+	var zoneColor = (gym.get("color") if JS.t(gym) else "#7060b0")
 	match node.type:
 		"gym":
-			return {"iconType": "crown", "label": (gym.name if JS.t(gym) else "Gym Leader"), "color": zoneColor}
+			return {"iconType": "crown", "label": (gym.get("name") if JS.t(gym) else "Gym Leader"), "color": zoneColor}
 		"rival":
 			return {"iconType": "crossed", "label": "Rival", "color": "#9a6aee"}
 		"campfire":
@@ -724,11 +724,11 @@ func _znNodeCfg(node = null, gym = null):
 		"shop":
 			return {"iconType": "bag", "label": "Shop", "color": "#2aaa7a"}
 		_:
-			var rc = JS.idx(_MAP_REWARD_CFG, node.rewardType)
+			var rc = JS.idx(_MAP_REWARD_CFG, node.get("rewardType"))
 			return {
-				"iconType": (rc.iconType if JS.t(rc) else "sword"),
-				"label": (rc.label if JS.t(rc) else "Battle"),
-				"color": (rc.color if JS.t(rc) else zoneColor),
+				"iconType": (rc.get("iconType") if JS.t(rc) else "sword"),
+				"label": (rc.get("label") if JS.t(rc) else "Battle"),
+				"color": (rc.get("color") if JS.t(rc) else zoneColor),
 			}
 
 func _znAvailableIds():
@@ -737,11 +737,11 @@ func _znAvailableIds():
 		return s
 	if State._playerNodeId == (-1):
 		# Zone just started: tier-1 nodes are available
-		for n in JS.iter(State._zoneGraph.nodes):
+		for n in JS.iter(State._zoneGraph.get("nodes")):
 			if JS.eq(n.get("tier"), 1):
 				s.add(n.id)
 		return s
-	for _e9 in JS.iter(State._zoneGraph.edges):
+	for _e9 in JS.iter(State._zoneGraph.get("edges")):
 		var fid = JS.idx(_e9, 0)
 		var tid = JS.idx(_e9, 1)
 		if (JS.eq(fid, State._playerNodeId) and not State._completedNodeIds.has(tid)):
@@ -755,9 +755,9 @@ func _scrollToPlayer():
 	var stageH = (ZN_TIERS * ZN_TIER_H) + (ZN_PAD * 2)
 	var tier = 1
 	if State._playerNodeId >= 0:
-		var node = JS.find(State._zoneGraph.nodes, func(n = null): return JS.eq(n.id, State._playerNodeId))
+		var node = JS.find(State._zoneGraph.get("nodes"), func(n = null): return JS.eq(n.id, State._playerNodeId))
 		if JS.t(node):
-			tier = node.tier
+			tier = node.get("tier")
 	var nodeY = _znTierToY(tier, stageH)
 	overlay.scrollTop = max(0, nodeY - (overlay.clientHeight * 0.55))
 
@@ -776,15 +776,15 @@ func _playZoneIntroAnim():
 	var vh = JS.or_(overlay.get("clientHeight"), window.innerHeight)
 	var banner = document.createElement("div")
 	banner.id = "zn-intro-banner"
-	banner.textContent = "Zone " + JS.s(State.currentGymIdx + 1) + (" — " + gym.element if JS.t(gym) else "")
+	banner.textContent = "Zone " + JS.s(State.currentGymIdx + 1) + (" — " + JS.s(gym.get("element")) if JS.t(gym) else "")
 	# Position at the very top of the stage (gym area), centered
-	banner.style.cssText = "position:absolute;top:" + JS.s(JS.round(vh * 0.18)) + "px;left:0;right:0;\n    text-align:center;padding:1.2rem 1rem;z-index:20;\n    font-family:'Cinzel',serif;font-size:2rem;letter-spacing:.18em;text-transform:uppercase;\n    color:" + JS.s((gym.color if JS.t(gym) else "#c8a060")) + ";text-shadow:0 0 30px " + JS.s((gym.color if JS.t(gym) else "#c8a060")) + "88;\n    background:linear-gradient(to bottom,#000c,#0000);\n    pointer-events:none;opacity:0;transition:opacity .5s;"
+	banner.style.cssText = "position:absolute;top:" + JS.s(JS.round(vh * 0.18)) + "px;left:0;right:0;\n    text-align:center;padding:1.2rem 1rem;z-index:20;\n    font-family:'Cinzel',serif;font-size:2rem;letter-spacing:.18em;text-transform:uppercase;\n    color:" + JS.s((gym.get("color") if JS.t(gym) else "#c8a060")) + ";text-shadow:0 0 30px " + JS.s((gym.get("color") if JS.t(gym) else "#c8a060")) + "88;\n    background:linear-gradient(to bottom,#000c,#0000);\n    pointer-events:none;opacity:0;transition:opacity .5s;"
 	if JS.t(stage):
 		stage.appendChild(banner)
 	var _fn10 = func():
 		banner.style.opacity = "1"
 	JS.requestAnimationFrame(_fn10)
-	var playerTier = ((JS.orf(JS.find(State._zoneGraph.nodes, func(n = null): return JS.eq(n.id, State._playerNodeId)), func(): return {"tier": 1})).tier if (State._playerNodeId >= 0 and JS.t(State._zoneGraph)) else 1)
+	var playerTier = ((JS.orf(JS.find(State._zoneGraph.get("nodes"), func(n = null): return JS.eq(n.id, State._playerNodeId)), func(): return {"tier": 1})).get("tier") if (State._playerNodeId >= 0 and JS.t(State._zoneGraph)) else 1)
 	var playerScroll = max(0, _znTierToY(playerTier, stageH) - (vh * 0.55))
 	# Hold briefly, then scroll down and fade banner out as scroll completes
 	var _fn12 = func():
@@ -811,7 +811,7 @@ func _playZoneIntroAnim():
 	JS.setTimeout(_fn12, 1400)
 
 func _startNodeEncounter(nodeId = null):
-	var node = (JS.find(State._zoneGraph.nodes, func(n = null): return JS.eq(n.id, nodeId)) if JS.t(State._zoneGraph) else State._zoneGraph)
+	var node = (JS.find(State._zoneGraph.get("nodes"), func(n = null): return JS.eq(n.id, nodeId)) if JS.t(State._zoneGraph) else State._zoneGraph)
 	if not JS.t(node):
 		return
 	# Disable all node clicks while travelling
@@ -824,7 +824,7 @@ func _startNodeEncounter(nodeId = null):
 			overlay.style.pointerEvents = ""
 		match node.type:
 			"battle":
-				BattleLoad.loadBattle(node.enc)
+				BattleLoad.loadBattle(node.get("enc"))
 			"campfire":
 				ShopCampfire.enterCampfire()
 			"shop":
@@ -845,25 +845,25 @@ func _animTravelToNode(nodeId = null, cb = null):
 		return
 	# Zone 2+: picking a starting tile — snap wizard to chosen node, no travel animation
 	if (State._playerNodeId == (-1) and State.currentGymIdx > 0):
-		var tn = JS.find(State._zoneGraph.nodes, func(n = null): return JS.eq(n.id, nodeId))
+		var tn = JS.find(State._zoneGraph.get("nodes"), func(n = null): return JS.eq(n.id, nodeId))
 		if JS.t(tn):
 			var sw = JS.or_(overlay.get("clientWidth"), window.innerWidth)
 			var sh = (ZN_TIERS * ZN_TIER_H) + (ZN_PAD * 2)
-			_znWizardX = _znColToX(tn.col, sw)
-			_znWizardY = _znTierToY(tn.tier, sh) - 28
+			_znWizardX = _znColToX(tn.get("col"), sw)
+			_znWizardY = _znTierToY(tn.get("tier"), sh) - 28
 		cb.call()
 		return
-	var fromNode = (JS.find(State._zoneGraph.nodes, func(n = null): return JS.eq(n.id, State._playerNodeId)) if State._playerNodeId >= 0 else JS.find(State._zoneGraph.nodes, func(n = null): return JS.eq(n.get("tier"), 1)))
-	var toNode = JS.find(State._zoneGraph.nodes, func(n = null): return JS.eq(n.id, nodeId))
+	var fromNode = (JS.find(State._zoneGraph.get("nodes"), func(n = null): return JS.eq(n.id, State._playerNodeId)) if State._playerNodeId >= 0 else JS.find(State._zoneGraph.get("nodes"), func(n = null): return JS.eq(n.get("tier"), 1)))
+	var toNode = JS.find(State._zoneGraph.get("nodes"), func(n = null): return JS.eq(n.id, nodeId))
 	if (not JS.t(fromNode) or not JS.t(toNode)):
 		cb.call()
 		return
 	var stageW = JS.or_(overlay.get("clientWidth"), window.innerWidth)
 	var stageH = (ZN_TIERS * ZN_TIER_H) + (ZN_PAD * 2)
-	var x1 = _znColToX(fromNode.col, stageW)
-	var y1 = _znTierToY(fromNode.tier, stageH)
-	var x2 = _znColToX(toNode.col, stageW)
-	var y2 = _znTierToY(toNode.tier, stageH)
+	var x1 = _znColToX(fromNode.get("col"), stageW)
+	var y1 = _znTierToY(fromNode.get("tier"), stageH)
+	var x2 = _znColToX(toNode.get("col"), stageW)
+	var y2 = _znTierToY(toNode.get("tier"), stageH)
 	# Compute the EXACT same bezier control point used when drawing the cobblestone path
 	var mx = (x1 + x2) * 0.5
 	var my = (y1 + y2) * 0.5
@@ -895,8 +895,8 @@ func _animTravelToNode(nodeId = null, cb = null):
 		var e = ease_.call(p)
 		# Follow the bezier curve so wizard stays on the cobblestone path
 		var bp = bezPt.call(e)
-		_znWizardX = bp.x
-		_znWizardY = bp.y - 28
+		_znWizardX = bp.get("x")
+		_znWizardY = bp.get("y") - 28
 		overlay.scrollTop = startScroll + ((targetScroll - startScroll) * e)
 		if p < 1:
 			JS.requestAnimationFrame(step_[0])
@@ -919,10 +919,10 @@ func _znStartWizardAnim(stage = null, W = null, H = null):
 	wc.style.height = JS.s(H) + "px"
 	# Snap wizard to current node position
 	if (JS.t(State._zoneGraph) and State._playerNodeId >= 0):
-		var node = JS.find(State._zoneGraph.nodes, func(n = null): return JS.eq(n.id, State._playerNodeId))
+		var node = JS.find(State._zoneGraph.get("nodes"), func(n = null): return JS.eq(n.id, State._playerNodeId))
 		if JS.t(node):
-			_znWizardX = _znColToX(node.col, W)
-			_znWizardY = _znTierToY(node.tier, H) - 28
+			_znWizardX = _znColToX(node.get("col"), W)
+			_znWizardY = _znTierToY(node.get("tier"), H) - 28
 	if JS.t(_znWizardRaf):
 		JS.cancelAnimationFrame(_znWizardRaf)
 	_znTickWizard()

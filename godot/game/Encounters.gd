@@ -793,7 +793,7 @@ func initGymRoster():
 		# Non-sandbox: only the 3 released element gyms in a random order.
 		# Fire and Lightning come from GYM_ROSTER_FIXED; Nature from GYM_ROSTER_VARIABLE_TEMPLATES.
 		var allTemplates = JS.arr(GYM_ROSTER_FIXED) + JS.arr(GYM_ROSTER_VARIABLE_TEMPLATES)
-		var releasedGyms = JS.arr(allTemplates).filter(func(g = null): return JS.includes(Constants.RELEASED_ELEMENTS, g.element))
+		var releasedGyms = JS.arr(allTemplates).filter(func(g = null): return JS.includes(Constants.RELEASED_ELEMENTS, g.get("element")))
 		GYM_ROSTER = JS.map(BattleReward.pickRandom(releasedGyms, len(releasedGyms)), func(g = null, i = null): return JS.merge([g, {"gymIdx": i, "battleAt": (i + 1) * 8}]))
 	else:
 		# Sandbox: all 8 element gyms in a shuffled order

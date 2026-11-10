@@ -155,7 +155,7 @@ func _boot():
 	]
 
 func _metaKey():
-	return META_KEY_BASE + (JS.or_(Constants.activeSaveSlot, 0))
+	return META_KEY_BASE + JS.s(JS.or_(Constants.activeSaveSlot, 0))
 
 func _metaCache():
 	if not JS.t(window.get("_metaBySlot")):
@@ -185,7 +185,7 @@ func saveMeta():
 # Called at run start — apply only the active artifact's bonuses
 func applyArtifactBonuses():
 	var meta = getMeta()
-	var activeId = meta.activeArtifactId
+	var activeId = meta.get("activeArtifactId")
 	if not JS.t(activeId):
 		return
 	var a = JS.find(JS.or_(meta.get("artifacts"), []), func(x = null): return JS.eq(x.id, activeId))
@@ -211,7 +211,7 @@ func onGymDefeated(gymIdx = null):
 	if not JS.t(meta.get("unseenArtifacts")):
 		meta.unseenArtifacts = []
 	# Find all artifact IDs not yet discovered
-	var discovered = JSSet.new(JS.arr(meta.artifacts).map(func(a = null): return a.id))
+	var discovered = JSSet.new(JS.arr(meta.get("artifacts")).map(func(a = null): return a.id))
 	var undiscovered = JS.arr(ARTIFACT_ORDER).filter(func(id = null): return not discovered.has(id))
 	if (not JS.t(len(undiscovered)) or randf() > 0.65):
 		saveMeta()
@@ -220,8 +220,8 @@ func onGymDefeated(gymIdx = null):
 	# Pick a random undiscovered artifact
 	var chosenId = JS.idx(undiscovered, floori(randf() * len(undiscovered)))
 	var target = {"id": chosenId, "star": 0, "roomsUsed": 0}
-	meta.artifacts.append(target)
-	meta.unseenArtifacts.append(chosenId)
+	meta.get("artifacts").append(target)
+	meta.get("unseenArtifacts").append(chosenId)
 	saveMeta()
 	window._lastArtifactUnlock = target
 	return target
@@ -258,14 +258,14 @@ func markBooksSeen():
 # Called after each non-gym room is cleared — progress the ACTIVE artifact only
 func incrementArtifactRooms():
 	var meta = getMeta()
-	var activeId = meta.activeArtifactId
+	var activeId = meta.get("activeArtifactId")
 	if not JS.t(activeId):
 		return null
 	var a = JS.find(JS.or_(meta.get("artifacts"), []), func(x = null): return JS.eq(x.id, activeId))
-	if (not JS.t(a) or a.star >= 3):
+	if (not JS.t(a) or a.get("star") >= 3):
 		return null
 	a.roomsUsed = (JS.or_(a.get("roomsUsed"), 0)) + 1
-	if a.roomsUsed >= 25:
+	if a.get("roomsUsed") >= 25:
 		a.star += 1
 		a.roomsUsed = 0
 		saveMeta()
@@ -297,12 +297,12 @@ func saveRunStats():
 	meta.bestLevel = max(JS.or_(meta.get("bestLevel"), 0), State.battleNumber)
 	if not JS.t(meta.get("runHistory")):
 		meta.runHistory = []
-	meta.runHistory.push_front({
+	meta.get("runHistory").push_front({
 		"element": JS.or_(State.playerElement, "?"),
 		"emoji": JS.or_(State.playerEmoji, "⚔"),
 		"battles": State.battleNumber,
-		"gold": State.player.gold,
-		"spells": len(State.player.spellbook),
+		"gold": State.player.get("gold"),
+		"spells": len(State.player.get("spellbook")),
 		"phos": phosEarned,
 		"date": JS.toLocaleDateString(JS.newDate()),
 		"dmgDealt": State._runDmgDealt,
@@ -310,8 +310,8 @@ func saveRunStats():
 		"rooms": State._runRoomsCompleted,
 		"zone": JS.or_(JS.or_(State._runZoneReached, State.playerElement), "?"),
 	})
-	if len(meta.runHistory) > 15:
-		meta.runHistory.pop_back()
+	if len(meta.get("runHistory")) > 15:
+		meta.get("runHistory").pop_back()
 	saveMeta()
 	return phosEarned
 
@@ -328,7 +328,7 @@ func starColor(star = null):
 # Returns extra actions from the active artifact for player this turn
 func artifactExtraActions():
 	var meta = getMeta()
-	var activeId = meta.activeArtifactId
+	var activeId = meta.get("activeArtifactId")
 	if not JS.t(activeId):
 		return 0
 	var a = JS.find(JS.or_(meta.get("artifacts"), []), func(x = null): return JS.eq(x.id, activeId))
@@ -375,7 +375,7 @@ func ARTIFACT_CATALOGUE__focus_lens__applyToRun(star = null):
 	State.player.effectPower += JS.idx([5, 8, 12, 15], star)
 
 func ARTIFACT_CATALOGUE__hardy_soul__applyToRun(star = null):
-	State.player.baseMaxHPBonus = (JS.or_(State.player.get("baseMaxHPBonus"), 0)) + JS.idx([20, 35, 55, 80], star)
+	State.player.baseMaxHPBonus = (JS.or_(State.player.get("baseMaxHPBonus"), 0)) + JS.un(JS.idx([20, 35, 55, 80], star))
 
 func ARTIFACT_CATALOGUE__battle_rhythm__applyToRun(star = null):
 	State.player._rhythmStar = star
@@ -389,18 +389,18 @@ func ARTIFACT_CATALOGUE__quick_hands__applyToRun(star = null):
 
 func ARTIFACT_CATALOGUE__survivors_grit__applyToRun(star = null):
 	# handled in startRound
-	State.player.revives = (JS.or_(State.player.get("revives"), 3)) + JS.idx([1, 2, 2, 3], star)
+	State.player.revives = (JS.or_(State.player.get("revives"), 3)) + JS.un(JS.idx([1, 2, 2, 3], star))
 	if star >= 2:
 		State.player._gritHealOnRevive = 50
 
 func ARTIFACT_CATALOGUE__ember_heart__applyToRun(star = null):
-	State.player._healBonus = (JS.or_(State.player.get("_healBonus"), 0)) + JS.idx([0.1, 0.2, 0.3, 0.5], star)
+	State.player._healBonus = (JS.or_(State.player.get("_healBonus"), 0)) + JS.un(JS.idx([0.1, 0.2, 0.3, 0.5], star))
 
 func ARTIFACT_CATALOGUE__storm_core__applyToRun(star = null):
-	State.player.basicDmgFlat = (JS.or_(State.player.get("basicDmgFlat"), 0)) + JS.idx([3, 5, 8, 12], star)
+	State.player.basicDmgFlat = (JS.or_(State.player.get("basicDmgFlat"), 0)) + JS.un(JS.idx([3, 5, 8, 12], star))
 
 func ARTIFACT_CATALOGUE__iron_skin__applyToRun(star = null):
-	State.player.defense = (JS.or_(State.player.get("defense"), 0)) + JS.idx([3, 5, 8, 12], star)
+	State.player.defense = (JS.or_(State.player.get("defense"), 0)) + JS.un(JS.idx([3, 5, 8, 12], star))
 
 func ARTIFACT_CATALOGUE__warlords_banner__applyToRun(star = null):
 	State.player._bannerStar = star

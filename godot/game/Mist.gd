@@ -93,7 +93,7 @@ func getMistConfig():
 	var meta = Artifacts.getMeta()
 	if not JS.t(meta.get("mistConfig")):
 		meta.mistConfig = {"active": false, "modifiers": {}}
-	return meta.mistConfig
+	return meta.get("mistConfig")
 
 func getTotalMist():
 	var total = [null]
@@ -102,16 +102,16 @@ func getTotalMist():
 		return 0
 	total[0] = 1
 	for mod in JS.iter(MIST_MODIFIERS):
-		var tier = JS.or_(JS.idx(cfg.modifiers, mod.id), 0)
+		var tier = JS.or_(JS.idx(cfg.get("modifiers"), mod.id), 0)
 		if tier > 0:
-			total[0] += JS.reduce(JS.slice(mod.mistCost, 0, tier), func(a = null, b = null): return a + b, 0)
+			total[0] += JS.reduce(JS.slice(mod.get("mistCost"), 0, tier), func(a = null, b = null): return a + b, 0)
 	return total[0]
 
 func getMistTier(modId = null):
 	var cfg = getMistConfig()
 	if not JS.t(cfg.get("active")):
 		return 0
-	return JS.or_(JS.idx(cfg.modifiers, modId), 0)
+	return JS.or_(JS.idx(cfg.get("modifiers"), modId), 0)
 
 func applyMistModifiers():
 	State.player._mistEnemyDmgMult = 1.0

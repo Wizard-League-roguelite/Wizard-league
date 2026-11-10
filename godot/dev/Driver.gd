@@ -8,6 +8,10 @@ var script_path := ""
 var steps: Array = []
 var idx := 0
 var wait := 0
+var until_ms := 0.0
+var perf_left := 0
+var perf_acc := [0, 0, 0]
+var _t_last := 0
 
 func _ready() -> void:
 	var f := FileAccess.open(script_path, FileAccess.READ)
@@ -18,14 +22,39 @@ func _ready() -> void:
 	steps = JSON.parse_string(f.get_as_text())
 
 func _process(_dt: float) -> void:
+	if perf_left > 0:
+		var nowu := Time.get_ticks_usec()
+		perf_acc[0] += nowu - _t_last
+		perf_acc[1] += JS.perf_pump_usec
+		perf_acc[2] += document.perf_flush_usec
+		_t_last = nowu
+		perf_left -= 1
+		if perf_left == 0:
+			var n: float = perf_acc[3]
+			print("PERF frame=%.1fms (%.1f fps)  game=%.1fms  dom=%.1fms" % [perf_acc[0] / n / 1000.0, 1e6 * n / perf_acc[0], perf_acc[1] / n / 1000.0, perf_acc[2] / n / 1000.0])
+		return
 	if wait > 0:
 		wait -= 1
 		return
+	if until_ms > 0.0:
+		if JS.now() < until_ms: return
+		until_ms = 0.0
 	while idx < steps.size():
 		var s: Dictionary = steps[idx]
 		idx += 1
 		if s.has("wait"):
 			wait = int(s.wait)
+			return
+		if s.has("perf"):
+			perf_left = int(s.perf)
+			perf_acc = [0, 0, 0, float(s.perf)]
+			_t_last = Time.get_ticks_usec()
+			return
+		if s.has("speed"):
+			JS.sim_speed = int(s.speed)
+			continue
+		if s.has("ms"):
+			until_ms = JS.now() + float(s.ms)
 			return
 		if s.has("click"):
 			var el = document.querySelector(s.click)
@@ -53,6 +82,8 @@ func _process(_dt: float) -> void:
 			var f = InlineJS.global(s.call)
 			if f is Callable: f.callv(s.get("args", []))
 			else: print("DRIVER: no function ", s.call)
+		elif s.has("print"):
+			print("PRINT ", s.print, " => ", JSON.stringify(JS._plain(InlineJS.eval_expr(s.print))))
 		elif s.has("js"):
 			InlineJS.run(s.js, null, null)
 		elif s.has("dump"):

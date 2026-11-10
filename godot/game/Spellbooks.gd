@@ -432,7 +432,7 @@ func SPELLBOOK_CATALOGUE__fire_tome__onSpellExecute(spell = null, lvl = null):
 		return
 	var burns = JS.or_(JS.idx([1, 2, 3, 3, 4], lvl), 1)
 	Helpers.applyBurn("enemy", burns, Helpers.effectPowerFor("player"))
-	if State.player.hp > 2:
+	if State.player.get("hp") > 2:
 		State.player.hp -= 2
 		UI.updateStatsUI()
 
@@ -453,7 +453,7 @@ func SPELLBOOK_CATALOGUE__tide_codex__onSpellExecute(spell = null, lvl = null):
 
 func SPELLBOOK_CATALOGUE__tide_codex__onSwitchTo(lvl = null):
 	if ((true and JS.t(State.combat.get("playerTurn"))) and not JS.t(State.combat.get("over"))):
-		if State.player.hp > 6:
+		if State.player.get("hp") > 6:
 			State.player.hp -= 5
 			UI.updateStatsUI()
 		UI.log_("📘 Tidal Codex: −5 HP on switch.", "status")
@@ -468,7 +468,7 @@ func SPELLBOOK_CATALOGUE__frost_grimoire__onSpellExecute(spell = null, lvl = nul
 	if JS.t(spell.get("isBuiltin")):
 		return
 	var frost = JS.or_(JS.idx([1, 1, 2, 2, 3], lvl), 1)
-	State.status.enemy.frostStacks = (JS.or_(State.status.enemy.get("frostStacks"), 0)) + frost
+	State.status.get("enemy").frostStacks = (JS.or_(State.status.get("enemy").get("frostStacks"), 0)) + frost
 
 func SPELLBOOK_CATALOGUE__frost_grimoire__onSwitchTo(lvl = null):
 	pass
@@ -483,7 +483,7 @@ func SPELLBOOK_CATALOGUE__storm_codex__onSpellExecute(spell = null, lvl = null):
 	if JS.t(spell.get("isBuiltin")):
 		return
 	var shock = JS.or_(JS.idx([1, 2, 2, 3, 4], lvl), 1)
-	State.status.enemy.shockStacks = (JS.or_(State.status.enemy.get("shockStacks"), 0)) + shock
+	State.status.get("enemy").shockStacks = (JS.or_(State.status.get("enemy").get("shockStacks"), 0)) + shock
 
 func SPELLBOOK_CATALOGUE__storm_codex__onSwitchTo(lvl = null):
 	pass
@@ -498,7 +498,7 @@ func SPELLBOOK_CATALOGUE__earth_ledger__onSpellExecute(spell = null, lvl = null)
 	if JS.t(spell.get("isBuiltin")):
 		return
 	var block = JS.or_(JS.idx([1, 2, 3, 4, 5], lvl), 1)
-	State.status.player.block = (JS.or_(State.status.player.get("block"), 0)) + block
+	State.status.get("player").block = (JS.or_(State.status.get("player").get("block"), 0)) + block
 
 func SPELLBOOK_CATALOGUE__earth_ledger__onSwitchTo(lvl = null):
 	pass
@@ -530,7 +530,7 @@ func SPELLBOOK_CATALOGUE__gale_sketchbook__onSpellExecute(spell = null, lvl = nu
 		return
 	var chance = JS.or_(JS.idx([0.2, 0.25, 0.3, 0.35, 0.4], lvl), 0.2)
 	if randf() < chance:
-		State.status.player.nextTurnBonusActions = (JS.or_(State.status.player.get("nextTurnBonusActions"), 0)) + 1
+		State.status.get("player").nextTurnBonusActions = (JS.or_(State.status.get("player").get("nextTurnBonusActions"), 0)) + 1
 		UI.log_("📑 Gale Sketchbook: +1 action next turn!", "status")
 
 func SPELLBOOK_CATALOGUE__gale_sketchbook__onSwitchTo(lvl = null):
@@ -548,7 +548,7 @@ func SPELLBOOK_CATALOGUE__plasma_atlas__onSpellExecute(spell = null, lvl = null)
 	var charge = JS.or_(JS.idx([1, 1, 2, 2, 3], lvl), 1)
 	var cap = (20 if lvl >= 4 else 17)
 	if JS.t(State.status.get("player")):
-		State.status.player.plasmaCharge = min((JS.or_(State.status.player.get("plasmaCharge"), 0)) + charge, cap)
+		State.status.get("player").plasmaCharge = min((JS.or_(State.status.get("player").get("plasmaCharge"), 0)) + charge, cap)
 		Spells.updateChargeUI()
 
 func SPELLBOOK_CATALOGUE__plasma_atlas__onSwitchTo(lvl = null):
@@ -580,7 +580,7 @@ func SPELLBOOK_CATALOGUE__guardians_ward__onSwitchTo(lvl = null):
 	if (false or not JS.t(State.combat.get("playerTurn"))):
 		return
 	var block = JS.or_(JS.idx([5, 8, 10, 12, 15], lvl), 5)
-	State.status.player.block = (JS.or_(State.status.player.get("block"), 0)) + block
+	State.status.get("player").block = (JS.or_(State.status.get("player").get("block"), 0)) + block
 	UI.log_("🛡 Guardian's Ward: +" + JS.s(block) + " Block!", "heal")
 
 func SPELLBOOK_CATALOGUE__guardians_ward__onSwitchAway(lvl = null):
@@ -617,7 +617,7 @@ func SPELLBOOK_CATALOGUE__scholars_folio__onSwitchTo(lvl = null):
 	var book = State.activeBook()
 	if not JS.t(book):
 		return
-	for s in JS.iter(book.spells):
+	for s in JS.iter(book.get("spells")):
 		if (JS.or_(s.get("currentCD"), 0)) > 0:
 			s.currentCD = max(0, (JS.or_(s.get("currentCD"), 0)) - reduce)
 	UI.log_("📚 Scholar's Folio: spell CDs −" + JS.s(reduce) + "!", "status")
@@ -649,12 +649,12 @@ func SPELLBOOK_CATALOGUE__tome_of_time__onSpellExecute(spell = null, lvl = null)
 
 func SPELLBOOK_CATALOGUE__tome_of_time__onTurnStart(lvl = null):
 	var interval = JS.or_(JS.idx([3, 3, 2, 2, 1], lvl), 3)
-	if (State.combat.turnInBattle > 0 and (JS.mod(State.combat.turnInBattle, interval)) == 0):
+	if (State.combat.get("turnInBattle") > 0 and (JS.mod(State.combat.get("turnInBattle"), interval)) == 0):
 		var book = State.activeBook()
 		if JS.t(book):
-			for s in JS.iter(book.spells):
+			for s in JS.iter(book.get("spells")):
 				if (JS.or_(s.get("currentCD"), 0)) > 0:
-					s.currentCD = max(0, s.currentCD - 1)
+					s.currentCD = max(0, s.get("currentCD") - 1)
 		UI.log_("⏳ Tome of Time: all spell CDs −1", "status")
 
 func SPELLBOOK_CATALOGUE__tome_of_time__onSwitchTo(lvl = null):
@@ -683,7 +683,7 @@ func SPELLBOOK_CATALOGUE__soul_codex__onSpellExecute(spell = null, lvl = null):
 	if JS.t(spell.get("isBuiltin")):
 		return
 	var cost = JS.or_(JS.idx([5, 5, 4, 4, 3], lvl), 5)
-	if State.player.hp > (cost + 1):
+	if State.player.get("hp") > (cost + 1):
 		State.player.hp -= cost
 		UI.updateStatsUI()
 

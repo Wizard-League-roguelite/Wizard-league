@@ -244,7 +244,7 @@ func _clear_children() -> void:
 	_tree_changed()
 
 # ───────────────────────── attributes / properties ─────────────────────────
-var id: String:
+var id:
 	get: return _id
 	set(v):
 		if doc != null: doc._unindex_id(self)
@@ -252,13 +252,13 @@ var id: String:
 		if doc != null: doc._index_id(self)
 		_restyle()
 
-var className: String:
+var className:
 	get: return " ".join(PackedStringArray(classes))
 	set(v):
 		classes = Array(JS.s(v).split(" ", false))
 		_restyle()
 
-var innerHTML: String:
+var innerHTML:
 	get: return HtmlParser.serialize_children(self)
 	set(v):
 		_clear_children()
@@ -273,7 +273,7 @@ var innerHTML: String:
 var outerHTML: String:
 	get: return HtmlParser.serialize(self)
 
-var textContent: String:
+var textContent:
 	get:
 		if nodeType == TEXT: return data
 		var s := ""
@@ -302,15 +302,15 @@ var textContent: String:
 		_tree_changed()
 		if tag == "style" and doc != null: doc._style_element_changed(self)
 
-var innerText: String:
+var innerText:
 	get: return textContent
 	set(v): textContent = v
 
-var title: String:
+var title:
 	get: return attrs.get("title", "")
 	set(v): attrs["title"] = JS.s(v)
 
-var disabled: bool:
+var disabled:
 	get: return _disabled
 	set(v):
 		var b := JS.t(v)
@@ -318,7 +318,7 @@ var disabled: bool:
 		_disabled = b
 		_restyle()
 
-var hidden: bool:
+var hidden:
 	get: return attrs.has("hidden")
 	set(v):
 		if JS.t(v): attrs["hidden"] = ""
@@ -337,19 +337,19 @@ var value:
 			if control is LineEdit: control.text = _value
 			elif control is HSlider: control.set_value_no_signal(_value.to_float())
 
-var checked: bool:
+var checked:
 	get: return _checked
 	set(v): _checked = JS.t(v)
 
-var draggable: bool:
+var draggable:
 	get: return attrs.get("draggable", "") == "true"
 	set(v): attrs["draggable"] = "true" if JS.t(v) else "false"
 
-var type: String:
+var type:
 	get: return attrs.get("type", "")
 	set(v): attrs["type"] = JS.s(v)
 
-var placeholder: String:
+var placeholder:
 	get: return attrs.get("placeholder", "")
 	set(v): attrs["placeholder"] = JS.s(v)
 

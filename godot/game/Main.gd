@@ -85,7 +85,7 @@ func showSaveSelect():
 			var runs = (JS.or_(meta.get("totalRuns"), 0) if JS.t(meta) else 0)
 			var best = (JS.or_(meta.get("bestLevel"), 0) if JS.t(meta) else 0)
 			var gyms = (JS.or_(meta.get("gymsBeaten"), 0) if JS.t(meta) else 0)
-			card.innerHTML = "\n        <div class=\"save-slot-left\">\n          <div class=\"save-slot-name\">" + JS.s(data.playerName) + "</div>\n          <div class=\"save-slot-stats\">Runs: " + JS.s(runs) + " · Best Lv." + JS.s(best) + " · Gyms: " + JS.s(gyms) + "</div>\n        </div>\n        <div style=\"display:flex;align-items:center;gap:.5rem;\">\n          <div class=\"save-slot-right has-data\">SLOT " + JS.s(i + 1) + "</div>\n          <div class=\"save-slot-delete\" onclick=\"event.stopPropagation();confirmDeleteSlot(" + JS.s(i) + ")\" title=\"Delete save\">✕</div>\n        </div>\n        <div style=\"margin-top:.5rem;border-top:1px solid #1a1208;padding-top:.45rem;display:flex;gap:.4rem;\">\n          <button onclick=\"event.stopPropagation();selectSaveSlot(" + JS.s(i) + ")\" style=\"flex:1;background:#0e0c06;border:1px solid #2a1e0e;color:#c8a060;font-family:Cinzel,serif;font-size:.52rem;letter-spacing:.08em;padding:.3rem .4rem;border-radius:4px;cursor:pointer;\">⚔ Play</button>\n          <button onclick=\"event.stopPropagation();selectSaveSlotSandbox(" + JS.s(i) + ")\" style=\"flex:1;background:#0a0614;border:1px solid #3a1a5a;color:#c080ff;font-family:Cinzel,serif;font-size:.52rem;letter-spacing:.08em;padding:.3rem .4rem;border-radius:4px;cursor:pointer;\">🔬 Sandbox</button>\n        </div>"
+			card.innerHTML = "\n        <div class=\"save-slot-left\">\n          <div class=\"save-slot-name\">" + JS.s(data.get("playerName")) + "</div>\n          <div class=\"save-slot-stats\">Runs: " + JS.s(runs) + " · Best Lv." + JS.s(best) + " · Gyms: " + JS.s(gyms) + "</div>\n        </div>\n        <div style=\"display:flex;align-items:center;gap:.5rem;\">\n          <div class=\"save-slot-right has-data\">SLOT " + JS.s(i + 1) + "</div>\n          <div class=\"save-slot-delete\" onclick=\"event.stopPropagation();confirmDeleteSlot(" + JS.s(i) + ")\" title=\"Delete save\">✕</div>\n        </div>\n        <div style=\"margin-top:.5rem;border-top:1px solid #1a1208;padding-top:.45rem;display:flex;gap:.4rem;\">\n          <button onclick=\"event.stopPropagation();selectSaveSlot(" + JS.s(i) + ")\" style=\"flex:1;background:#0e0c06;border:1px solid #2a1e0e;color:#c8a060;font-family:Cinzel,serif;font-size:.52rem;letter-spacing:.08em;padding:.3rem .4rem;border-radius:4px;cursor:pointer;\">⚔ Play</button>\n          <button onclick=\"event.stopPropagation();selectSaveSlotSandbox(" + JS.s(i) + ")\" style=\"flex:1;background:#0a0614;border:1px solid #3a1a5a;color:#c080ff;font-family:Cinzel,serif;font-size:.52rem;letter-spacing:.08em;padding:.3rem .4rem;border-radius:4px;cursor:pointer;\">🔬 Sandbox</button>\n        </div>"
 		else:
 			card.innerHTML = "\n        <div class=\"save-slot-left\">\n          <div class=\"save-slot-name\" style=\"color:#3a2a10;\">Empty Slot</div>\n          <div class=\"save-slot-stats\">— no data —</div>\n        </div>\n        <div class=\"save-slot-right\">SLOT " + JS.s(i + 1) + "</div>"
 		card.onclick = func(): return selectSaveSlot(i)
@@ -117,7 +117,7 @@ func selectSaveSlot(slot = null):
 	var data = loadSlot(slot)
 	if (JS.t(data) and JS.t(data.get("playerName"))):
 		# Existing save — go straight to lobby
-		State.playerName = data.playerName
+		State.playerName = data.get("playerName")
 		Constants.sandboxMode = false
 		BetweenRuns.showBetweenRuns()
 	else:
@@ -131,7 +131,7 @@ func selectSaveSlotSandbox(slot = null):
 	window.get("_metaBySlot")[slot] = null
 	var data = loadSlot(slot)
 	if (JS.t(data) and JS.t(data.get("playerName"))):
-		State.playerName = data.playerName
+		State.playerName = data.get("playerName")
 		Constants.sandboxMode = true
 		BetweenRuns.showBetweenRuns()
 	else:
@@ -167,10 +167,10 @@ func selectFullUnlockSlot(sandbox = null):
 	# ── All talents at max level ──
 	var talents = {}
 	for tree in JS.iter(JS.values(Talents.TALENT_TREE)):
-		if (JS.t(tree) and (tree.nodes is Array)):
-			for node in JS.iter(tree.nodes):
+		if (JS.t(tree) and (tree.get("nodes") is Array)):
+			for node in JS.iter(tree.get("nodes")):
 				if (JS.t(node) and JS.t(node.get("id"))):
-					talents[node.id] = node.maxLevel
+					talents[node.id] = node.get("maxLevel")
 	var meta = {
 		"totalRuns": 50,
 		"bestLevel": 99,
@@ -204,7 +204,7 @@ func showHub():
 	var meta = Artifacts.getMeta()
 	var hasSave = (not (not JS.t(slotData.get("playerName"))))
 	document.getElementById("hub-slot-label").textContent = "Save File " + JS.s(Constants.activeSaveSlot + 1)
-	document.getElementById("hub-title").textContent = ("Welcome back, " + JS.s(slotData.playerName) if hasSave else "New Adventure")
+	document.getElementById("hub-title").textContent = ("Welcome back, " + JS.s(slotData.get("playerName")) if hasSave else "New Adventure")
 	# Show name input only for new saves
 	var nameInput = document.getElementById("hub-name-input")
 	var nameError = document.getElementById("hub-error")
@@ -213,8 +213,8 @@ func showHub():
 	nameError.style.display = ("none" if hasSave else "")
 	# Stats
 	var statsRow = document.getElementById("hub-stats-row")
-	if meta.totalRuns > 0:
-		statsRow.innerHTML = "Runs: <span>" + JS.s(meta.totalRuns) + "</span> &nbsp;·&nbsp; Best Level: <span>" + JS.s(JS.or_(meta.get("bestLevel"), 0)) + "</span> &nbsp;·&nbsp; Gyms: <span>" + JS.s(JS.or_(meta.get("gymsBeaten"), 0)) + "</span>"
+	if meta.get("totalRuns") > 0:
+		statsRow.innerHTML = "Runs: <span>" + JS.s(meta.get("totalRuns")) + "</span> &nbsp;·&nbsp; Best Level: <span>" + JS.s(JS.or_(meta.get("bestLevel"), 0)) + "</span> &nbsp;·&nbsp; Gyms: <span>" + JS.s(JS.or_(meta.get("gymsBeaten"), 0)) + "</span>"
 	else:
 		statsRow.innerHTML = ("<span style=\"color:#3a2a10;\">No runs yet — go fight!</span>" if hasSave else "<span style=\"color:#3a2a10;\">No runs yet</span>")
 	UI.showScreen("hub-screen")
@@ -248,7 +248,7 @@ func hubPlay():
 func showElementScreen():
 	var pool = JS.arr(ALL_ELEMENTS)
 	# Sandbox: all elements. Non-sandbox: 2 random from released elements.
-	var picked = (pool if JS.t(Constants.sandboxMode) else BattleReward.pickRandom(JS.arr(pool).filter(func(e = null): return JS.includes(Constants.RELEASED_ELEMENTS, e.el)), 2))
+	var picked = (pool if JS.t(Constants.sandboxMode) else BattleReward.pickRandom(JS.arr(pool).filter(func(e = null): return JS.includes(Constants.RELEASED_ELEMENTS, e.get("el"))), 2))
 	var grid = document.getElementById("element-grid")
 	grid.innerHTML = ""
 	State.playerElement = ""
@@ -259,9 +259,9 @@ func showElementScreen():
 	for def in JS.iter(picked):
 		var card = document.createElement("div")
 		card.className = "element-card"
-		card.id = "card-" + JS.s(def.el)
-		card.innerHTML = "\n      <div class=\"crack crack-1\"></div><div class=\"crack crack-2\"></div><div class=\"crack crack-3\"></div>\n      <span class=\"emoji\">" + JS.s(def.emoji) + "</span>\n      <span class=\"name\" style=\"color:" + JS.s(def.color) + "\">" + JS.s(def.el) + "</span>\n      <span class=\"mechanic\">" + JS.s(def.mechanic) + "</span>\n    "
-		card.onclick = func(): return selectElement(def.el, def.emoji, def.color)
+		card.id = "card-" + JS.s(def.get("el"))
+		card.innerHTML = "\n      <div class=\"crack crack-1\"></div><div class=\"crack crack-2\"></div><div class=\"crack crack-3\"></div>\n      <span class=\"emoji\">" + JS.s(def.get("emoji")) + "</span>\n      <span class=\"name\" style=\"color:" + JS.s(def.get("color")) + "\">" + JS.s(def.get("el")) + "</span>\n      <span class=\"mechanic\">" + JS.s(def.get("mechanic")) + "</span>\n    "
+		card.onclick = func(): return selectElement(def.get("el"), def.get("emoji"), def.get("color"))
 		grid.appendChild(card)
 	UI.showScreen("element-screen")
 
@@ -310,7 +310,7 @@ func showPassiveScreen(element = null):
 		btn.type = "button"
 		btn.dataset.passiveId = ch.id
 		var infoIcon = ("<span class=\"pc-info-icon\" title=\"" + JS.s(ch.detail) + "\" onclick=\"event.stopPropagation()\">ℹ</span>" if JS.t(ch.get("detail")) else "")
-		btn.innerHTML = "<div class=\"choice-title\">" + JS.s(ch.emoji) + " " + JS.s(ch.title) + infoIcon + "</div><div class=\"choice-desc\">" + JS.s(ch.desc) + "</div>"
+		btn.innerHTML = "<div class=\"choice-title\">" + JS.s(ch.get("emoji")) + " " + JS.s(ch.title) + infoIcon + "</div><div class=\"choice-desc\">" + JS.s(ch.get("desc")) + "</div>"
 		var _fn3 = func():
 			window.pendingStartPassive = ch.id
 			for b in JS.iter(list.querySelectorAll("button.choice-btn")):
@@ -327,10 +327,10 @@ func hasPassive(id = null):
 	return JS.includes(JS.or_(State.player.get("passives"), []), id)
 
 func enemyHasPassive(id = null):
-	var e = JS.idx(State.combat.enemies, State.combat.activeEnemyIdx)
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
 	if not JS.t(e):
 		return false
-	return (JS.eq(e.passive, id) or JS.includes(JS.or_(e.get("extraPassives"), []), id))
+	return (JS.eq(e.get("passive"), id) or JS.includes(JS.or_(e.get("extraPassives"), []), id))
 
 # Show book selection screen at run start (if player owns catalogue books)
 func showRunBookSelectionScreen(onDone = null):
@@ -340,7 +340,7 @@ func showRunBookSelectionScreen(onDone = null):
 	# Deck is chosen in the lobby — auto-select or fall back to default, never show this screen
 	if not JS.t(Constants.sandboxMode):
 		if JS.t(meta.get("startingBookId")):
-			var sid = meta.startingBookId
+			var sid = meta.get("startingBookId")
 			if (JS.includes(ownedBookIds, sid) and JS.t(JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, sid))):
 				onDone.call(sid)
 				return
@@ -392,7 +392,7 @@ func showRunBookSelectionScreen(onDone = null):
 		var rarityLabel = ("⚡ Generic Deck" if cat.get("rarity") == "generic" else (JS.or_(cat.get("element"), "")) + " Deck")
 		var btn = document.createElement("button")
 		btn.className = "prog-choice-btn"
-		btn.innerHTML = "<div class=\"pc-tag\">" + rarityLabel + " · Lv " + JS.s(lvl) + "</div>\n      <div class=\"pc-name\" style=\"color:" + rarityColor + ";\">" + JS.s(cat.emoji) + " " + JS.s(cat.name) + "</div>\n      <div class=\"pc-desc\">" + JS.s((JS.idx(cat.levelDescs, lvl) if JS.t(cat.get("levelDescs")) else cat.desc)) + "</div>\n      <div style=\"font-size:.58rem;color:#6a4a3a;margin-top:.2rem;\">⚠ " + JS.s(cat.negative) + "</div>"
+		btn.innerHTML = "<div class=\"pc-tag\">" + rarityLabel + " · Lv " + JS.s(lvl) + "</div>\n      <div class=\"pc-name\" style=\"color:" + rarityColor + ";\">" + JS.s(cat.get("emoji")) + " " + JS.s(cat.get("name")) + "</div>\n      <div class=\"pc-desc\">" + JS.s((JS.idx(cat.get("levelDescs"), lvl) if JS.t(cat.get("levelDescs")) else cat.get("desc"))) + "</div>\n      <div style=\"font-size:.58rem;color:#6a4a3a;margin-top:.2rem;\">⚠ " + JS.s(cat.get("negative")) + "</div>"
 		btn.onclick = func(): return onDone.call(id)
 		cont.appendChild(btn)
 	UI.showScreen("bookselect-screen")
@@ -516,14 +516,14 @@ func _offerRunBookThenBattle():
 				var newBook = State.makeBookInstance(chosenId)
 				if JS.t(newBook):
 					# Transfer spells/passives from default book
-					var oldBook = JS.idx(State.player.spellbooks, 0)
+					var oldBook = JS.idx(State.player.get("spellbooks"), 0)
 					if JS.t(oldBook):
-						newBook.spells = JS.arr(oldBook.spells)
-						newBook.passives = JS.arr(oldBook.passives)
-					State.player.spellbooks[0] = newBook
+						newBook.spells = JS.arr(oldBook.get("spells"))
+						newBook.passives = JS.arr(oldBook.get("passives"))
+					State.player.get("spellbooks")[0] = newBook
 					State.player.activeBookIdx = 0
 					State.syncActiveBook()
-					UI.log_("📖 Starting with " + JS.s(cat.emoji) + " " + JS.s(cat.name) + ".", "item")
+					UI.log_("📖 Starting with " + JS.s(cat.get("emoji")) + " " + JS.s(cat.get("name")) + ".", "item")
 		# First time entering the castle — play throne room intro
 		var meta = Artifacts.getMeta()
 		if not JS.t(meta.get("seenThroneRoom")):
@@ -540,17 +540,17 @@ func _offerRunBookThenBattle():
 func confirmStartPassive(passiveId = null):
 	State.player.startPassive = passiveId
 	# Put start passive into active book
-	if (JS.t(State.player.get("spellbooks")) and JS.t(len(State.player.spellbooks))):
+	if (JS.t(State.player.get("spellbooks")) and JS.t(len(State.player.get("spellbooks")))):
 		State.addPassiveToBook(passiveId)
 	else:
 		State.player.passives = [passiveId]
 	if JS.t(State.player.get("_extraStartSpell")):
-		var owned = JSSet.new(JS.arr(State.player.spellbook).map(func(s = null): return s.id))
-		var candidates = JS.arr(JS.values(Spells.SPELL_CATALOGUE)).filter(func(s = null): return ((JS.eq(s.element, State.playerElement) and not owned.has(s.id)) and not JS.t(s.get("legendary"))))
+		var owned = JSSet.new(JS.arr(State.player.get("spellbook")).map(func(s = null): return s.id))
+		var candidates = JS.arr(JS.values(Spells.SPELL_CATALOGUE)).filter(func(s = null): return ((JS.eq(s.get("element"), State.playerElement) and not owned.has(s.id)) and not JS.t(s.get("legendary"))))
 		if JS.t(len(candidates)):
 			var pick = JS.idx(candidates, floori(randf() * len(candidates)))
 			Spells.addSpellById(pick.id)
-			UI.log_("📚 Head Start: bonus spell — " + JS.s(pick.emoji) + " " + JS.s(pick.name) + "!", "item")
+			UI.log_("📚 Head Start: bonus spell — " + JS.s(pick.get("emoji")) + " " + JS.s(pick.get("name")) + "!", "item")
 	_offerRunBookThenBattle()
 
 func backToElementSelectFromPassive():

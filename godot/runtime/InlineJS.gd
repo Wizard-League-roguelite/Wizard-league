@@ -21,6 +21,14 @@ static func run(code: String, this_node, event) -> void:
 		var r = _eval(stmt, env)
 		if env.has("__return"): break
 
+# Evaluate a snippet and return the value of its last statement (debugging aid).
+static func eval_expr(code: String):
+	var p := _Parser.new(code)
+	var env := {"this": null, "event": null}
+	var last = null
+	for stmt in p.program(): last = _eval(stmt, env)
+	return last
+
 # Resolve a global name: function → Callable, variable → value.
 static func global(name_: String):
 	var g = _globals.get(name_)

@@ -64,7 +64,6 @@ func _init(owner_: DomNode, w: int, h: int) -> void:
 	vp.disable_3d = true
 	vp.render_target_clear_mode = SubViewport.CLEAR_MODE_ONCE
 	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
-	vp.msaa_2d = Viewport.MSAA_4X
 	vp.gui_disable_input = true
 	document.add_child(vp)
 	_root = RenderingServer.canvas_item_create()

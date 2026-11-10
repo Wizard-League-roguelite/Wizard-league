@@ -81,15 +81,15 @@ func ITEM_CATALOGUE__dmg_booster__use():
 	return "💎 Damage Crystal shatters — +16 damage this battle!"
 
 func ITEM_CATALOGUE__efx_crystal__use():
-	State.status.player.battleEfxBonus = (JS.or_(State.status.player.get("battleEfxBonus"), 0)) + 20
+	State.status.get("player").battleEfxBonus = (JS.or_(State.status.get("player").get("battleEfxBonus"), 0)) + 20
 	return "✦ EFX Crystal — +20 Effect Power this battle!"
 
 func ITEM_CATALOGUE__def_crystal__use():
-	State.status.player.battleDefBonus = (JS.or_(State.status.player.get("battleDefBonus"), 0)) + 20
+	State.status.get("player").battleDefBonus = (JS.or_(State.status.get("player").get("battleDefBonus"), 0)) + 20
 	return "🛡️ Defense Crystal — +20 Defense this battle!"
 
 func ITEM_CATALOGUE__basic_dispel__use():
-	var s = State.status.player
+	var s = State.status.get("player")
 	for key in JS.iter(["burnStacks", "foamStacks", "shockStacks", "frostStacks", "rootStacks", "overgrowthStacks"]):
 		if JS.t(JS.idx(s, key)):
 			s[key] = floori(s[key] / 2.0)
@@ -102,7 +102,7 @@ func ITEM_CATALOGUE__basic_dispel__use():
 	return "🧹 Debuffs reduced!"
 
 func ITEM_CATALOGUE__strong_dispel__use():
-	var s = State.status.player
+	var s = State.status.get("player")
 	for key in JS.iter([
 		"burnStacks",
 		"foamStacks",

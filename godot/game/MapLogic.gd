@@ -269,11 +269,11 @@ func showGameOver():
 			{"ox": 145, "phase": 0.8, "col": "rgba(160,120,220,0.35)"},
 		]
 		for w in JS.iter(wisps):
-			var wy = 40 + (sin((frame[0] * 0.035) + w.phase) * 8)
-			ctx.fillStyle = w.col
-			ctx.fillRect(w.ox, wy, 4, 6)
-			ctx.fillRect(w.ox - 1, wy + 2, 6, 3)
-			ctx.fillRect(w.ox + 1, wy + 5, 2, 3)
+			var wy = 40 + (sin((frame[0] * 0.035) + w.get("phase")) * 8)
+			ctx.fillStyle = w.get("col")
+			ctx.fillRect(w.get("ox"), wy, 4, 6)
+			ctx.fillRect(w.get("ox") - 1, wy + 2, 6, 3)
+			ctx.fillRect(w.get("ox") + 1, wy + 5, 2, 3)
 		# "GAME OVER" text in big pixel-ish font
 		var alpha = min(1, frame[0] / 40.0)
 		ctx.globalAlpha = alpha
@@ -308,7 +308,7 @@ func showRunVictory():
 	var statsEl = document.getElementById("victory-stats")
 	if JS.t(statsEl):
 		var phos = JS.or_(BetweenRuns._lastRunPhos, 0)
-		statsEl.innerHTML = "<div style=\"color:#aaffaa;font-size:.9rem;text-align:center;margin-bottom:.6rem;letter-spacing:.06em;\">✦ RUN COMPLETE ✦</div>" + "<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:.15rem .8rem;\">" + ("<span style=\"color:#559955;\">Element</span><span style=\"color:#ccffcc;\">" + (JS.or_(State.playerEmoji, "")) + " " + (JS.or_(State.playerElement, "?")) + "</span>") + ("<span style=\"color:#559955;\">Battles</span><span style=\"color:#ccffcc;\">" + JS.s(State.battleNumber) + "</span>") + ("<span style=\"color:#559955;\">Damage Dealt</span><span style=\"color:#ccffcc;\">" + JS.toLocaleString(JS.or_(State._runDmgDealt, 0)) + "</span>") + ("<span style=\"color:#559955;\">Damage Taken</span><span style=\"color:#ccffcc;\">" + JS.toLocaleString(JS.or_(State._runDmgTaken, 0)) + "</span>") + ("<span style=\"color:#559955;\">Gold Earned</span><span style=\"color:#ccffcc;\">" + JS.s(State.player.gold) + "</span>") + ("<span style=\"color:#559955;\">Spells</span><span style=\"color:#ccffcc;\">" + JS.s(len(State.player.spellbook)) + "</span>") + ("<span style=\"color:#559955;\">Phos Earned</span><span style=\"color:#ffdd88;\">✦ " + JS.s(phos) + "</span>") + "</div>"
+		statsEl.innerHTML = "<div style=\"color:#aaffaa;font-size:.9rem;text-align:center;margin-bottom:.6rem;letter-spacing:.06em;\">✦ RUN COMPLETE ✦</div>" + "<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:.15rem .8rem;\">" + ("<span style=\"color:#559955;\">Element</span><span style=\"color:#ccffcc;\">" + (JS.or_(State.playerEmoji, "")) + " " + (JS.or_(State.playerElement, "?")) + "</span>") + ("<span style=\"color:#559955;\">Battles</span><span style=\"color:#ccffcc;\">" + JS.s(State.battleNumber) + "</span>") + ("<span style=\"color:#559955;\">Damage Dealt</span><span style=\"color:#ccffcc;\">" + JS.toLocaleString(JS.or_(State._runDmgDealt, 0)) + "</span>") + ("<span style=\"color:#559955;\">Damage Taken</span><span style=\"color:#ccffcc;\">" + JS.toLocaleString(JS.or_(State._runDmgTaken, 0)) + "</span>") + ("<span style=\"color:#559955;\">Gold Earned</span><span style=\"color:#ccffcc;\">" + JS.s(State.player.get("gold")) + "</span>") + ("<span style=\"color:#559955;\">Spells</span><span style=\"color:#ccffcc;\">" + JS.s(len(State.player.get("spellbook"))) + "</span>") + ("<span style=\"color:#559955;\">Phos Earned</span><span style=\"color:#ffdd88;\">✦ " + JS.s(phos) + "</span>") + "</div>"
 	UI.showScreen("run-victory-screen")
 	_startVictoryCanvas()
 
@@ -423,13 +423,13 @@ func _startVictoryCanvas():
 		ctx.globalAlpha = 1
 		# Confetti
 		for p in JS.iter(confetti):
-			p.y += p.vy
-			if p.y > H:
+			p.y += p.get("vy")
+			if p.get("y") > H:
 				p.y = -4
-			var wx = p.x + (sin((frame[0] * 0.04) + p.phase) * 3)
-			ctx.fillStyle = p.col
+			var wx = p.get("x") + (sin((frame[0] * 0.04) + p.get("phase")) * 3)
+			ctx.fillStyle = p.get("col")
 			ctx.globalAlpha = 0.75
-			ctx.fillRect(JS.round(wx), JS.round(p.y), 2, 2)
+			ctx.fillRect(JS.round(wx), JS.round(p.get("y")), 2, 2)
 		ctx.globalAlpha = 1
 		# "VICTORY" text
 		var alpha = min(1, frame[0] / 35.0)
@@ -538,12 +538,12 @@ func startShopCanvas():
 		ctx.fillRect(0, 0, W, H)
 		# Swirling stars
 		for s in JS.iter(STARS):
-			s.angle += s.speed
-			var sx = s.cx + (cos(s.angle) * s.r)
-			var sy = s.cy + ((sin(s.angle) * s.r) * 0.45)
+			s.angle += s.get("speed")
+			var sx = s.get("cx") + (cos(s.get("angle")) * s.get("r"))
+			var sy = s.get("cy") + ((sin(s.get("angle")) * s.get("r")) * 0.45)
 			# elliptical orbit
-			var twinkle = 0.4 + (sin((frame[0] * 0.07) + s.phase) * 0.3)
-			ctx.globalAlpha = twinkle * s.brightness
+			var twinkle = 0.4 + (sin((frame[0] * 0.07) + s.get("phase")) * 0.3)
+			ctx.globalAlpha = twinkle * s.get("brightness")
 			ctx.fillStyle = "#e8e0ff"
 			ctx.fillRect(JS.round(sx), JS.round(sy), s.size, s.size)
 		# A few brighter fixed stars
@@ -671,18 +671,18 @@ func startShopCanvas():
 		ctx.fillRect(lx - 4, ly + 3, 8, 2)
 		# Fire particles from lantern
 		for p in JS.iter(particles):
-			p.life += p.speed * 0.04
-			if p.life >= 1:
+			p.life += p.get("speed") * 0.04
+			if p.get("life") >= 1:
 				p.life = 0
 				p.x = lx + ((randf() - 0.5) * 3)
 				p.y = ly
 				p.vx = (randf() - 0.5) * 0.4
-			p.x += p.vx
-			p.y = ly - (p.life * 9)
-			var a = (1 - p.life) * 0.8
+			p.x += p.get("vx")
+			p.y = ly - (p.get("life") * 9)
+			var a = (1 - p.get("life")) * 0.8
 			ctx.globalAlpha = a
-			ctx.fillStyle = ("#ffdd60" if p.life < 0.4 else "#ff8020")
-			ctx.fillRect(JS.round(p.x), JS.round(p.y), 1, 2)
+			ctx.fillStyle = ("#ffdd60" if p.get("life") < 0.4 else "#ff8020")
+			ctx.fillRect(JS.round(p.get("x")), JS.round(p.get("y")), 1, 2)
 		ctx.globalAlpha = 1
 		# Foreground vignette
 		var vign = ctx.createRadialGradient(W / 2.0, H * 0.6, H * 0.1, W / 2.0, H * 0.5, H * 0.9)
@@ -783,42 +783,42 @@ func renderRunInfo(target = null):
 	var row = func(name_ = null, val = null): return "<div class=\"ri-row\"><span class=\"ri-name\">" + JS.s(name_) + "</span><span class=\"ri-val\">" + JS.s(val) + "</span></div>"
 	# ── Stats
 	var maxHP = Helpers.maxHPFor("player")
-	section.call("Stats", ((((((row.call("Element", JS.s(State.playerEmoji) + " " + JS.s(State.playerElement)) + row.call("HP", JS.s(max(0, State.player.hp)) + " / " + JS.s(maxHP))) + row.call("Attack Power", State.player.attackPower)) + row.call("Effect Power", State.player.effectPower)) + row.call("Defense", State.player.defense)) + row.call("Gold", State.player.gold)) + row.call("Lives", State.player.revives)) + (row.call("Bonus Actions", "+" + JS.s(State.player.bonusActions)) if JS.t(State.player.get("bonusActions")) else ""))
+	section.call("Stats", ((((((row.call("Element", JS.s(State.playerEmoji) + " " + JS.s(State.playerElement)) + row.call("HP", JS.s(max(0, State.player.get("hp"))) + " / " + JS.s(maxHP))) + row.call("Attack Power", State.player.get("attackPower"))) + row.call("Effect Power", State.player.get("effectPower"))) + row.call("Defense", State.player.get("defense"))) + row.call("Gold", State.player.get("gold"))) + row.call("Lives", State.player.get("revives"))) + (row.call("Bonus Actions", "+" + JS.s(State.player.get("bonusActions"))) if JS.t(State.player.get("bonusActions")) else ""))
 	# ── Passives
-	if (JS.t(State.player.get("passives")) and JS.t(len(State.player.passives))):
+	if (JS.t(State.player.get("passives")) and JS.t(len(State.player.get("passives")))):
 		var html = [null]
 		var allPassives = JS.flat(JS.values(Passives.PASSIVE_CHOICES))
 		html[0] = ""
-		for id in JS.iter(State.player.passives):
+		for id in JS.iter(State.player.get("passives")):
 			var p = JS.find(allPassives, func(x = null): return JS.eq(x.id, id))
 			if not JS.t(p):
 				continue
-			html[0] += "<div style=\"padding:.25rem 0; border-bottom:1px solid #111; font-size:.72rem;\">\n        <div style=\"color:#c8a060;font-family:'Cinzel',serif;font-size:.7rem;display:flex;align-items:center;gap:.3rem;\">" + PassiveIcons.passiveIconSVG(p, 14) + " " + JS.s(p.title) + "</div>\n        <div style=\"color:#6a5a40;font-size:.62rem;margin-top:.1rem;line-height:1.4;\">" + JS.s(p.desc) + "</div>\n      </div>"
+			html[0] += "<div style=\"padding:.25rem 0; border-bottom:1px solid #111; font-size:.72rem;\">\n        <div style=\"color:#c8a060;font-family:'Cinzel',serif;font-size:.7rem;display:flex;align-items:center;gap:.3rem;\">" + PassiveIcons.passiveIconSVG(p, 14) + " " + JS.s(p.title) + "</div>\n        <div style=\"color:#6a5a40;font-size:.62rem;margin-top:.1rem;line-height:1.4;\">" + JS.s(p.get("desc")) + "</div>\n      </div>"
 		section.call("Passives", JS.or_(html[0], "<div style=\"color:#333;font-size:.68rem;\">None yet</div>"))
 	else:
 		section.call("Passives", "<div style=\"color:#333;font-size:.68rem;\">None yet</div>")
 	# ── Spells
-	if (JS.t(State.player.get("spellbook")) and JS.t(len(State.player.spellbook))):
+	if (JS.t(State.player.get("spellbook")) and JS.t(len(State.player.get("spellbook")))):
 		var html = [null]
 		html[0] = ""
-		for s in JS.iter(State.player.spellbook):
+		for s in JS.iter(State.player.get("spellbook")):
 			var rankPct = JS.round((JS.or_(s.get("dmgMult"), 1.0)) * 100)
 			var rankStr = ("<span class=\"ri-spell-rank\">+" + JS.s(rankPct - 100) + "% dmg</span>" if rankPct > 100 else "")
-			var cdStr = ("CD:" + JS.s(s.baseCooldown) if s.baseCooldown > 0 else "No CD")
-			html[0] += "<div style=\"padding:.28rem 0;border-bottom:1px solid #111;font-size:.72rem;display:flex;flex-direction:column;gap:.1rem;\">\n        <div style=\"display:flex;justify-content:space-between;align-items:center;\">\n          <span style=\"color:#c8a060;font-family:'Cinzel',serif;font-size:.7rem;\">" + JS.s(s.emoji) + " " + JS.s(s.name) + " " + rankStr + "</span>\n          <span style=\"color:#4a4030;font-size:.6rem;\">" + cdStr + " · " + (JS.or_(s.get("element"), "Neutral")) + "</span>\n        </div>\n        <div style=\"color:#6a5a40;font-size:.62rem;line-height:1.4;\">" + JS.s(s.desc) + "</div>\n      </div>"
+			var cdStr = ("CD:" + JS.s(s.get("baseCooldown")) if s.get("baseCooldown") > 0 else "No CD")
+			html[0] += "<div style=\"padding:.28rem 0;border-bottom:1px solid #111;font-size:.72rem;display:flex;flex-direction:column;gap:.1rem;\">\n        <div style=\"display:flex;justify-content:space-between;align-items:center;\">\n          <span style=\"color:#c8a060;font-family:'Cinzel',serif;font-size:.7rem;\">" + JS.s(s.get("emoji")) + " " + JS.s(s.get("name")) + " " + rankStr + "</span>\n          <span style=\"color:#4a4030;font-size:.6rem;\">" + cdStr + " · " + (JS.or_(s.get("element"), "Neutral")) + "</span>\n        </div>\n        <div style=\"color:#6a5a40;font-size:.62rem;line-height:1.4;\">" + JS.s(s.get("desc")) + "</div>\n      </div>"
 		section.call("Spellbook", html[0])
 	else:
 		section.call("Spellbook", "<div style=\"color:#333;font-size:.68rem;\">No spells learned yet</div>")
 	# ── Items
-	if (JS.t(State.player.get("inventory")) and JS.t(len(State.player.inventory))):
+	if (JS.t(State.player.get("inventory")) and JS.t(len(State.player.get("inventory")))):
 		var html = [null]
 		html[0] = ""
-		for item in JS.iter(State.player.inventory):
-			html[0] += JS.s(row.call(JS.s(item.emoji) + " " + JS.s(item.name), item.desc))
+		for item in JS.iter(State.player.get("inventory")):
+			html[0] += JS.s(row.call(JS.s(item.get("emoji")) + " " + JS.s(item.get("name")), item.get("desc")))
 		section.call("Inventory", html[0])
 	# ── Second elements
-	if (JS.t(State.player.get("unlockedElements")) and JS.t(len(State.player.unlockedElements))):
-		section.call("Second Elements", JS.join(JS.arr(State.player.unlockedElements).map(func(e = null): return row.call(e, "✦ Unlocked")), ""))
+	if (JS.t(State.player.get("unlockedElements")) and JS.t(len(State.player.get("unlockedElements")))):
+		section.call("Second Elements", JS.join(JS.arr(State.player.get("unlockedElements")).map(func(e = null): return row.call(e, "✦ Unlocked")), ""))
 	# ── Battle info
 	section.call("Run Progress", row.call("Battle #", State.battleNumber) + row.call("Gym defeated", ("Yes ✦" if JS.t(State.gymDefeated) else "Not yet")))
 
@@ -855,71 +855,71 @@ func hillY(x = null):
 
 func getZone():
 	var el = (State.currentZoneElement if (true and JS.t(State.currentZoneElement)) else State.playerElement)
-	return (JS.idx(ZONE, el) if (JS.t(JS.idx(ZONE, el)) and JS.t(el)) else ZONE.Neutral)
+	return (JS.idx(ZONE, el) if (JS.t(JS.idx(ZONE, el)) and JS.t(el)) else ZONE.get("Neutral"))
 
 func drawScene():
 	var z = getZone()
 	# Sky gradient
 	var sky = ctx.createLinearGradient(0, 0, 0, H)
-	sky.addColorStop(0, JS.idx(z.sky, 0))
-	sky.addColorStop(0.55, JS.idx(z.sky, 1))
-	sky.addColorStop(1, JS.idx(z.sky, 2))
+	sky.addColorStop(0, JS.idx(z.get("sky"), 0))
+	sky.addColorStop(0.55, JS.idx(z.get("sky"), 1))
+	sky.addColorStop(1, JS.idx(z.get("sky"), 2))
 	ctx.fillStyle = sky
 	ctx.fillRect(0, 0, W, H)
 	# Nebulae
-	for n in JS.iter(z.nebulae):
-		var pulse = n.base + (sin((frame * 0.012) + n.x) * 0.015)
-		var g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, max(n.rx, n.ry))
-		g.addColorStop(0, JS.s(JS.add(n.r, min(0.12, pulse * 2))) + ")")
-		g.addColorStop(0.5, JS.s(JS.add(n.r, pulse)) + ")")
-		g.addColorStop(1, JS.s(n.r) + "0)")
+	for n in JS.iter(z.get("nebulae")):
+		var pulse = n.get("base") + (sin((frame * 0.012) + n.get("x")) * 0.015)
+		var g = ctx.createRadialGradient(n.get("x"), n.get("y"), 0, n.get("x"), n.get("y"), max(n.get("rx"), n.get("ry")))
+		g.addColorStop(0, JS.s(JS.add(n.get("r"), min(0.12, pulse * 2))) + ")")
+		g.addColorStop(0.5, JS.s(JS.add(n.get("r"), pulse)) + ")")
+		g.addColorStop(1, JS.s(n.get("r")) + "0)")
 		ctx.save()
-		ctx.scale(1, n.ry / float(n.rx))
+		ctx.scale(1, n.get("ry") / float(n.get("rx")))
 		ctx.fillStyle = g
 		ctx.beginPath()
-		ctx.arc(n.x, n.y * (n.rx / float(n.ry)), n.rx, 0, PI * 2)
+		ctx.arc(n.get("x"), n.get("y") * (n.get("rx") / float(n.get("ry"))), n.get("rx"), 0, PI * 2)
 		ctx.fill()
 		ctx.restore()
 	# Stars
 	for s in JS.iter(FAR_STARS):
-		s.angle += s.speed
-		var sx = s.cx + (cos(s.angle) * s.r)
-		var sy = s.cy + ((sin(s.angle) * s.r) * 0.38)
-		var tw = s.bright * (0.5 + (sin((frame * 0.04) + s.phase) * 0.3))
+		s.angle += s.get("speed")
+		var sx = s.get("cx") + (cos(s.get("angle")) * s.get("r"))
+		var sy = s.get("cy") + ((sin(s.get("angle")) * s.get("r")) * 0.38)
+		var tw = s.get("bright") * (0.5 + (sin((frame * 0.04) + s.get("phase")) * 0.3))
 		ctx.globalAlpha = max(0, tw)
-		ctx.fillStyle = z.starCol
+		ctx.fillStyle = z.get("starCol")
 		ctx.fillRect(JS.round(sx), JS.round(sy), 1, 1)
 	for s in JS.iter(NEAR_STARS):
-		s.angle += s.speed
-		var sx = s.cx + (cos(s.angle) * s.r)
-		var sy = s.cy + ((sin(s.angle) * s.r) * 0.42)
-		var tw = s.bright * (0.6 + (sin((frame * 0.06) + s.phase) * 0.35))
+		s.angle += s.get("speed")
+		var sx = s.get("cx") + (cos(s.get("angle")) * s.get("r"))
+		var sy = s.get("cy") + ((sin(s.get("angle")) * s.get("r")) * 0.42)
+		var tw = s.get("bright") * (0.6 + (sin((frame * 0.06) + s.get("phase")) * 0.35))
 		ctx.globalAlpha = max(0, tw)
-		ctx.fillStyle = ("#ffffff" if s.get("size") == 2 else z.starCol)
+		ctx.fillStyle = ("#ffffff" if s.get("size") == 2 else z.get("starCol"))
 		ctx.fillRect(JS.round(sx), JS.round(sy), s.size, s.size)
 	ctx.globalAlpha = 1
 	# Shooting stars
 	spawnShoot()
 	for i in range(len(shoots) - 1, 0 - 1, -1):
 		var s = shoots[i]
-		s.x += s.vx
-		s.y += s.vy
+		s.x += s.get("vx")
+		s.y += s.get("vy")
 		s.life += 1
-		var t = s.life / float(s.maxLife)
+		var t = s.get("life") / float(s.get("maxLife"))
 		var a = (t / 0.3 if t < 0.3 else 1 - ((t - 0.3) / 0.7))
 		ctx.globalAlpha = a * 0.85
 		ctx.fillStyle = "#ffffff"
-		ctx.fillRect(JS.round(s.x), JS.round(s.y), 2, 1)
+		ctx.fillRect(JS.round(s.get("x")), JS.round(s.get("y")), 2, 1)
 		ctx.globalAlpha = a * 0.4
-		ctx.fillStyle = z.starCol
-		ctx.fillRect(JS.round(s.x - (s.vx * 3)), JS.round(s.y - (s.vy * 3)), 3, 1)
+		ctx.fillStyle = z.get("starCol")
+		ctx.fillRect(JS.round(s.get("x") - (s.get("vx") * 3)), JS.round(s.get("y") - (s.get("vy") * 3)), 3, 1)
 		ctx.globalAlpha = 1
-		if s.life >= s.maxLife:
+		if s.get("life") >= s.get("maxLife"):
 			JS.splice(shoots, i, 1)
 	# Zone extra effects (aurora, embers, fireflies, etc.)
 	JS.callm(z, "extra", [ctx, W, H, frame])
 	# Terrain silhouette
-	ctx.fillStyle = z.hillCol
+	ctx.fillStyle = z.get("hillCol")
 	ctx.beginPath()
 	ctx.moveTo(0, H)
 	for x in range(0, floori(W) + 1):
@@ -930,12 +930,12 @@ func drawScene():
 	# Horizon glow
 	var hgY = hillY(W / 2.0)
 	var hg = ctx.createLinearGradient(0, hgY - 6, 0, hgY + 4)
-	hg.addColorStop(0, z.hgCol)
+	hg.addColorStop(0, z.get("hgCol"))
 	hg.addColorStop(1, "rgba(0,0,0,0)")
 	ctx.fillStyle = hg
 	ctx.fillRect(0, hgY - 6, W, 10)
 	# Ground fill
-	ctx.fillStyle = z.gndCol
+	ctx.fillStyle = z.get("gndCol")
 	ctx.fillRect(0, H * 0.85, W, H)
 	frame += 1
 	JS.requestAnimationFrame(drawScene)

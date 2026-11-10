@@ -13,7 +13,7 @@ func makeEnemyObj(enc = null):
 	if JS.t(enc.get("isTargetDummy")):
 		passive[0] = null
 	elif JS.t(enc.get("gymPassive")):
-		passive[0] = enc.gymPassive
+		passive[0] = enc.get("gymPassive")
 	else:
 		var pool = JS.arr(JS.or_(JS.idx(Passives.PASSIVE_CHOICES, el), [])).filter(func(p = null): return not JS.t(p.get("legendary")))
 		passive[0] = (JS.idx(pool, floori(randf() * len(pool))).id if JS.t(len(pool)) else null)
@@ -48,17 +48,17 @@ func makeEnemyObj(enc = null):
 			else:
 				incantLvl += 1
 	# Build ability list based on element + zone depth + bonus actions + incantation level
-	var _difficulty = (enc.get("difficulty") if JS.t(enc.get("difficulty")) else ("hard" if enc.enemyMaxHP > 120 else ("medium" if enc.enemyMaxHP > 100 else "easy")))
+	var _difficulty = (enc.get("difficulty") if JS.t(enc.get("difficulty")) else ("hard" if enc.get("enemyMaxHP") > 120 else ("medium" if enc.get("enemyMaxHP") > 100 else "easy")))
 	var abilities = ([] if (JS.t(enc.get("isGym")) or JS.t(enc.get("isTargetDummy"))) else EnemyAbilities.buildEnemyAbilities(el, State.currentGymIdx, _difficulty, bonusActions, incantLvl))
 	# Mist: extra passives for non-dummy enemies
 	var extraPassives = []
 	if (not JS.t(enc.get("isTargetDummy")) and (JS.or_(State.player.get("_mistExtraPassives"), 0)) > 0):
 		var pool = JS.arr(JS.or_(JS.idx(Passives.PASSIVE_CHOICES, el), [])).filter(func(p = null): return (not JS.t(p.get("legendary")) and not JS.eq(p.id, passive[0])))
-		extraPassives = JS.arr(BattleReward.pickRandom(pool, State.player._mistExtraPassives)).map(func(p = null): return p.id)
+		extraPassives = JS.arr(BattleReward.pickRandom(pool, State.player.get("_mistExtraPassives"))).map(func(p = null): return p.id)
 	# Mist: boss legendaries for gym enemies
 	if (JS.t(enc.get("isGym")) and (JS.or_(State.player.get("_mistBossLegendaries"), 0)) > 0):
 		var legPool = JS.arr(JS.or_(JS.idx(Passives.PASSIVE_CHOICES, el), [])).filter(func(p = null): return JS.t(p.get("legendary")))
-		extraPassives = JS.arr(extraPassives) + JS.arr(JS.arr(BattleReward.pickRandom(legPool, State.player._mistBossLegendaries)).map(func(p = null): return p.id))
+		extraPassives = JS.arr(extraPassives) + JS.arr(JS.arr(BattleReward.pickRandom(legPool, State.player.get("_mistBossLegendaries"))).map(func(p = null): return p.id))
 	# Give enemies consumable items (gym bosses get both, regular enemies get healing draught)
 	var items = ([] if JS.t(enc.get("isTargetDummy")) else (JS.arr(EnemyAbilities.ENEMY_ITEM_CATALOGUE).map(func(it = null): return JS.merge([it])) if JS.t(enc.get("isGym")) else [JS.merge([JS.idx(EnemyAbilities.ENEMY_ITEM_CATALOGUE, 0)])]))
 	return JS.merge([enc, {
@@ -83,9 +83,9 @@ func makeEnemyObj(enc = null):
 
 func restoreAllPP():
 	for book in JS.iter(JS.or_(State.player.get("spellbooks"), [])):
-		for s in JS.iter(book.spells):
+		for s in JS.iter(book.get("spells")):
 			if s.get("maxPP") != null:
-				s.currentPP = s.maxPP
+				s.currentPP = s.get("maxPP")
 
 func loadBattle(enc = null):
 	UI.resetDeckHandTracking()
@@ -100,7 +100,7 @@ func loadBattle(enc = null):
 	State.combat.hitFlashes = []
 	State.combat.turnInBattle = 0
 	State.combat._chosenRewardType = JS.or_(enc.get("_rewardType"), null)
-	State.combat.activeZoneElement = (null if JS.eq(State.battleNumber, 1) else ((JS.or_(Encounters.currentGymDef(), {})).element if (Encounters.inGymZone() and not JS.t(enc.get("isGym"))) else null))
+	State.combat.activeZoneElement = (null if JS.eq(State.battleNumber, 1) else ((JS.or_(Encounters.currentGymDef(), {})).get("element") if (Encounters.inGymZone() and not JS.t(enc.get("isGym"))) else null))
 	State.combat._echoReady = false
 	# will be set true in startRound
 	State.combat._swiftbladeSwitch = 0
@@ -132,11 +132,11 @@ func loadBattle(enc = null):
 	State.combat._vortexStrikeActive = false
 	# Zone background = the map zone you are fighting in, never the enemy element
 	var _gymDef = Encounters.currentGymDef()
-	State._setZoneElement((_gymDef.element if (JS.t(_gymDef) and JS.t(_gymDef.get("element"))) else State.playerElement))
+	State._setZoneElement((_gymDef.get("element") if (JS.t(_gymDef) and JS.t(_gymDef.get("element"))) else State.playerElement))
 	Helpers.resetStatusForBattle()
 	# Initialize all books' spells (CDs reset, PP calculated) so non-active books are ready too
 	for book in JS.iter(JS.or_(State.player.get("spellbooks"), [])):
-		for s in JS.iter(book.spells):
+		for s in JS.iter(book.get("spells")):
 			s.currentCD = 0
 			if JS.has(s, "_battlePriority"):
 				s._battlePriority = 0
@@ -145,18 +145,18 @@ func loadBattle(enc = null):
 			var maxPP = max(1, floori(rawPP * (JS.or_(State.player.get("_mistPPMult"), 1.0))))
 			s.maxPP = maxPP
 			# Carry PP over between battles — only reset if uninitialized or above new max
-			if (s.get("currentPP") == null or s.currentPP > maxPP):
+			if (s.get("currentPP") == null or s.get("currentPP") > maxPP):
 				s.currentPP = maxPP
 	# Apply per-battle character buff effects
-	if State.player._blockStart > 0:
-		State.status.player.block = (JS.or_(State.status.player.get("block"), 0)) + State.player._blockStart
+	if State.player.get("_blockStart") > 0:
+		State.status.get("player").block = (JS.or_(State.status.get("player").get("block"), 0)) + State.player.get("_blockStart")
 	if (JS.or_(State.player.get("_talentStoneStart"), 0)) > 0:
-		State.status.player.stoneStacks = (JS.or_(State.status.player.get("stoneStacks"), 0)) + State.player._talentStoneStart
+		State.status.get("player").stoneStacks = (JS.or_(State.status.get("player").get("stoneStacks"), 0)) + State.player.get("_talentStoneStart")
 	# Plasma: start each battle with 3 charge (+ Reserve Cell bonus)
 	if State.playerElement == "Plasma":
 		var startCharge = (3 + (10 if Main.hasPassive("plasma_reserve_cell") else 0)) + (JS.or_(State.player.get("_talentChargeStart"), 0))
-		State.status.player.plasmaCharge = startCharge
-		State.status.player.plasmaChargeHalf = 0
+		State.status.get("player").plasmaCharge = startCharge
+		State.status.get("player").plasmaChargeHalf = 0
 		State.combat.plasmaChargeReserved = 0
 		State.combat.plasmaOvercharged = false
 		State.combat.plasmaSpendAmounts = {}
@@ -164,26 +164,26 @@ func loadBattle(enc = null):
 		State.combat.plasmaCurrentSpend = 1
 		Spells.updateChargeUI()
 	if JS.t(enc.get("isPack")):
-		var memberCount = len(enc.members)
+		var memberCount = len(enc.get("members"))
 		# Pack members deal much less individually — total pack dps should ~= solo enemy
 		# 2-pack: 60% HP / 37% dmg.  3-pack: 50% HP / 27% dmg.  4+: 40% HP / 20% dmg
 		var hpScale = (0.6 if memberCount <= 2 else (0.5 if memberCount == 3 else 0.4))
 		var dmgScale = (0.37 if memberCount <= 2 else (0.27 if memberCount == 3 else 0.2))
 		var _fn1 = func(m = null):
 			return makeEnemyObj(JS.merge([m, {
-				"enemyMaxHP": JS.round(m.enemyMaxHP * hpScale),
-				"enemyDmg": JS.round(m.enemyDmg * dmgScale),
-				"gold": floori(enc.gold / float(len(enc.members))),
+				"enemyMaxHP": JS.round(m.get("enemyMaxHP") * hpScale),
+				"enemyDmg": JS.round(m.get("enemyDmg") * dmgScale),
+				"gold": floori(enc.get("gold") / float(len(enc.get("members")))),
 				"isGym": false,
 			}]))
-		State.combat.enemies = JS.arr(enc.members).map(_fn1)
-		State.combat.totalGold = enc.gold
+		State.combat.enemies = JS.arr(enc.get("members")).map(_fn1)
+		State.combat.totalGold = enc.get("gold")
 		State.combat._isSpellBattle = JS.or_(enc.get("_isSpellBattle"), false)
 		State.combat._isRival = JS.or_(enc.get("isRival"), false)
 		State.combat._isGauntletBoss = JS.or_(enc.get("isGauntletBoss"), false)
 	else:
 		State.combat.enemies = [makeEnemyObj(enc)]
-		State.combat.totalGold = enc.gold
+		State.combat.totalGold = enc.get("gold")
 		State.combat._isSpellBattle = JS.or_(enc.get("_isSpellBattle"), false)
 		State.combat._isRival = JS.or_(enc.get("isRival"), false)
 		State.combat._isGauntletBoss = JS.or_(enc.get("isGauntletBoss"), false)
@@ -191,23 +191,23 @@ func loadBattle(enc = null):
 	State.setActiveEnemy(0)
 	# Apply talent-granted battle-start stacks to enemies
 	if (JS.or_(State.player.get("_talentBurnStart"), 0)) > 0:
-		for e in JS.iter(State.combat.enemies):
+		for e in JS.iter(State.combat.get("enemies")):
 			if JS.t(e.get("alive")):
-				e.status.burnStacks = (JS.or_(e.status.get("burnStacks"), 0)) + State.player._talentBurnStart
+				e.get("status").burnStacks = (JS.or_(e.get("status").get("burnStacks"), 0)) + State.player.get("_talentBurnStart")
 	if (JS.or_(State.player.get("_talentFoamStart"), 0)) > 0:
-		for e in JS.iter(State.combat.enemies):
+		for e in JS.iter(State.combat.get("enemies")):
 			if JS.t(e.get("alive")):
-				e.status.foamStacks = (JS.or_(e.status.get("foamStacks"), 0)) + State.player._talentFoamStart
-	var label = ("⚔ Gym " + JS.s(State.currentGymIdx + 1) + " — " + JS.s(enc.name) + " ⚔" if JS.t(enc.get("isGym")) else ("⚔ Pack Encounter ⚔" if JS.t(enc.get("isPack")) else "⚔ Battle " + JS.s(State.battleNumber) + " ⚔"))
+				e.get("status").foamStacks = (JS.or_(e.get("status").get("foamStacks"), 0)) + State.player.get("_talentFoamStart")
+	var label = ("⚔ Gym " + JS.s(State.currentGymIdx + 1) + " — " + JS.s(enc.get("name")) + " ⚔" if JS.t(enc.get("isGym")) else ("⚔ Pack Encounter ⚔" if JS.t(enc.get("isPack")) else "⚔ Battle " + JS.s(State.battleNumber) + " ⚔"))
 	document.getElementById("combat-round-label").textContent = label
 	# player-hud-name is set by updateHPBars; set element badge
 	var badge = document.getElementById("combat-element-badge")
 	var gym = Encounters.currentGymDef()
-	var zoneEl = (gym.element if JS.t(gym) else State.playerElement)
+	var zoneEl = (gym.get("element") if JS.t(gym) else State.playerElement)
 	var zoneMeta = (JS.idx(Encounters.CAMP_META, zoneEl) if JS.t(JS.idx(Encounters.CAMP_META, zoneEl)) else {"icon": State.playerEmoji, "color": State.playerColor})
-	badge.textContent = JS.s(zoneMeta.icon) + " " + JS.s(zoneEl) + " Zone"
-	badge.style.color = zoneMeta.color
-	badge.style.borderColor = zoneMeta.color + "44"
+	badge.textContent = JS.s(zoneMeta.get("icon")) + " " + JS.s(zoneEl) + " Zone"
+	badge.style.color = zoneMeta.get("color")
+	badge.style.borderColor = JS.s(zoneMeta.get("color")) + "44"
 	document.getElementById("battle-log").innerHTML = ""
 	MapLogic.switchCombatTab("actions")
 	UI.showScreen("combat-screen")
@@ -237,10 +237,10 @@ func loadBattle(enc = null):
 			combatZoneBar.innerHTML = "<span style=\"color:#888;font-size:.6rem;align-self:center;margin-right:4px;\">ZONE:</span>"
 			for gym_2 in JS.iter(JS.or_(Encounters.GYM_ROSTER, [])):
 				var btn = document.createElement("button")
-				btn.textContent = gym_2.emoji + " " + gym_2.element
-				var isActive = JS.eq(State.combat.activeZoneElement, gym_2.element)
-				btn.style.cssText = "background:" + (gym_2.color + "33" if isActive else "#111") + ";border:1px solid " + JS.s((gym_2.color if isActive else "#333")) + ";color:" + JS.s((gym_2.color if isActive else "#888")) + ";border-radius:4px;padding:2px 7px;font-size:.58rem;font-family:'Cinzel',serif;cursor:pointer;"
-				btn.onclick = func(): return Sandbox.sandboxSetCombatZone(gym_2.element)
+				btn.textContent = JS.s(gym_2.get("emoji")) + " " + JS.s(gym_2.get("element"))
+				var isActive = JS.eq(State.combat.get("activeZoneElement"), gym_2.get("element"))
+				btn.style.cssText = "background:" + (JS.s(gym_2.get("color")) + "33" if isActive else "#111") + ";border:1px solid " + JS.s((gym_2.get("color") if isActive else "#333")) + ";color:" + JS.s((gym_2.get("color") if isActive else "#888")) + ";border-radius:4px;padding:2px 7px;font-size:.58rem;font-family:'Cinzel',serif;cursor:pointer;"
+				btn.onclick = func(): return Sandbox.sandboxSetCombatZone(gym_2.get("element"))
 				combatZoneBar.appendChild(btn)
 		else:
 			combatZoneBar.style.display = "none"
@@ -257,21 +257,21 @@ func loadBattle(enc = null):
 		Combat.updateActionUI()
 	JS.setTimeout(_fn2, 0)
 	if JS.t(enc.get("isGym")):
-		UI.log_("🏛 Gym " + JS.s(State.currentGymIdx + 1) + " — " + JS.s(enc.name) + " steps forward!", "system")
+		UI.log_("🏛 Gym " + JS.s(State.currentGymIdx + 1) + " — " + JS.s(enc.get("name")) + " steps forward!", "system")
 		if JS.t(enc.get("signature")):
-			UI.log_(enc.signature, "system")
+			UI.log_(enc.get("signature"), "system")
 		UI.log_("✦ You enter fully healed. (" + JS.s(Helpers.maxHPFor("player")) + "/" + JS.s(Helpers.maxHPFor("player")) + ")", "heal")
 	elif JS.t(enc.get("isPack")):
-		UI.log_("⚔ " + JS.s(enc.packName) + " attacks! (" + JS.s(len(enc.members)) + " enemies)", "system")
+		UI.log_("⚔ " + JS.s(enc.get("packName")) + " attacks! (" + JS.s(len(enc.get("members"))) + " enemies)", "system")
 	else:
-		UI.log_(JS.s(enc.name) + " appears!", "system")
+		UI.log_(JS.s(enc.get("name")) + " appears!", "system")
 	if JS.t(State.combat.get("activeZoneElement")):
-		var zd = JS.idx(Encounters.ZONE_EFFECTS, State.combat.activeZoneElement)
+		var zd = JS.idx(Encounters.ZONE_EFFECTS, State.combat.get("activeZoneElement"))
 		if JS.t(zd):
-			UI.log_("🌍 Zone Effect active: " + JS.s(zd.desc), "system")
+			UI.log_("🌍 Zone Effect active: " + JS.s(zd.get("desc")), "system")
 	UI.log_("Select your target. All enemies act each round.", "system")
 	if (JS.t(enc.get("isGym")) and JS.t(enc.get("gymEntryEffect"))):
-		JS.setTimeout(func(): return applyGymEntryEffect(enc.gymEntryEffect, enc), 600)
+		JS.setTimeout(func(): return applyGymEntryEffect(enc.get("gymEntryEffect"), enc), 600)
 	JS.setTimeout(Combat.startRound, (1100 if (JS.t(enc.get("isGym")) and JS.t(enc.get("gymEntryEffect"))) else 400))
 
 func _loadGauntletBoss():
@@ -286,32 +286,32 @@ func _loadGauntletBoss():
 func applyGymEntryEffect(effect = null, enc = null):
 	if JS.t(State.combat.get("over")):
 		return
-	var gym = JS.idx(State.combat.enemies, 0)
+	var gym = JS.idx(State.combat.get("enemies"), 0)
 	if not JS.t(gym):
 		return
 	match effect:
 		"frozen_ground":
-			State.status.player.frostStacks = (JS.or_(State.status.player.get("frostStacks"), 0)) + 6
-			UI.log_("❄️ " + JS.s(enc.name) + " casts Frozen Ground! You are afflicted with 6 Frost!", "enemy")
+			State.status.get("player").frostStacks = (JS.or_(State.status.get("player").get("frostStacks"), 0)) + 6
+			UI.log_("❄️ " + JS.s(enc.get("name")) + " casts Frozen Ground! You are afflicted with 6 Frost!", "enemy")
 			UI.renderStatusTags()
 		"chain_shock":
-			State.status.player.shockStacks = (JS.or_(State.status.player.get("shockStacks"), 0)) + 3
-			UI.log_("⚡ " + JS.s(enc.name) + " opens with Chain Shock! +3 Shock!", "enemy")
+			State.status.get("player").shockStacks = (JS.or_(State.status.get("player").get("shockStacks"), 0)) + 3
+			UI.log_("⚡ " + JS.s(enc.get("name")) + " opens with Chain Shock! +3 Shock!", "enemy")
 		"fortify":
-			gym.status.block = (JS.or_(gym.status.get("block"), 0)) + 30
-			gym.status.stoneStacks = (JS.or_(gym.status.get("stoneStacks"), 0)) + 3
-			UI.log_("🪨 " + JS.s(enc.name) + " FORTIFIES! +30 Block, +3 Stone stacks!", "enemy")
+			gym.get("status").block = (JS.or_(gym.get("status").get("block"), 0)) + 30
+			gym.get("status").stoneStacks = (JS.or_(gym.get("status").get("stoneStacks"), 0)) + 3
+			UI.log_("🪨 " + JS.s(enc.get("name")) + " FORTIFIES! +30 Block, +3 Stone stacks!", "enemy")
 			UI.renderEnemyCards()
 		"summon_treant":
-			State.combat.summons.append({
+			State.combat.get("summons").append({
 				"name": "Gym Treant",
 				"emoji": "🌳",
 				"hp": 100,
 				"maxHP": 100,
-				"dmg": 35 + floori(State.player.attackPower / 2.0),
+				"dmg": 35 + floori(State.player.get("attackPower") / 2.0),
 				"cd": 0,
 				"id": JS.dateNow(),
 				"rootChance": 0.75,
 			})
-			UI.log_("🌿 " + JS.s(enc.name) + " summons a mighty Treant!", "enemy")
+			UI.log_("🌿 " + JS.s(enc.get("name")) + " summons a mighty Treant!", "enemy")
 			UI.renderSummonsRow()

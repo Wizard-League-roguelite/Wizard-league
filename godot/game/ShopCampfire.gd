@@ -94,7 +94,7 @@ func enterCampfire():
 		for opt in JS.iter(chosen):
 			var btn = document.createElement("button")
 			btn.className = "prog-choice-btn"
-			btn.innerHTML = "<div class=\"pc-tag\">" + JS.s(opt.tag) + "</div><div class=\"pc-name\">" + JS.s(opt.emoji) + " " + JS.s(opt.label) + "</div><div class=\"pc-desc\">" + JS.s(opt.desc) + "</div>"
+			btn.innerHTML = "<div class=\"pc-tag\">" + JS.s(opt.get("tag")) + "</div><div class=\"pc-name\">" + JS.s(opt.get("emoji")) + " " + JS.s(opt.get("label")) + "</div><div class=\"pc-desc\">" + JS.s(opt.get("desc")) + "</div>"
 			var _fn7 = func():
 				JS.callm(opt, "apply", [])
 				if JS.t(descEl):
@@ -213,7 +213,7 @@ func _generateShopStock():
 		UI.log_("🛡️ +5 Defense!", "item")
 	var _fn18 = func():
 		State.player.baseMaxHPBonus = (JS.or_(State.player.get("baseMaxHPBonus"), 0)) + 25
-		State.player.hp = min(Helpers.maxHPFor("player"), State.player.hp + 25)
+		State.player.hp = min(Helpers.maxHPFor("player"), State.player.get("hp") + 25)
 		UI.updateStatsUI()
 		UI.log_("❤️ +25 Max HP!", "item")
 	var statPool = [
@@ -328,7 +328,7 @@ func _generateShopStock():
 	var mix = (JS.idx(BattleReward.pickRandom(JS.arr(itemPool).filter(func(i = null): return not JS.eq(i.id, item1.id)), 1), 0) if randf() < 0.5 else JS.idx(BattleReward.pickRandom(JS.arr(statPool).filter(func(s = null): return not JS.eq(s.id, stat1.id)), 1), 0))
 	var reward = JS.idx(BattleReward.pickRandom(rewardPool, 1), 0)
 	var power = JS.idx(BattleReward.pickRandom(powerPool, 1), 0)
-	return JS.arr(JS.sort(JS.filter([item1, stat1, mix, reward, power], JS.t), func(a = null, b = null): return a.cost - b.cost)).map(func(item = null): return JS.merge([item, {"bought": false}]))
+	return JS.arr(JS.sort(JS.filter([item1, stat1, mix, reward, power], JS.t), func(a = null, b = null): return a.get("cost") - b.get("cost"))).map(func(item = null): return JS.merge([item, {"bought": false}]))
 
 func _closeShopForReward():
 	_shopStock = null
@@ -342,19 +342,19 @@ func enterShop():
 	_renderShop()
 
 func _renderShop():
-	document.getElementById("shop-gold-display").textContent = State.player.gold
+	document.getElementById("shop-gold-display").textContent = State.player.get("gold")
 	var c = document.getElementById("shop-items")
 	c.innerHTML = ""
 	for item in JS.iter(JS.or_(_shopStock, [])):
-		var affordable = State.player.gold >= item.cost
+		var affordable = State.player.get("gold") >= item.get("cost")
 		var canBuy = (not JS.t(item.get("bought")) and affordable)
 		var row = document.createElement("div")
 		row.className = "shop-item-row" + (" cant-afford" if JS.t(item.get("bought")) else ("" if canBuy else " cant-afford"))
 		var statusLabel = ("<span style=\"font-size:.55rem;color:#555;margin-left:.4rem;\">SOLD</span>" if JS.t(item.get("bought")) else "")
-		row.innerHTML = "<div><div class=\"shop-item-name\">" + JS.s(item.emoji) + " " + JS.s(item.label) + statusLabel + "</div><div class=\"shop-item-desc\">[" + JS.s(item.tag) + "] " + JS.s(item.desc) + "</div></div><div class=\"shop-item-cost\">" + JS.s(item.cost) + "g</div>"
+		row.innerHTML = "<div><div class=\"shop-item-name\">" + JS.s(item.get("emoji")) + " " + JS.s(item.get("label")) + statusLabel + "</div><div class=\"shop-item-desc\">[" + JS.s(item.get("tag")) + "] " + JS.s(item.get("desc")) + "</div></div><div class=\"shop-item-cost\">" + JS.s(item.get("cost")) + "g</div>"
 		if canBuy:
 			var _fn24 = func():
-				State.player.gold -= item.cost
+				State.player.gold -= item.get("cost")
 				item.bought = true
 				JS.callm(item, "buy", [])
 				if not JS.t(item.get("_modal")):

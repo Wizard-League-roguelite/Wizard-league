@@ -564,87 +564,87 @@ func _buildEnemyAbilityFromSpell(id = null):
 		"name": JS.or_(spell.get("name"), id),
 		"emoji": JS.or_(spell.get("emoji"), "⚔"),
 		"element": JS.or_(spell.get("element"), "Fire"),
-		"tier": JS.nn(JS.idx(_tierMap, spell.tier), 0),
+		"tier": JS.nn(JS.idx(_tierMap, spell.get("tier")), 0),
 		"baseCd": JS.or_(vals.get("baseCd"), 2),
 		"baseDmg": JS.or_(vals.get("baseDmg"), 0),
-		"hits": vals.hits,
-		"effects": vals.effects,
-		"foam": vals.foam,
-		"frost": vals.frost,
-		"root": vals.root,
-		"shock": vals.shock,
-		"heal": vals.heal,
-		"armor": vals.armor,
-		"crackArmor": vals.crackArmor,
+		"hits": vals.get("hits"),
+		"effects": vals.get("effects"),
+		"foam": vals.get("foam"),
+		"frost": vals.get("frost"),
+		"root": vals.get("root"),
+		"shock": vals.get("shock"),
+		"heal": vals.get("heal"),
+		"armor": vals.get("armor"),
+		"crackArmor": vals.get("crackArmor"),
 	}
 	var _fn1 = func():
-		var scaled = JS.round((JS.or_(params.get("baseDmg"), 0)) * ab[0]._scaleMult)
+		var scaled = JS.round((JS.or_(params.get("baseDmg"), 0)) * ab[0].get("_scaleMult"))
 		var parts = []
 		if scaled > 0:
-			parts.append("~" + JS.s(scaled) + " dmg" + (" ×" + JS.s(params.hits) if (JS.or_(params.get("hits"), 1)) > 1 else ""))
+			parts.append("~" + JS.s(scaled) + " dmg" + (" ×" + JS.s(params.get("hits")) if (JS.or_(params.get("hits"), 1)) > 1 else ""))
 		if JS.t(params.get("foam")):
-			parts.append("+" + JS.s(params.foam) + " 🫧 Foam")
+			parts.append("+" + JS.s(params.get("foam")) + " 🫧 Foam")
 		if JS.t(params.get("frost")):
-			parts.append("+" + JS.s(params.frost) + " ❄️ Frost")
+			parts.append("+" + JS.s(params.get("frost")) + " ❄️ Frost")
 		if JS.t(params.get("root")):
-			parts.append("+" + JS.s(params.root) + " 🌿 Root")
+			parts.append("+" + JS.s(params.get("root")) + " 🌿 Root")
 		if JS.t(params.get("shock")):
-			parts.append("+" + JS.s(params.shock) + " ⚡ Shock")
+			parts.append("+" + JS.s(params.get("shock")) + " ⚡ Shock")
 		if JS.t(params.get("crackArmor")):
-			parts.append("cracks " + JS.s(params.crackArmor) + " Armor")
+			parts.append("cracks " + JS.s(params.get("crackArmor")) + " Armor")
 		if JS.t(params.get("heal")):
-			parts.append("Heals " + JS.s(params.heal))
+			parts.append("Heals " + JS.s(params.get("heal")))
 		if JS.t(params.get("armor")):
-			parts.append("+" + JS.s(params.armor) + " Block")
+			parts.append("+" + JS.s(params.get("armor")) + " Block")
 		for ef in JS.iter(JS.or_(params.get("effects"), [])):
 			if ef.get("type") == "burn":
-				parts.append("+" + JS.s(ef.stacks) + " 🔥 Burn")
+				parts.append("+" + JS.s(ef.get("stacks")) + " 🔥 Burn")
 			if ef.get("type") == "stun":
-				parts.append("Stun " + JS.s(ef.turns) + "t")
+				parts.append("Stun " + JS.s(ef.get("turns")) + "t")
 		return JS.join(parts, " · ")
 	var _fn2 = func(enemyIdx = null):
-		var e = JS.idx(State.combat.enemies, enemyIdx)
+		var e = JS.idx(State.combat.get("enemies"), enemyIdx)
 		State.setActiveEnemy(enemyIdx)
-		UI.log_(JS.s(params.emoji) + " " + JS.s(e.name) + " casts " + JS.s(params.name) + "!", "enemy")
-		var baseDmg = JS.round((JS.or_(params.get("baseDmg"), 0)) * ab[0]._scaleMult)
-		if (not JS.t(State.combat.get("over")) and (baseDmg > 0 or (JS.t(params.get("effects")) and len(params.effects) > 0))):
+		UI.log_(JS.s(params.get("emoji")) + " " + JS.s(e.get("name")) + " casts " + JS.s(params.get("name")) + "!", "enemy")
+		var baseDmg = JS.round((JS.or_(params.get("baseDmg"), 0)) * ab[0].get("_scaleMult"))
+		if (not JS.t(State.combat.get("over")) and (baseDmg > 0 or (JS.t(params.get("effects")) and len(params.get("effects")) > 0))):
 			Hit.performHit("enemy", "player", {
 				"baseDamage": baseDmg,
 				"hits": JS.or_(params.get("hits"), 1),
-				"effects": (JS.arr(params.effects) if JS.t(params.get("effects")) else []),
-				"abilityElement": params.element,
+				"effects": (JS.arr(params.get("effects")) if JS.t(params.get("effects")) else []),
+				"abilityElement": params.get("element"),
 				"isEnemyAttack": true,
 			})
 		if (not JS.t(State.combat.get("over")) and JS.t(params.get("foam"))):
-			Helpers.applyFoam("enemy", "player", params.foam)
+			Helpers.applyFoam("enemy", "player", params.get("foam"))
 		if (not JS.t(State.combat.get("over")) and JS.t(params.get("frost"))):
-			Helpers.applyFrost("enemy", "player", params.frost)
+			Helpers.applyFrost("enemy", "player", params.get("frost"))
 		if (not JS.t(State.combat.get("over")) and JS.t(params.get("root"))):
-			Helpers.applyRoot("enemy", "player", params.root)
+			Helpers.applyRoot("enemy", "player", params.get("root"))
 		if (not JS.t(State.combat.get("over")) and JS.t(params.get("shock"))):
-			State.status.player.shockStacks = (JS.or_(State.status.player.get("shockStacks"), 0)) + params.shock
-			UI.log_("⚡ Shock +" + JS.s(params.shock) + " (×" + JS.s(State.status.player.shockStacks) + ")", "status")
+			State.status.get("player").shockStacks = (JS.or_(State.status.get("player").get("shockStacks"), 0)) + JS.un(params.get("shock"))
+			UI.log_("⚡ Shock +" + JS.s(params.get("shock")) + " (×" + JS.s(State.status.get("player").get("shockStacks")) + ")", "status")
 		if (not JS.t(State.combat.get("over")) and JS.t(params.get("crackArmor"))):
-			var crack = min(JS.or_(State.status.player.get("block"), 0), params.crackArmor)
+			var crack = min(JS.or_(State.status.get("player").get("block"), 0), params.get("crackArmor"))
 			if crack > 0:
-				State.status.player.block -= crack
+				State.status.get("player").block -= crack
 				UI.log_("🪨 Armor cracked by " + JS.s(crack) + "!", "status")
 		if (not JS.t(State.combat.get("over")) and JS.t(params.get("heal"))):
-			var h = JS.round(params.heal)
-			e.hp = min(e.enemyMaxHP, e.hp + h)
-			UI.log_("💚 " + JS.s(e.name) + " heals " + JS.s(h) + " HP!", "enemy")
+			var h = JS.round(params.get("heal"))
+			e.hp = min(e.get("enemyMaxHP"), e.get("hp") + h)
+			UI.log_("💚 " + JS.s(e.get("name")) + " heals " + JS.s(h) + " HP!", "enemy")
 			UI.updateHPBars()
 		if (not JS.t(State.combat.get("over")) and JS.t(params.get("armor"))):
-			e.status.block = (JS.or_(e.status.get("block"), 0)) + JS.round(params.armor)
-			UI.log_("🛡️ " + JS.s(e.name) + " gains " + JS.s(JS.round(params.armor)) + " Block!", "enemy")
+			e.get("status").block = (JS.or_(e.get("status").get("block"), 0)) + JS.round(params.get("armor"))
+			UI.log_("🛡️ " + JS.s(e.get("name")) + " gains " + JS.s(JS.round(params.get("armor"))) + " Block!", "enemy")
 		if ((((JS.t(params.get("foam")) or JS.t(params.get("frost"))) or JS.t(params.get("root"))) or JS.t(params.get("crackArmor"))) or JS.t(params.get("armor"))):
 			UI.renderStatusTags()
 	ab[0] = {
 		"id": id,
-		"name": params.name,
-		"emoji": params.emoji,
-		"tier": params.tier,
-		"baseCd": params.baseCd,
+		"name": params.get("name"),
+		"emoji": params.get("emoji"),
+		"tier": params.get("tier"),
+		"baseCd": params.get("baseCd"),
 		"cd": 0,
 		"_scaleMult": 0.6,
 		"hintFn": _fn1,
@@ -688,14 +688,14 @@ func buildEnemyAbilities(element = null, gymIdx = null, difficulty = null, bonus
 		chosen.append(JS.idx(tier0, floori(randf() * len(tier0))))
 	# Fill remainder preferring higher tiers
 	var remaining = JS.arr(shuffled).filter(func(c = null): return not JS.t(JS.find(chosen, func(x = null): return JS.eq(x.id, c.id))))
-	JS.sort(remaining, func(a = null, b = null): return b.tier - a.tier)
+	JS.sort(remaining, func(a = null, b = null): return JS.un(b.get("tier")) - JS.un(a.get("tier")))
 	while (len(chosen) < count and JS.t(len(remaining))):
 		chosen.append(remaining.pop_front())
 	# Build live ability objects from SPELL_CATALOGUE + ENEMY_SPELL_VALUES
 	var built = JS.arr(chosen).map(func(c = null): return _buildEnemyAbilityFromSpell(c.id))
 	# Apply incantation boost to the highest-tier ability
 	if ((JS.or_(incantLvl, 0)) > 0 and len(built) > 0):
-		var priority = JS.reduce(built, func(best = null, ab = null): return (ab if ab.tier > best.tier else best), JS.idx(built, 0))
+		var priority = JS.reduce(built, func(best = null, ab = null): return (ab if JS.un(ab.get("tier")) > JS.un(best.get("tier")) else best), JS.idx(built, 0))
 		priority._scaleMult = min(1.0, 0.6 + ((JS.or_(incantLvl, 0)) * 0.12))
 	# Every enemy always gets Brace — universal armor ability
 	built.push_front(JS.merge([JS.idx(ENEMY_ABILITY_CATALOGUE, "brace"), {"cd": 0}]))
@@ -703,29 +703,29 @@ func buildEnemyAbilities(element = null, gymIdx = null, difficulty = null, bonus
 
 # Called each round start to tick enemy ability cooldowns
 func tickEnemyAbilityCDs():
-	for e in JS.iter(State.combat.enemies):
+	for e in JS.iter(State.combat.get("enemies")):
 		if (not JS.t(e.get("alive")) or not JS.t(e.get("abilities"))):
 			continue
-		for a in JS.iter(e.abilities):
-			if a.cd > 0:
+		for a in JS.iter(e.get("abilities")):
+			if a.get("cd") > 0:
 				a.cd -= 1
 		# Tick static field duration
-		if e._staticFieldTurns > 0:
+		if JS.un(e.get("_staticFieldTurns")) > 0:
 			e._staticFieldTurns -= 1
-			if (e._staticFieldTurns <= 0 and JS.t(e.get("_staticPowerBonus"))):
-				e.statPow = max(0, (JS.or_(e.get("statPow"), 0)) - e._staticPowerBonus)
+			if (JS.un(e.get("_staticFieldTurns")) <= 0 and JS.t(e.get("_staticPowerBonus"))):
+				e.statPow = max(0, (JS.or_(e.get("statPow"), 0)) - JS.un(e.get("_staticPowerBonus")))
 				e._staticPowerBonus = 0
-				UI.log_("🌩️ " + JS.s(e.name) + "'s Static Field fades.", "status")
+				UI.log_("🌩️ " + JS.s(e.get("name")) + "'s Static Field fades.", "status")
 
 # Pick an ability for this enemy to use (returns ability obj or null)
 func pickEnemyAbility(e = null, gymIdx = null):
-	if (not JS.t(e.get("abilities")) or len(e.abilities) == 0):
+	if (not JS.t(e.get("abilities")) or len(e.get("abilities")) == 0):
 		return null
-	var ready = JS.arr(e.abilities).filter(func(a = null): return a.cd <= 0)
+	var ready = JS.arr(e.get("abilities")).filter(func(a = null): return a.get("cd") <= 0)
 	if not JS.t(len(ready)):
 		return null
-	var hpPct = e.hp / float(e.enemyMaxHP)
-	var hasNoBlock = (JS.or_(e.status.get("block"), 0)) == 0
+	var hpPct = e.get("hp") / float(e.get("enemyMaxHP"))
+	var hasNoBlock = (JS.or_(e.get("status").get("block"), 0)) == 0
 	# Brace: use proactively when undefended
 	var brace = JS.find(ready, func(a = null): return a.get("id") == "brace")
 	if JS.t(brace):
@@ -738,8 +738,8 @@ func pickEnemyAbility(e = null, gymIdx = null):
 		if (JS.t(defensive) and randf() < 0.65):
 			return defensive
 	# Use high-tier abilities when available
-	if (JS.t(JS.find(ready, func(a = null): return a.tier >= 1)) and randf() < 0.55):
-		var powerful = JS.arr(ready).filter(func(a = null): return a.tier >= 1)
+	if (JS.t(JS.find(ready, func(a = null): return JS.un(a.get("tier")) >= 1)) and randf() < 0.55):
+		var powerful = JS.arr(ready).filter(func(a = null): return JS.un(a.get("tier")) >= 1)
 		return JS.idx(powerful, floori(randf() * len(powerful)))
 	# Random ability with 50% overall chance
 	if randf() < 0.5:
@@ -748,14 +748,14 @@ func pickEnemyAbility(e = null, gymIdx = null):
 
 # Pick an item for the enemy to use (returns item or null)
 func pickEnemyItem(e = null):
-	if (not JS.t(e.get("items")) or len(e.items) == 0):
+	if (not JS.t(e.get("items")) or len(e.get("items")) == 0):
 		return null
-	var hpPct = e.hp / float(e.enemyMaxHP)
-	var heal = JS.find(e.items, func(it = null): return it.get("id") == "enemy_healing_draught")
+	var hpPct = e.get("hp") / float(e.get("enemyMaxHP"))
+	var heal = JS.find(e.get("items"), func(it = null): return it.get("id") == "enemy_healing_draught")
 	if ((JS.t(heal) and hpPct < 0.4) and randf() < 0.75):
 		return heal
-	var flask = JS.find(e.items, func(it = null): return it.get("id") == "enemy_iron_flask")
-	if ((JS.t(flask) and (JS.or_(e.status.get("block"), 0)) == 0) and randf() < 0.59):
+	var flask = JS.find(e.get("items"), func(it = null): return it.get("id") == "enemy_iron_flask")
+	if ((JS.t(flask) and (JS.or_(e.get("status").get("block"), 0)) == 0) and randf() < 0.59):
 		return flask
 	return null
 
@@ -764,26 +764,26 @@ func scaleEnemyForZone(enc = null, gymIdx = null):
 	# HP and damage scale per zone — roughly +25% HP and +20% dmg per zone
 	var hpMult = 1 + (gymIdx * 0.336)
 	var dmgMult = 1 + (gymIdx * 0.22)
-	return {"enemyMaxHP": JS.round(enc.enemyMaxHP * hpMult), "enemyDmg": JS.round(enc.enemyDmg * dmgMult)}
+	return {"enemyMaxHP": JS.round(enc.get("enemyMaxHP") * hpMult), "enemyDmg": JS.round(enc.get("enemyDmg") * dmgMult)}
 
 func ENEMY_ABILITY_CATALOGUE__brace__fn(i = null):
 	# ═══ UNIVERSAL ═══
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	var armor = JS.round((5 + floori((JS.or_(e.get("statDef"), 0)) / 5.0)) * 1.625)
-	e.status.block = (JS.or_(e.status.get("block"), 0)) + armor
-	UI.log_("🛡️ " + JS.s(e.name) + " braces! (+" + JS.s(armor) + " Block)", "enemy")
+	e.get("status").block = (JS.or_(e.get("status").get("block"), 0)) + armor
+	UI.log_("🛡️ " + JS.s(e.get("name")) + " braces! (+" + JS.s(armor) + " Block)", "enemy")
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__fire_ignite__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("🔥 " + JS.s(e.name) + " ignites you! (+6 Burn)", "enemy")
+	UI.log_("🔥 " + JS.s(e.get("name")) + " ignites you! (+6 Burn)", "enemy")
 	Hit.performHit("enemy", "player", {"baseDamage": 8, "effects": [{"type": "burn", "stacks": 6}], "abilityElement": "Fire", "isEnemyAttack": true})
 
 func ENEMY_ABILITY_CATALOGUE__fire_flame_burst__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("💥 " + JS.s(e.name) + " erupts in flames!", "enemy")
+	UI.log_("💥 " + JS.s(e.get("name")) + " erupts in flames!", "enemy")
 	Hit.performHit("enemy", "player", {
 		"baseDamage": 18,
 		"effects": [{"type": "burn", "stacks": 4}],
@@ -792,10 +792,10 @@ func ENEMY_ABILITY_CATALOGUE__fire_flame_burst__fn(i = null):
 	})
 
 func ENEMY_ABILITY_CATALOGUE__fire_combustion_strike__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	var extra = (floori(State.status.player.burnStacks * 1.5) if (JS.or_(State.status.player.get("burnStacks"), 0)) > 0 else 0)
-	UI.log_("🔥 " + JS.s(e.name) + " Combustion Strike! " + ("(+" + JS.s(extra) + " burn dmg)" if extra > 0 else ""), "enemy")
+	var extra = (floori(State.status.get("player").get("burnStacks") * 1.5) if (JS.or_(State.status.get("player").get("burnStacks"), 0)) > 0 else 0)
+	UI.log_("🔥 " + JS.s(e.get("name")) + " Combustion Strike! " + ("(+" + JS.s(extra) + " burn dmg)" if extra > 0 else ""), "enemy")
 	Hit.performHit("enemy", "player", {
 		"baseDamage": 14 + extra,
 		"effects": [{"type": "burn", "stacks": 3}],
@@ -804,57 +804,57 @@ func ENEMY_ABILITY_CATALOGUE__fire_combustion_strike__fn(i = null):
 	})
 
 func ENEMY_ABILITY_CATALOGUE__fire_wildfire__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	var stacks = JS.or_(State.status.player.get("burnStacks"), 0)
+	var stacks = JS.or_(State.status.get("player").get("burnStacks"), 0)
 	if stacks > 0:
-		State.status.player.burnStacks = min(stacks * 2, 60)
-		UI.log_("🌋 " + JS.s(e.name) + " Wildfire! Burn doubled (×" + JS.s(State.status.player.burnStacks) + ")", "enemy")
+		State.status.get("player").burnStacks = min(stacks * 2, 60)
+		UI.log_("🌋 " + JS.s(e.get("name")) + " Wildfire! Burn doubled (×" + JS.s(State.status.get("player").get("burnStacks")) + ")", "enemy")
 	else:
-		State.status.player.burnStacks = 8
-		UI.log_("🌋 " + JS.s(e.name) + " Wildfire! Sets you ablaze (×8 Burn)", "enemy")
+		State.status.get("player").burnStacks = 8
+		UI.log_("🌋 " + JS.s(e.get("name")) + " Wildfire! Sets you ablaze (×8 Burn)", "enemy")
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__fire_magma_armor__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	var armor = JS.round((20 + floori((JS.or_(e.get("statDef"), 0)) / 5.0)) * 1.625)
-	e.status.block = (JS.or_(e.status.get("block"), 0)) + armor
-	UI.log_("🛡️ " + JS.s(e.name) + " hardens with Magma Armor! (+" + JS.s(armor) + " Block)", "enemy")
+	e.get("status").block = (JS.or_(e.get("status").get("block"), 0)) + armor
+	UI.log_("🛡️ " + JS.s(e.get("name")) + " hardens with Magma Armor! (+" + JS.s(armor) + " Block)", "enemy")
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__fire_inferno__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("☄️ " + JS.s(e.name) + " unleashes INFERNO!", "enemy")
+	UI.log_("☄️ " + JS.s(e.get("name")) + " unleashes INFERNO!", "enemy")
 	Hit.performHit("enemy", "player", {
 		"baseDamage": 30,
 		"effects": [{"type": "burn", "stacks": 12}],
 		"abilityElement": "Fire",
 		"isEnemyAttack": true,
 	})
-	State.status.player.burnStacks = min((JS.or_(State.status.player.get("burnStacks"), 0)) + 9, 80)
+	State.status.get("player").burnStacks = min((JS.or_(State.status.get("player").get("burnStacks"), 0)) + 9, 80)
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__water_foam_burst__fn(i = null):
 	# ═══ WATER ═══
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("🫧 " + JS.s(e.name) + " Foam Burst! (+3 Foam on you)", "enemy")
+	UI.log_("🫧 " + JS.s(e.get("name")) + " Foam Burst! (+3 Foam on you)", "enemy")
 	Hit.performHit("enemy", "player", {"baseDamage": 10, "effects": [], "abilityElement": "Water", "isEnemyAttack": true})
 	Helpers.applyFoam("enemy", "player", 3)
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__water_tidal_shield__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	var armor = JS.round((20 + floori((JS.or_(e.get("statDef"), 0)) / 4.0)) * 1.625)
-	e.status.block = (JS.or_(e.status.get("block"), 0)) + armor
-	UI.log_("💧 " + JS.s(e.name) + " raises a Tidal Shield! (+" + JS.s(armor) + " Block)", "enemy")
+	e.get("status").block = (JS.or_(e.get("status").get("block"), 0)) + armor
+	UI.log_("💧 " + JS.s(e.get("name")) + " raises a Tidal Shield! (+" + JS.s(armor) + " Block)", "enemy")
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__water_riptide__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("🌊 " + JS.s(e.name) + " Riptide! Multiple hits + Foam", "enemy")
+	UI.log_("🌊 " + JS.s(e.get("name")) + " Riptide! Multiple hits + Foam", "enemy")
 	for h in range(3):
 		if JS.t(State.combat.get("over")):
 			return
@@ -863,184 +863,184 @@ func ENEMY_ABILITY_CATALOGUE__water_riptide__fn(i = null):
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__water_healing_surge__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	var heal = 25 + floori((JS.or_(e.get("statEfx"), 0)) / 3.0)
-	var prev = e.hp
-	e.hp = min(e.enemyMaxHP, e.hp + heal)
-	UI.log_("💚 " + JS.s(e.name) + " Healing Surge! (+" + JS.s(e.hp - prev) + " HP → " + JS.s(e.hp) + "/" + JS.s(e.enemyMaxHP) + ")", "enemy")
+	var prev = e.get("hp")
+	e.hp = min(e.get("enemyMaxHP"), e.get("hp") + heal)
+	UI.log_("💚 " + JS.s(e.get("name")) + " Healing Surge! (+" + JS.s(e.get("hp") - prev) + " HP → " + JS.s(e.get("hp")) + "/" + JS.s(e.get("enemyMaxHP")) + ")", "enemy")
 	UI.updateHPBars()
 
 func ENEMY_ABILITY_CATALOGUE__water_drown__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	var foam = JS.or_(State.status.player.get("foamStacks"), 0)
+	var foam = JS.or_(State.status.get("player").get("foamStacks"), 0)
 	if foam >= 4:
-		State.status.player.foamStacks = 0
-		State.status.player.stunned = (JS.or_(State.status.player.get("stunned"), 0)) + 1
-		UI.log_("🌀 " + JS.s(e.name) + " DROWNS you! (" + JS.s(foam) + " Foam consumed — Stunned 1t)", "enemy")
+		State.status.get("player").foamStacks = 0
+		State.status.get("player").stunned = (JS.or_(State.status.get("player").get("stunned"), 0)) + 1
+		UI.log_("🌀 " + JS.s(e.get("name")) + " DROWNS you! (" + JS.s(foam) + " Foam consumed — Stunned 1t)", "enemy")
 	else:
 		Helpers.applyFoam("enemy", "player", 2)
 		Hit.performHit("enemy", "player", {"baseDamage": 12, "effects": [], "abilityElement": "Water", "isEnemyAttack": true})
-		UI.log_("🌀 " + JS.s(e.name) + " Drown — not enough Foam yet (+2 Foam)", "enemy")
+		UI.log_("🌀 " + JS.s(e.get("name")) + " Drown — not enough Foam yet (+2 Foam)", "enemy")
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__water_tsunami__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	var foam = JS.or_(State.status.player.get("foamStacks"), 0)
-	UI.log_("🌊 " + JS.s(e.name) + " calls a TSUNAMI! (" + JS.s(foam) + " Foam stacks)", "enemy")
+	var foam = JS.or_(State.status.get("player").get("foamStacks"), 0)
+	UI.log_("🌊 " + JS.s(e.get("name")) + " calls a TSUNAMI! (" + JS.s(foam) + " Foam stacks)", "enemy")
 	var hits = max(1, foam)
 	for h in range(ceili(hits)):
 		if JS.t(State.combat.get("over")):
 			return
 		Hit.performHit("enemy", "player", {"baseDamage": 10, "effects": [], "abilityElement": "Water", "isEnemyAttack": true})
-	State.status.player.foamStacks = 0
+	State.status.get("player").foamStacks = 0
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__ice_frost_bolt__fn(i = null):
 	# ═══ ICE ═══
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("❄️ " + JS.s(e.name) + " Frost Bolt!", "enemy")
+	UI.log_("❄️ " + JS.s(e.get("name")) + " Frost Bolt!", "enemy")
 	Hit.performHit("enemy", "player", {"baseDamage": 12, "effects": [{"type": "stun", "turns": 1}], "abilityElement": "Ice", "isEnemyAttack": true})
 	if not JS.t(State.combat.get("over")):
 		Helpers.applyFrost("enemy", "player", 1)
 
 func ENEMY_ABILITY_CATALOGUE__ice_glacial_armor__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	var armor = JS.round((25 + floori((JS.or_(e.get("statDef"), 0)) / 4.0)) * 1.625)
-	e.status.block = (JS.or_(e.status.get("block"), 0)) + armor
-	UI.log_("🧊 " + JS.s(e.name) + " encases itself in Glacial Armor! (+" + JS.s(armor) + " Block)", "enemy")
+	e.get("status").block = (JS.or_(e.get("status").get("block"), 0)) + armor
+	UI.log_("🧊 " + JS.s(e.get("name")) + " encases itself in Glacial Armor! (+" + JS.s(armor) + " Block)", "enemy")
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__ice_flash_freeze__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("🌨️ " + JS.s(e.name) + " Flash Freeze!", "enemy")
+	UI.log_("🌨️ " + JS.s(e.get("name")) + " Flash Freeze!", "enemy")
 	Helpers.applyFrost("enemy", "player", 6)
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__ice_shatter_strike__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	var frost = JS.or_(State.status.player.get("frostStacks"), 0)
+	var frost = JS.or_(State.status.get("player").get("frostStacks"), 0)
 	var dmg = (40 + ((JS.or_(e.get("statPow"), 0)) * 2) if frost >= 10 else frost * 4)
-	UI.log_("💎 " + JS.s(e.name) + " Shatter! " + ("FROZEN — massive hit" if frost >= 10 else "(" + JS.s(frost) + " Frost × 4)"), "enemy")
+	UI.log_("💎 " + JS.s(e.get("name")) + " Shatter! " + ("FROZEN — massive hit" if frost >= 10 else "(" + JS.s(frost) + " Frost × 4)"), "enemy")
 	Hit.performHit("enemy", "player", {"baseDamage": max(8, dmg), "effects": [], "abilityElement": "Ice", "isEnemyAttack": true})
 	if (not JS.t(State.combat.get("over")) and frost < 10):
 		Helpers.applyFrost("enemy", "player", 1)
 	if frost >= 10:
-		State.status.player.frostStacks = 0
-		State.status.player.frozen = 0
+		State.status.get("player").frostStacks = 0
+		State.status.get("player").frozen = 0
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__ice_cryostasis__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	var armor = JS.round(35 * 1.625)
 	var heal = 30
-	e.status.block = (JS.or_(e.status.get("block"), 0)) + armor
-	e.hp = min(e.enemyMaxHP, e.hp + heal)
-	e.status.stunned = max(JS.or_(e.status.get("stunned"), 0), 1)
+	e.get("status").block = (JS.or_(e.get("status").get("block"), 0)) + armor
+	e.hp = min(e.get("enemyMaxHP"), e.get("hp") + heal)
+	e.get("status").stunned = max(JS.or_(e.get("status").get("stunned"), 0), 1)
 	# stuns SELF for 1t (charges up)
-	UI.log_("🧊 " + JS.s(e.name) + " enters Cryostasis! (+" + JS.s(armor) + " Armor, +" + JS.s(heal) + " HP, charges 1t)", "enemy")
+	UI.log_("🧊 " + JS.s(e.get("name")) + " enters Cryostasis! (+" + JS.s(armor) + " Armor, +" + JS.s(heal) + " HP, charges 1t)", "enemy")
 	UI.updateHPBars()
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__lightning_zap__fn(i = null):
 	# ═══ LIGHTNING ═══
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("⚡ " + JS.s(e.name) + " Zap!", "enemy")
+	UI.log_("⚡ " + JS.s(e.get("name")) + " Zap!", "enemy")
 	Hit.performHit("enemy", "player", {"baseDamage": 12, "effects": [], "abilityElement": "Lightning", "isEnemyAttack": true})
 
 func ENEMY_ABILITY_CATALOGUE__lightning_chain__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("⚡ " + JS.s(e.name) + " Chain Lightning! (×4 hits)", "enemy")
+	UI.log_("⚡ " + JS.s(e.get("name")) + " Chain Lightning! (×4 hits)", "enemy")
 	for h in range(4):
 		if JS.t(State.combat.get("over")):
 			return
 		Hit.performHit("enemy", "player", {"baseDamage": 6, "effects": [], "abilityElement": "Lightning", "isEnemyAttack": true})
 
 func ENEMY_ABILITY_CATALOGUE__lightning_overcharge__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	var shock = JS.or_(State.status.player.get("shockStacks"), 0)
-	State.status.player.shockStacks = (JS.or_(State.status.player.get("shockStacks"), 0)) + 3
-	UI.log_("💥 " + JS.s(e.name) + " Overcharge! +3 Shock (×" + JS.s(State.status.player.shockStacks) + ")", "enemy")
+	var shock = JS.or_(State.status.get("player").get("shockStacks"), 0)
+	State.status.get("player").shockStacks = (JS.or_(State.status.get("player").get("shockStacks"), 0)) + 3
+	UI.log_("💥 " + JS.s(e.get("name")) + " Overcharge! +3 Shock (×" + JS.s(State.status.get("player").get("shockStacks")) + ")", "enemy")
 	Hit.performHit("enemy", "player", {"baseDamage": 20, "effects": [], "abilityElement": "Lightning", "isEnemyAttack": true})
 
 func ENEMY_ABILITY_CATALOGUE__lightning_blitz__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	var shock = JS.or_(State.status.player.get("shockStacks"), 0)
+	var shock = JS.or_(State.status.get("player").get("shockStacks"), 0)
 	if shock > 0:
 		var dmg = shock * max(1, floori((JS.or_(e.get("statPow"), 0)) / 2.0))
-		UI.log_("💫 " + JS.s(e.name) + " BLITZ! Detonates " + JS.s(shock) + " Shock stacks (" + JS.s(dmg) + " dmg)", "enemy")
+		UI.log_("💫 " + JS.s(e.get("name")) + " BLITZ! Detonates " + JS.s(shock) + " Shock stacks (" + JS.s(dmg) + " dmg)", "enemy")
 		Hit.applyDirectDamage.call("enemy", "player", dmg, "💫 Blitz")
-		State.status.player.shockStacks = 0
+		State.status.get("player").shockStacks = 0
 	else:
 		Hit.performHit("enemy", "player", {"baseDamage": 18, "effects": [], "abilityElement": "Lightning", "isEnemyAttack": true})
-		UI.log_("💫 " + JS.s(e.name) + " Blitz — no stacks, raw hit", "enemy")
+		UI.log_("💫 " + JS.s(e.get("name")) + " Blitz — no stacks, raw hit", "enemy")
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__lightning_static_field__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	# Self-buff: enemy deals 15% more dmg for 2 turns via temp power
 	e._staticFieldTurns = 2
 	var bonus = floori((JS.or_(e.get("statPow"), 0)) * 0.3)
 	e._staticPowerBonus = bonus
 	e.statPow = (JS.or_(e.get("statPow"), 0)) + bonus
-	UI.log_("🌩️ " + JS.s(e.name) + " Static Field! (+" + JS.s(bonus) + " Power for 2t)", "enemy")
+	UI.log_("🌩️ " + JS.s(e.get("name")) + " Static Field! (+" + JS.s(bonus) + " Power for 2t)", "enemy")
 
 func ENEMY_ABILITY_CATALOGUE__lightning_charge_shot__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("⚡ " + JS.s(e.name) + " winds up a CHARGE SHOT — next turn massive lightning!", "enemy")
+	UI.log_("⚡ " + JS.s(e.get("name")) + " winds up a CHARGE SHOT — next turn massive lightning!", "enemy")
 	e._chargeShot = true
 	# resolved next action
-	e.status.block = (JS.or_(e.status.get("block"), 0)) + 13
+	e.get("status").block = (JS.or_(e.get("status").get("block"), 0)) + 13
 	# defensive while charging
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__earth_fortify__fn(i = null):
 	# ═══ EARTH ═══
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	var armor = JS.round((20 + floori((JS.or_(e.get("statDef"), 0)) / 4.0)) * 1.625)
-	e.status.block = (JS.or_(e.status.get("block"), 0)) + armor
-	UI.log_("🛡️ " + JS.s(e.name) + " Fortifies! (+" + JS.s(armor) + " Block)", "enemy")
+	e.get("status").block = (JS.or_(e.get("status").get("block"), 0)) + armor
+	UI.log_("🛡️ " + JS.s(e.get("name")) + " Fortifies! (+" + JS.s(armor) + " Block)", "enemy")
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__earth_boulder__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("🗿 " + JS.s(e.name) + " Boulder Toss!", "enemy")
+	UI.log_("🗿 " + JS.s(e.get("name")) + " Boulder Toss!", "enemy")
 	Hit.performHit("enemy", "player", {"baseDamage": 22, "effects": [], "abilityElement": "Earth", "isEnemyAttack": true})
 
 func ENEMY_ABILITY_CATALOGUE__earth_seismic__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("🌍 " + JS.s(e.name) + " Seismic Wave! Cracks your armor", "enemy")
+	UI.log_("🌍 " + JS.s(e.get("name")) + " Seismic Wave! Cracks your armor", "enemy")
 	Hit.performHit("enemy", "player", {"baseDamage": 16, "effects": [], "abilityElement": "Earth", "isEnemyAttack": true})
-	var crack = min(JS.or_(State.status.player.get("block"), 0), 15)
+	var crack = min(JS.or_(State.status.get("player").get("block"), 0), 15)
 	if crack > 0:
-		State.status.player.block -= crack
+		State.status.get("player").block -= crack
 		UI.log_("🪨 Armor cracked by " + JS.s(crack) + "!", "status")
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__earth_stone_stance__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	var armor = JS.round((30 + floori((JS.or_(e.get("statDef"), 0)) / 3.0)) * 1.625)
-	e.status.block = (JS.or_(e.status.get("block"), 0)) + armor
+	e.get("status").block = (JS.or_(e.get("status").get("block"), 0)) + armor
 	# Gain stone stacks
-	e.status.stoneStacks = (JS.or_(e.status.get("stoneStacks"), 0)) + 3
-	UI.log_("🧱 " + JS.s(e.name) + " Stone Stance! (+" + JS.s(armor) + " Block, +3 Stone stacks)", "enemy")
+	e.get("status").stoneStacks = (JS.or_(e.get("status").get("stoneStacks"), 0)) + 3
+	UI.log_("🧱 " + JS.s(e.get("name")) + " Stone Stance! (+" + JS.s(armor) + " Block, +3 Stone stacks)", "enemy")
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__earth_petrify__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("🗿 " + JS.s(e.name) + " Petrify!", "enemy")
+	UI.log_("🗿 " + JS.s(e.get("name")) + " Petrify!", "enemy")
 	Hit.performHit("enemy", "player", {
 		"baseDamage": 18,
 		"effects": [{"type": "stun", "turns": 2}],
@@ -1049,60 +1049,60 @@ func ENEMY_ABILITY_CATALOGUE__earth_petrify__fn(i = null):
 	})
 
 func ENEMY_ABILITY_CATALOGUE__earth_cataclysm__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	var stone = JS.or_(e.status.get("stoneStacks"), 0)
+	var stone = JS.or_(e.get("status").get("stoneStacks"), 0)
 	var dmg = (stone * 25 if stone > 0 else 50 + ((JS.or_(e.get("statPow"), 0)) * 2))
-	UI.log_("💥 " + JS.s(e.name) + " CATACLYSM! " + ("(" + JS.s(stone) + " Stone×25)" if stone > 0 else "Raw devastation"), "enemy")
+	UI.log_("💥 " + JS.s(e.get("name")) + " CATACLYSM! " + ("(" + JS.s(stone) + " Stone×25)" if stone > 0 else "Raw devastation"), "enemy")
 	Hit.performHit("enemy", "player", {"baseDamage": dmg, "effects": [], "abilityElement": "Earth", "isEnemyAttack": true})
-	e.status.stoneStacks = 0
+	e.get("status").stoneStacks = 0
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__nature_entangle__fn(i = null):
 	# ═══ NATURE ═══
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("🌿 " + JS.s(e.name) + " Entangle!", "enemy")
+	UI.log_("🌿 " + JS.s(e.get("name")) + " Entangle!", "enemy")
 	Hit.performHit("enemy", "player", {"baseDamage": 10, "effects": [], "abilityElement": "Nature", "isEnemyAttack": true})
-	State.status.player.rootStacks = (JS.or_(State.status.player.get("rootStacks"), 0)) + 2
+	State.status.get("player").rootStacks = (JS.or_(State.status.get("player").get("rootStacks"), 0)) + 2
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__nature_thornwall__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	var armor = JS.round((25 + floori((JS.or_(e.get("statDef"), 0)) / 4.0)) * 1.625)
-	e.status.block = (JS.or_(e.status.get("block"), 0)) + armor
-	e.status.thornArmor = true
+	e.get("status").block = (JS.or_(e.get("status").get("block"), 0)) + armor
+	e.get("status").thornArmor = true
 	# flag: thorns on hit
-	UI.log_("🌵 " + JS.s(e.name) + " Thornwall! (+" + JS.s(armor) + " Block + Thorns)", "enemy")
+	UI.log_("🌵 " + JS.s(e.get("name")) + " Thornwall! (+" + JS.s(armor) + " Block + Thorns)", "enemy")
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__nature_wild_growth__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	var heal = 20 + floori((JS.or_(e.get("statEfx"), 0)) / 3.0)
-	e.hp = min(e.enemyMaxHP, e.hp + heal)
+	e.hp = min(e.get("enemyMaxHP"), e.get("hp") + heal)
 	var armor = JS.round(15 * 2.1125)
-	e.status.block = (JS.or_(e.status.get("block"), 0)) + armor
-	UI.log_("🌱 " + JS.s(e.name) + " Wild Growth! (+" + JS.s(heal) + " HP, +" + JS.s(armor) + " Block)", "enemy")
+	e.get("status").block = (JS.or_(e.get("status").get("block"), 0)) + armor
+	UI.log_("🌱 " + JS.s(e.get("name")) + " Wild Growth! (+" + JS.s(heal) + " HP, +" + JS.s(armor) + " Block)", "enemy")
 	UI.updateHPBars()
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__nature_vine_lash__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("🌿 " + JS.s(e.name) + " Vine Lash! (×3 hits + Root)", "enemy")
+	UI.log_("🌿 " + JS.s(e.get("name")) + " Vine Lash! (×3 hits + Root)", "enemy")
 	for h in range(3):
 		if JS.t(State.combat.get("over")):
 			return
 		Hit.performHit("enemy", "player", {"baseDamage": 8, "effects": [], "abilityElement": "Nature", "isEnemyAttack": true})
 		if not JS.t(State.combat.get("over")):
-			State.status.player.rootStacks = (JS.or_(State.status.player.get("rootStacks"), 0)) + 1
+			State.status.get("player").rootStacks = (JS.or_(State.status.get("player").get("rootStacks"), 0)) + 1
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__nature_spore_cloud__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("🍄 " + JS.s(e.name) + " Spore Cloud! Weakens and roots you", "enemy")
-	State.status.player.rootStacks = (JS.or_(State.status.player.get("rootStacks"), 0)) + 3
+	UI.log_("🍄 " + JS.s(e.get("name")) + " Spore Cloud! Weakens and roots you", "enemy")
+	State.status.get("player").rootStacks = (JS.or_(State.status.get("player").get("rootStacks"), 0)) + 3
 	# Temp power debuff on player tracked via foamStacks as proxy (visual only)
 	Hit.performHit("enemy", "player", {
 		"baseDamage": 8,
@@ -1113,109 +1113,109 @@ func ENEMY_ABILITY_CATALOGUE__nature_spore_cloud__fn(i = null):
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__nature_wrath__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	var root = JS.or_(State.status.player.get("rootStacks"), 0)
+	var root = JS.or_(State.status.get("player").get("rootStacks"), 0)
 	var dmg = max(20, root * 20)
-	UI.log_("🌳 " + JS.s(e.name) + " NATURE'S WRATH! (" + JS.s(root) + " Root × 20 = " + JS.s(dmg) + " dmg)", "enemy")
+	UI.log_("🌳 " + JS.s(e.get("name")) + " NATURE'S WRATH! (" + JS.s(root) + " Root × 20 = " + JS.s(dmg) + " dmg)", "enemy")
 	Hit.performHit("enemy", "player", {"baseDamage": dmg, "effects": [], "abilityElement": "Nature", "isEnemyAttack": true})
-	State.status.player.rootStacks = 0
+	State.status.get("player").rootStacks = 0
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__plasma_phase_strike__fn(i = null):
 	# ═══ PLASMA ═══
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("🔮 " + JS.s(e.name) + " Phase Strike!", "enemy")
+	UI.log_("🔮 " + JS.s(e.get("name")) + " Phase Strike!", "enemy")
 	Hit.performHit("enemy", "player", {"baseDamage": 14, "effects": [], "abilityElement": "Plasma", "isEnemyAttack": true})
 
 func ENEMY_ABILITY_CATALOGUE__plasma_phase_shift__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
-	e.status.phaseTurns = 1
-	UI.log_("✨ " + JS.s(e.name) + " phases out! (dodges next hit)", "enemy")
+	var e = JS.idx(State.combat.get("enemies"), i)
+	e.get("status").phaseTurns = 1
+	UI.log_("✨ " + JS.s(e.get("name")) + " phases out! (dodges next hit)", "enemy")
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__plasma_void_pulse__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("🌀 " + JS.s(e.name) + " Void Pulse!", "enemy")
+	UI.log_("🌀 " + JS.s(e.get("name")) + " Void Pulse!", "enemy")
 	Hit.performHit("enemy", "player", {"baseDamage": 20, "effects": [], "abilityElement": "Plasma", "isEnemyAttack": true})
 	# Phase self after attacking
-	e.status.phaseTurns = 1
+	e.get("status").phaseTurns = 1
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__plasma_evasion_boost__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
-	e.status.battleDodgeBonus = (JS.or_(e.status.get("battleDodgeBonus"), 0)) + 0.15
-	e.status.phaseTurns = 1
-	UI.log_("💜 " + JS.s(e.name) + " Evasion Boost! (+15% dodge + Phase)", "enemy")
+	var e = JS.idx(State.combat.get("enemies"), i)
+	e.get("status").battleDodgeBonus = (JS.or_(e.get("status").get("battleDodgeBonus"), 0)) + 0.15
+	e.get("status").phaseTurns = 1
+	UI.log_("💜 " + JS.s(e.get("name")) + " Evasion Boost! (+15% dodge + Phase)", "enemy")
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__plasma_singularity__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("⚫ " + JS.s(e.name) + " opens a SINGULARITY!", "enemy")
+	UI.log_("⚫ " + JS.s(e.get("name")) + " opens a SINGULARITY!", "enemy")
 	Hit.performHit("enemy", "player", {
 		"baseDamage": 35,
 		"effects": [{"type": "stun", "turns": 1}],
 		"abilityElement": "Plasma",
 		"isEnemyAttack": true,
 	})
-	e.status.phaseTurns = 1
-	e.status.battleDodgeBonus = (JS.or_(e.status.get("battleDodgeBonus"), 0)) + 0.2
+	e.get("status").phaseTurns = 1
+	e.get("status").battleDodgeBonus = (JS.or_(e.get("status").get("battleDodgeBonus"), 0)) + 0.2
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__air_twin_gust__fn(i = null):
 	# ═══ AIR ═══
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("🌀 " + JS.s(e.name) + " Twin Gust! (×2)", "enemy")
+	UI.log_("🌀 " + JS.s(e.get("name")) + " Twin Gust! (×2)", "enemy")
 	Hit.performHit("enemy", "player", {"baseDamage": 10, "effects": [], "abilityElement": "Air", "isEnemyAttack": true, "hits": 2})
 
 func ENEMY_ABILITY_CATALOGUE__air_gale_force__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("💨 " + JS.s(e.name) + " Gale Force!", "enemy")
+	UI.log_("💨 " + JS.s(e.get("name")) + " Gale Force!", "enemy")
 	Hit.performHit("enemy", "player", {"baseDamage": 22, "effects": [], "abilityElement": "Air", "isEnemyAttack": true})
 
 func ENEMY_ABILITY_CATALOGUE__air_cyclone__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("🌪️ " + JS.s(e.name) + " Cyclone! (×3 hits)", "enemy")
+	UI.log_("🌪️ " + JS.s(e.get("name")) + " Cyclone! (×3 hits)", "enemy")
 	Hit.performHit("enemy", "player", {"baseDamage": 10, "effects": [], "abilityElement": "Air", "isEnemyAttack": true, "hits": 3})
 
 func ENEMY_ABILITY_CATALOGUE__air_wind_shield__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
-	e.status.battleDodgeBonus = (JS.or_(e.status.get("battleDodgeBonus"), 0)) + 0.2
+	var e = JS.idx(State.combat.get("enemies"), i)
+	e.get("status").battleDodgeBonus = (JS.or_(e.get("status").get("battleDodgeBonus"), 0)) + 0.2
 	var armor = JS.round(15 * 2.1125)
-	e.status.block = (JS.or_(e.status.get("block"), 0)) + armor
-	UI.log_("🌬️ " + JS.s(e.name) + " Wind Shield! (+20% dodge, +" + JS.s(armor) + " Block)", "enemy")
+	e.get("status").block = (JS.or_(e.get("status").get("block"), 0)) + armor
+	UI.log_("🌬️ " + JS.s(e.get("name")) + " Wind Shield! (+20% dodge, +" + JS.s(armor) + " Block)", "enemy")
 	UI.renderStatusTags()
 
 func ENEMY_ABILITY_CATALOGUE__air_sky_slam__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("🌩️ " + JS.s(e.name) + " Sky Slam!", "enemy")
+	UI.log_("🌩️ " + JS.s(e.get("name")) + " Sky Slam!", "enemy")
 	Hit.performHit("enemy", "player", {"baseDamage": 20, "effects": [{"type": "stun", "turns": 1}], "abilityElement": "Air", "isEnemyAttack": true})
 
 func ENEMY_ABILITY_CATALOGUE__air_tempest__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	State.setActiveEnemy(i)
-	UI.log_("⛈️ " + JS.s(e.name) + " TEMPEST! (×5 rapid hits)", "enemy")
+	UI.log_("⛈️ " + JS.s(e.get("name")) + " TEMPEST! (×5 rapid hits)", "enemy")
 	Hit.performHit("enemy", "player", {"baseDamage": 10, "effects": [], "abilityElement": "Air", "isEnemyAttack": true, "hits": 5})
-	e.status.battleDodgeBonus = (JS.or_(e.status.get("battleDodgeBonus"), 0)) + 0.1
+	e.get("status").battleDodgeBonus = (JS.or_(e.get("status").get("battleDodgeBonus"), 0)) + 0.1
 	UI.renderStatusTags()
 
 func ENEMY_ITEM_CATALOGUE__enemy_healing_draught__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
-	var heal = JS.round(e.enemyMaxHP * 0.2)
-	e.hp = min(e.enemyMaxHP, e.hp + heal)
-	UI.log_("🧪 " + JS.s(e.name) + " drinks a Healing Draught! (+" + JS.s(heal) + " HP)", "enemy")
+	var e = JS.idx(State.combat.get("enemies"), i)
+	var heal = JS.round(e.get("enemyMaxHP") * 0.2)
+	e.hp = min(e.get("enemyMaxHP"), e.get("hp") + heal)
+	UI.log_("🧪 " + JS.s(e.get("name")) + " drinks a Healing Draught! (+" + JS.s(heal) + " HP)", "enemy")
 	UI.updateHPBars()
 
 func ENEMY_ITEM_CATALOGUE__enemy_iron_flask__fn(i = null):
-	var e = JS.idx(State.combat.enemies, i)
+	var e = JS.idx(State.combat.get("enemies"), i)
 	var armor = JS.round(15 * 2.1125)
-	e.status.block = (JS.or_(e.status.get("block"), 0)) + armor
-	UI.log_("⚗️ " + JS.s(e.name) + " uses an Iron Flask! (+" + JS.s(armor) + " Block)", "enemy")
+	e.get("status").block = (JS.or_(e.get("status").get("block"), 0)) + armor
+	UI.log_("⚗️ " + JS.s(e.get("name")) + " uses an Iron Flask! (+" + JS.s(armor) + " Block)", "enemy")
 	UI.renderStatusTags()

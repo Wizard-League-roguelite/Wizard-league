@@ -709,9 +709,9 @@ func summonSpritePos(idx = null, W = null, H = null):
 func triggerHitFlash(defenderSide = null, enemyIdx = null):
 	if not JS.t(State.combat.get("hitFlashes")):
 		State.combat.hitFlashes = []
-	State.combat.hitFlashes.append({
+	State.combat.get("hitFlashes").append({
 		"side": defenderSide,
-		"idx": (enemyIdx if enemyIdx != null else State.combat.activeEnemyIdx),
+		"idx": (enemyIdx if enemyIdx != null else State.combat.get("activeEnemyIdx")),
 		"frames": 10,
 		"color": ("#FF3322" if defenderSide == "player" else "#FFAA33"),
 	})
@@ -1269,13 +1269,13 @@ func renderBattlefield():
 	var playerLean = JS.round(sin(t * 0.028) * 1)
 	# ±1px horizontal drift
 	var pp = playerSpritePos(W, H)
-	var px = pp.x + playerLean
-	var py = pp.y + playerBob
+	var px = pp.get("x") + playerLean
+	var py = pp.get("y") + playerBob
 	ctx.save()
 	ctx.globalAlpha = 0.28 - (abs(playerBob) * 0.02)
 	ctx.fillStyle = "#000"
 	ctx.beginPath()
-	ctx.ellipse(px + (pp.w / 2.0), (pp.y + pp.h) + 3, pp.w * 0.38, 5, 0, 0, PI * 2)
+	ctx.ellipse(px + (pp.get("w") / 2.0), (pp.get("y") + pp.get("h")) + 3, pp.get("w") * 0.38, 5, 0, 0, PI * 2)
 	ctx.fill()
 	ctx.restore()
 	var rows = getPlayerCharSprite()
@@ -1298,14 +1298,14 @@ func renderBattlefield():
 		var phaseOff = i * 1.3
 		var enemyBob = (JS.round(sin((t * 0.07) + phaseOff) * 2) if JS.t(e.get("alive")) else 0)
 		var enemySway = (JS.round(sin((t * 0.04) + phaseOff) * 1) if JS.t(e.get("alive")) else 0)
-		var ex = ep.x + enemySway
-		var ey = ep.y + enemyBob
+		var ex = ep.get("x") + enemySway
+		var ey = ep.get("y") + enemyBob
 		if JS.t(e.get("alive")):
 			ctx.save()
 			ctx.globalAlpha = 0.22
 			ctx.fillStyle = "#000"
 			ctx.beginPath()
-			ctx.ellipse(ep.x + (ep.w / 2.0), (ep.y + ep.h) + 3, ep.w * 0.36, 4, 0, 0, PI * 2)
+			ctx.ellipse(ep.get("x") + (ep.get("w") / 2.0), (ep.get("y") + ep.get("h")) + 3, ep.get("w") * 0.36, 4, 0, 0, PI * 2)
 			ctx.fill()
 			ctx.restore()
 		ctx.save()
@@ -1315,38 +1315,38 @@ func renderBattlefield():
 		ctx.restore()
 		if JS.t(e.get("alive")):
 			# Target arrow
-			if JS.eq(i, State.combat.targetIdx):
+			if JS.eq(i, State.combat.get("targetIdx")):
 				ctx.save()
 				ctx.fillStyle = "#C8A060"
 				ctx.font = "bold 10px monospace"
 				ctx.textAlign = "center"
-				ctx.fillText("▼", ep.x + (ep.w / 2.0), ep.y - 5)
+				ctx.fillText("▼", ep.get("x") + (ep.get("w") / 2.0), ep.get("y") - 5)
 				ctx.restore()
 	# ── Summons ──
-	var _arr18 = JS.iter(JS.arr(JS.or_(State.combat.get("summons"), [])).filter(func(s = null): return s.hp > 0))
+	var _arr18 = JS.iter(JS.arr(JS.or_(State.combat.get("summons"), [])).filter(func(s = null): return s.get("hp") > 0))
 	for i in range(len(_arr18)):
 		var sp = summonSpritePos(i, W, H)
 		ctx.save()
 		ctx.globalAlpha = 0.22
 		ctx.fillStyle = "#000"
 		ctx.beginPath()
-		ctx.ellipse(sp.x + (sp.w / 2.0), (sp.y + sp.h) + 3, sp.w * 0.32, 4, 0, 0, PI * 2)
+		ctx.ellipse(sp.get("x") + (sp.get("w") / 2.0), (sp.get("y") + sp.get("h")) + 3, sp.get("w") * 0.32, 4, 0, 0, PI * 2)
 		ctx.fill()
 		ctx.restore()
-		drawSprite(ctx, SpriteData.SPRITE_TREANT, sp.x, sp.y, S_SCALE, getElemPal("Nature"))
+		drawSprite(ctx, SpriteData.SPRITE_TREANT, sp.get("x"), sp.get("y"), S_SCALE, getElemPal("Nature"))
 	# ── Hit flashes ──
-	if (JS.t(State.combat.get("hitFlashes")) and JS.t(len(State.combat.hitFlashes))):
-		for flash in JS.iter(State.combat.hitFlashes):
-			if flash.frames <= 0:
+	if (JS.t(State.combat.get("hitFlashes")) and JS.t(len(State.combat.get("hitFlashes")))):
+		for flash in JS.iter(State.combat.get("hitFlashes")):
+			if flash.get("frames") <= 0:
 				continue
-			var rect = (playerSpritePos(W, H) if flash.get("side") == "player" else enemySpritePos(flash.idx, allE, W, H))
+			var rect = (playerSpritePos(W, H) if flash.get("side") == "player" else enemySpritePos(flash.get("idx"), allE, W, H))
 			ctx.save()
-			ctx.globalAlpha = (flash.frames / 10.0) * 0.6
-			ctx.fillStyle = flash.color
-			ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
+			ctx.globalAlpha = (flash.get("frames") / 10.0) * 0.6
+			ctx.fillStyle = flash.get("color")
+			ctx.fillRect(rect.get("x"), rect.get("y"), rect.get("w"), rect.get("h"))
 			ctx.restore()
 			flash.frames -= 1
-		State.combat.hitFlashes = JS.arr(State.combat.hitFlashes).filter(func(f = null): return f.frames > 0)
+		State.combat.hitFlashes = JS.arr(State.combat.get("hitFlashes")).filter(func(f = null): return f.get("frames") > 0)
 	# ── Spell / effect animations ──
 	Animations.tickAnims(ctx, W, H)
 
@@ -1387,4 +1387,4 @@ func initBattleCanvas():
 				canvas.height = nh
 				UI.renderEnemyCards()
 		arena._battleResizeObserver = JSResizeObserver.new(_fn20)
-		arena._battleResizeObserver.observe(arena)
+		arena.get("_battleResizeObserver").observe(arena)

@@ -154,6 +154,6 @@ func _boot():
 # ── Public render function ─────────────────────────────────────────────────
 func spellIconSVG(spell = null, size = null):
 	size = JS.or_(size, 24)
-	var color = JS.or_(JS.idx(_ELEM_COLOR, spell.element), "#c8a060")
+	var color = JS.or_(JS.idx(_ELEM_COLOR, spell.get("element")), "#c8a060")
 	var inner = JS.or_(JS.idx(SPELL_ICON_DATA, spell.id), "<circle cx=\"8\" cy=\"8\" r=\"5\" fill=\"currentColor\" opacity=\".6\"/>")
 	return "<svg viewBox=\"0 0 16 16\" width=\"" + JS.s(size) + "\" height=\"" + JS.s(size) + "\" style=\"color:" + color + ";display:block\" shape-rendering=\"crispEdges\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">" + inner + "</svg>"

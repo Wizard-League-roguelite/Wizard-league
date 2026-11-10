@@ -35,10 +35,10 @@ func _renderVeilContent(content = null):
 	html[0] = "\n    <div class=\"lobby-panel-title\">The Veil</div>\n    <div style=\"color:#9070cc;font-size:.72rem;margin-bottom:12px;font-style:italic;\">\n      Each burden you accept is another layer of Mist.\n    </div>\n    <div style=\"display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:8px;\n                background:#120020;border:1px solid #4020aa;border-radius:6px;\">\n      <label style=\"display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.8rem;\n                    color:" + ("#c080ff" if JS.t(cfg.get("active")) else "#776699") + ";\">\n        <input type=\"checkbox\" id=\"veil-active-toggle\" " + ("checked" if JS.t(cfg.get("active")) else "") + " style=\"accent-color:#8040cc;width:14px;height:14px;\">\n        <span>" + ("<b style=\"color:#c080ff;\">The Veil Active</b> — <span style=\"color:#e0a0ff;\">🌫 " + JS.s(totalMist) + " Mist</span>" if JS.t(cfg.get("active")) else "Enter the Veil") + "</span>\n      </label>\n    </div>\n  "
 	var dimmed = ("" if JS.t(cfg.get("active")) else "opacity:.35;pointer-events:none;")
 	for mod in JS.iter(Mist.MIST_MODIFIERS):
-		var currentTier = JS.or_(JS.idx(cfg.modifiers, mod.id), 0)
-		html[0] += "\n      <div style=\"" + dimmed + "margin-bottom:8px;padding:8px 10px;background:#0e0018;\n                  border:1px solid " + ("#5030aa" if currentTier > 0 else "#241840") + ";border-radius:6px;\">\n        <div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;\">\n          <span style=\"font-size:.76rem;color:#c0a0ee;\">" + JS.s(mod.emoji) + " " + JS.s(mod.label) + "</span>\n          <span style=\"font-size:.65rem;color:" + ("#a070ff" if currentTier > 0 else "#554477") + ";\">\n            " + ("Tier " + JS.s(currentTier) + "/" + JS.s(mod.tiers) if currentTier > 0 else "Off") + "\n          </span>\n        </div>\n        <div style=\"font-size:.65rem;color:" + ("#aa88dd" if currentTier > 0 else "#554477") + ";margin-bottom:6px;\">\n          " + JS.s((JS.callm(mod, "desc", [currentTier]) if currentTier > 0 else "Inactive")) + "\n        </div>\n        <div style=\"display:flex;gap:4px;flex-wrap:wrap;\">\n          <button onclick=\"setMistModifier('" + JS.s(mod.id) + "',0)\"\n            style=\"" + _veilBtnStyle(currentTier == 0, "off") + "\">Off</button>"
-		for t in range(1, floori(mod.tiers) + 1):
-			var cost = JS.reduce(JS.slice(mod.mistCost, 0, t), func(a = null, b = null): return a + b, 0)
+		var currentTier = JS.or_(JS.idx(cfg.get("modifiers"), mod.id), 0)
+		html[0] += "\n      <div style=\"" + dimmed + "margin-bottom:8px;padding:8px 10px;background:#0e0018;\n                  border:1px solid " + ("#5030aa" if currentTier > 0 else "#241840") + ";border-radius:6px;\">\n        <div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;\">\n          <span style=\"font-size:.76rem;color:#c0a0ee;\">" + JS.s(mod.get("emoji")) + " " + JS.s(mod.get("label")) + "</span>\n          <span style=\"font-size:.65rem;color:" + ("#a070ff" if currentTier > 0 else "#554477") + ";\">\n            " + ("Tier " + JS.s(currentTier) + "/" + JS.s(mod.get("tiers")) if currentTier > 0 else "Off") + "\n          </span>\n        </div>\n        <div style=\"font-size:.65rem;color:" + ("#aa88dd" if currentTier > 0 else "#554477") + ";margin-bottom:6px;\">\n          " + JS.s((JS.callm(mod, "desc", [currentTier]) if currentTier > 0 else "Inactive")) + "\n        </div>\n        <div style=\"display:flex;gap:4px;flex-wrap:wrap;\">\n          <button onclick=\"setMistModifier('" + JS.s(mod.id) + "',0)\"\n            style=\"" + _veilBtnStyle(currentTier == 0, "off") + "\">Off</button>"
+		for t in range(1, floori(mod.get("tiers")) + 1):
+			var cost = JS.reduce(JS.slice(mod.get("mistCost"), 0, t), func(a = null, b = null): return a + b, 0)
 			html[0] += "<button onclick=\"setMistModifier('" + JS.s(mod.id) + "'," + JS.s(t) + ")\"\n        style=\"" + _veilBtnStyle(currentTier == t, "tier") + "\">Tier " + JS.s(t) + " <span style=\"color:#9060cc\">(+" + JS.s(cost) + ")</span></button>"
 		html[0] += "</div></div>"
 	html[0] += "\n    <div style=\"margin-top:10px;padding:10px;background:#1a0030;border:1px solid #5020cc;\n                border-radius:6px;text-align:center;\">\n      <span style=\"font-size:.9rem;color:#c080ff;letter-spacing:.04em;\">\n        🌫 Total Mist: <b>" + JS.s(totalMist) + "</b>\n      </span>\n      " + ("<div style=\"font-size:.62rem;color:#554477;margin-top:3px;\">Activate the Veil to begin</div>" if JS.eq(totalMist, 0) else "") + "\n      " + ("<div style=\"margin-top:8px;\">\n        <button onclick=\"resetVeil()\" style=\"padding:4px 14px;border-radius:4px;font-size:.63rem;\n          cursor:pointer;font-family:'Cinzel',serif;background:#1a0010;border:1px solid #6020aa;\n          color:#886699;transition:all .15s;\">Reset All</button>\n      </div>" if JS.t(cfg.get("active")) else "") + "\n    </div>"
@@ -49,7 +49,7 @@ func _renderVeilContent(content = null):
 			var meta = Artifacts.getMeta()
 			if not JS.t(meta.get("mistConfig")):
 				meta.mistConfig = {"active": false, "modifiers": {}}
-			meta.mistConfig.active = toggle.checked
+			meta.get("mistConfig").active = toggle.checked
 			Artifacts.saveMeta()
 			_renderVeilContent(content)
 		toggle.onchange = _fn1
@@ -66,7 +66,7 @@ func setMistModifier(modId = null, tier = null):
 	var meta = Artifacts.getMeta()
 	if not JS.t(meta.get("mistConfig")):
 		meta.mistConfig = {"active": true, "modifiers": {}}
-	meta.mistConfig.modifiers[modId] = tier
+	meta.get("mistConfig").get("modifiers")[modId] = tier
 	Artifacts.saveMeta()
 	var content = document.getElementById("lobby-panel-content")
 	if JS.t(content):

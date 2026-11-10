@@ -115,7 +115,7 @@ func _boot():
 func passiveIconSVG(passive = null, size = null):
 	size = JS.or_(size, 24)
 	# Determine color: element passives use element color, else gold
-	var elemColor = (JS.idx(SpellIcons._ELEM_COLOR, passive.element) if JS.t(SpellIcons._ELEM_COLOR) else SpellIcons._ELEM_COLOR)
+	var elemColor = (JS.idx(SpellIcons._ELEM_COLOR, passive.get("element")) if JS.t(SpellIcons._ELEM_COLOR) else SpellIcons._ELEM_COLOR)
 	var color = JS.or_(elemColor, "#c8a060")
 	# Key lookup: artifacts use their own id, passives use id
 	var key = ("storm_core_artifact" if passive.get("id") == "storm_core" else passive.id)

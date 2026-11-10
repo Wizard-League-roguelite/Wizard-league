@@ -120,12 +120,48 @@ for (const mod of mods) {
     else if (n.type === 'VariableDeclaration') for (const d of n.declarations) {
       if (d.id.type !== 'Identifier') { warn(mod, n, 'destructured global'); continue; }
       const isFn = d.init && /Function/.test(d.init.type);
-      reg(d.id.name, { mod, kind: 'var', node: d, isFn });
+      const lit = n.kind === 'const' && d.init && (d.init.type === 'Literal' || d.init.type === 'TemplateLiteral') ? (d.init.type === 'TemplateLiteral' ? 'string' : typeof d.init.value === 'string' ? 'string' : typeof d.init.value === 'number' ? 'number' : null) : null;
+      reg(d.id.name, { mod, kind: 'var', node: d, isFn, constType: lit });
       mod.vars.set(d.id.name, d);
     }
   }
 }
 function lookupGlobal(name, mod) { return (mod && mod.privates.get(name)) || GLOBALS.get(name); }
+// ── property classification ──
+// A property that may be absent on some objects is read through .get() (yielding null, like
+// JavaScript's undefined) instead of plain dot access, which is an error in GDScript.
+const LITERAL_KEYS = new Set(), OPTIONAL_KEYS = new Set();
+const SHIM_PROPS = new Set(('id className classList style innerHTML outerHTML textContent innerText value checked disabled hidden title dataset children childNodes ' +
+  'parentElement parentNode firstChild lastChild firstElementChild lastElementChild nextElementSibling previousElementSibling nextSibling tagName nodeType ' +
+  'offsetWidth offsetHeight offsetLeft offsetTop offsetParent clientWidth clientHeight scrollTop scrollLeft scrollHeight scrollWidth width height isConnected ' +
+  'draggable placeholder type target currentTarget clientX clientY pageX pageY offsetX offsetY button buttons key code touches changedTouches deltaY deltaX ' +
+  'pointerId pointerType dataTransfer detail shiftKey ctrlKey altKey metaKey defaultPrevented canvas fillStyle strokeStyle lineWidth globalAlpha font textAlign ' +
+  'textBaseline shadowColor shadowBlur lineCap lineJoin innerWidth innerHeight devicePixelRatio body head documentElement activeElement volume paused currentTime ' +
+  'loop muted src duration size length cssText').split(' '));
+function classifyProps() {
+  const keysOf = o => o.properties.filter(p => p.type === 'Property' && !p.computed).map(p => p.key.name != null ? p.key.name : String(p.key.value));
+  const family = (objs) => {
+    if (objs.length < 2) return;
+    const sets = objs.map(o => new Set(keysOf(o)));
+    const all = new Set(); sets.forEach(st => st.forEach(k => all.add(k)));
+    for (const k of all) if (sets.some(st => !st.has(k))) OPTIONAL_KEYS.add(k);
+  };
+  const objsIn = (n) => n.type === 'ArrayExpression' ? n.elements.filter(e => e && e.type === 'ObjectExpression')
+    : n.type === 'ObjectExpression' ? n.properties.filter(p => p.type === 'Property' && p.value.type === 'ObjectExpression').map(p => p.value) : [];
+  for (const mod of mods) (function w(n) {
+    if (!n || typeof n.type !== 'string') return;
+    if (n.type === 'ObjectExpression') {
+      keysOf(n).forEach(k => LITERAL_KEYS.add(k));
+      // values that are arrays of objects (PASSIVE_CHOICES = {Fire:[…], Water:[…]}) form one family
+      const cousins = [];
+      for (const p of n.properties) if (p.type === 'Property' && p.value.type === 'ArrayExpression') cousins.push(...objsIn(p.value));
+      family(cousins);
+    }
+    if (n.type === 'ArrayExpression' || n.type === 'ObjectExpression') family(objsIn(n));
+    for (const k in n) { if (k === 'loc') continue; const v = n[k]; if (Array.isArray(v)) v.forEach(w); else if (v && typeof v.type === 'string') w(v); }
+  })(mod.ast);
+}
+function missingProne(p) { return !SHIM_PROPS.has(p) && (!LITERAL_KEYS.has(p) || OPTIONAL_KEYS.has(p)); }
 // window.X = ... / bare assignments to undeclared names become globals of the Win module
 const WINDOW_PROPS = new Set();
 
@@ -389,7 +425,11 @@ function inferType(n) {
     }
     case 'ConditionalExpression': { const a = inferType(n.consequent), b = inferType(n.alternate); return a === b ? a : null; }
     case 'AssignmentExpression': return inferType(n.right);
-    case 'Identifier': return n._b ? n._b.type : (n.name === 'undefined' ? null : null);
+    case 'Identifier': {
+      if (n._b) return n._b.type;
+      const g = GLOBALS.get(n.name) || (CUR_MOD && CUR_MOD.privates.get(n.name));
+      return g && g.constType ? g.constType : null;
+    }
     case 'MemberExpression': if (!n.computed) { if (n.property.name === 'length' || n.property.name === 'size') return 'number'; } return null;
     case 'CallExpression': {
       const c = n.callee;
@@ -723,14 +763,14 @@ class Emitter {
           // a sub-sum of unknown types inside a string chain may itself be a concatenation
           const amb = (p) => p.type === 'BinaryExpression' && p.operator === '+' && inferType(p) == null;
           const addExpr = (p) => amb(p) ? `JS.add(${addExpr(p.left)}, ${addExpr(p.right)})` : this.expr(p);
-          return parts.map(p => isStringy(p) ? this.exprP(p) : (amb(p) ? `JS.s(${addExpr(p)})` : this.strOperand(p))).join(' + ');
+          return parts.map(p => inferType(p) === 'string' ? this.exprP(p) : (amb(p) ? `JS.s(${addExpr(p)})` : this.strOperand(p))).join(' + ');
         }
-        return `${this.exprP(L)} + ${this.exprP(R)}`;
+        return `${this.num(L)} + ${this.num(R)}`;
       }
-      case '-': case '*': return `${this.exprP(L)} ${op} ${this.exprP(R)}`;
+      case '-': case '*': return `${this.num(L)} ${op} ${this.num(R)}`;
       case '/':
-        if (R.type === 'Literal' && typeof R.value === 'number') { const t = numLit(R.value, null); return `${this.exprP(L)} / ${t.includes('.') || /e/i.test(t) ? t : t + '.0'}`; }
-        return `${this.exprP(L)} / float(${this.expr(R)})`;
+        if (R.type === 'Literal' && typeof R.value === 'number') { const t = numLit(R.value, null); return `${this.num(L)} / ${t.includes('.') || /e/i.test(t) ? t : t + '.0'}`; }
+        return `${this.num(L)} / float(${this.num(R)})`;
       case '%': return `JS.mod(${this.expr(L)}, ${this.expr(R)})`;
       case '**': return `pow(${this.expr(L)}, ${this.expr(R)})`;
       case '===': case '==': case '!==': case '!=': {
@@ -749,7 +789,7 @@ class Emitter {
         if (lt == null && rt == null && L.type !== 'Literal' && R.type !== 'Literal') return (o === '!=' ? 'not ' : '') + `JS.eq(${this.expr(L)}, ${this.expr(R)})`;
         return `${a} ${o} ${b}`;
       }
-      case '<': case '>': case '<=': case '>=': return `${this.exprP(L)} ${op} ${this.exprP(R)}`;
+      case '<': case '>': case '<=': case '>=': return `${this.num(L)} ${op} ${this.num(R)}`;
       case '&': case '|': case '^': case '<<': case '>>':
         if (op === '|' && R.type === 'Literal' && R.value === 0) return `int(${this.expr(L)})`;
         return `${this.exprP(L)} ${op} ${this.exprP(R)}`;
@@ -834,7 +874,7 @@ class Emitter {
         return [`${t} = ${v}`];
       }
       case '+=':
-        if (isStringy(L) || isStringy(R)) return [`${t} += ${isStringy(R) ? this.expr(R) : this.str(R)}`];
+        if (isStringy(L) || isStringy(R)) return [`${t} += ${this.str(R)}`];
         return [`${t} += ${this.expr(R)}`];
       case '-=': case '*=': return [`${t} ${op} ${this.expr(R)}`];
       case '/=': return [`${t} = ${t} / float(${this.expr(R)})`];
@@ -935,8 +975,19 @@ class Emitter {
       return `JS.idx(${this.expr(n.object)}, ${this.expr(pr)})`;
     }
     const p = n.property.name;
+    if (n.object.type === 'Identifier' && !n.object._b && ['document', 'window', 'localStorage'].includes(n.object.name)) return `${o}.${p}`;
+    if (!SHIM_PROPS.has(p)) return `${o}.get(${strLit(p)})`;
     if (PROP_KEYWORDS.has(p)) return `${o}[${strLit(p)}]`;
     return `${o}.${p}`;
+  }
+  // operand of arithmetic / relational operators: a possibly-missing read becomes NaN, as in JS
+  num(n) {
+    const s = this.exprP(n);
+    if (n.type === 'MemberExpression' && !this.memberSpecial(n)) {
+      if (n.computed) { if (!(n.property.type === 'Identifier' && n.property._b && n.property._b.loopVar && !n.property._b.boxed)) return `JS.un(${this.expr(n)})`; }
+      else if (missingProne(n.property.name) && !(n.object.type === 'Identifier' && !n.object._b && ['document', 'window'].includes(n.object.name))) return `JS.un(${this.expr(n)})`;
+    }
+    return s;
   }
   args(list, max) {
     let a = list;
@@ -1669,6 +1720,7 @@ class Emitter {
 function balanced(s) { let d = 0; for (const ch of s) { if (ch === '(') d++; else if (ch === ')') { d--; if (d < 0) return false; } } return d === 0; }
 
 // ───────────────────────────── main ─────────────────────────────
+classifyProps();
 inferReturnTypes();
 const only = (process.argv.find(a => a.startsWith('--only=')) || '').slice(7);
 fs.mkdirSync(OUT, { recursive: true });

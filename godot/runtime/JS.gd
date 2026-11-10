@@ -50,6 +50,10 @@ func s(x) -> String:
 			if x != null and x.has_method("_js_to_string"): return x._js_to_string()
 	return str(x)
 
+# undefined → NaN, for operands of arithmetic / comparisons (JavaScript semantics)
+func un(x):
+	return NAN if x == null else x
+
 # `a + b` when either side might be a string
 func add(a, b):
 	if a is String or b is String or a is StringName or b is StringName: return s(a) + s(b)
@@ -287,46 +291,47 @@ func newArray(n = null, b = null) -> Array:
 func forEach(a, fn: Callable) -> void:
 	var list = iter(a)
 	var n = fn.get_argument_count()
-	if n >= 2:
+	if n >= 3:
+		for i in range(list.size()): fn.call(list[i], i, list)
+	elif n == 2:
 		for i in range(list.size()): fn.call(list[i], i)
 	elif n == 1:
 		for x in list: fn.call(x)
 	else:
 		for x in list: fn.call()
 
+# call an array callback with (item[, index[, array]]) depending on what it accepts
+func _cb(fn: Callable, n: int, list, i: int):
+	if n >= 3: return fn.call(list[i], i, list)
+	if n == 2: return fn.call(list[i], i)
+	if n == 1: return fn.call(list[i])
+	return fn.call()
+
 func map(a, fn: Callable) -> Array:
 	var list = iter(a); var out = []
-	if fn.get_argument_count() >= 2:
-		for i in range(list.size()): out.append(fn.call(list[i], i))
-	else:
-		for x in list: out.append(fn.call(x))
+	var n = fn.get_argument_count()
+	for i in range(list.size()): out.append(_cb(fn, n, list, i))
 	return out
 
 func filter(a, fn: Callable) -> Array:
 	var list = iter(a); var out = []
-	if fn.get_argument_count() >= 2:
-		for i in range(list.size()):
-			if t(fn.call(list[i], i)): out.append(list[i])
-	else:
-		for x in list:
-			if t(fn.call(x)): out.append(x)
+	var n = fn.get_argument_count()
+	for i in range(list.size()):
+		if t(_cb(fn, n, list, i)): out.append(list[i])
 	return out
 
 func find(a, fn: Callable):
 	var list = iter(a)
-	if fn.get_argument_count() >= 2:
-		for i in range(list.size()):
-			if t(fn.call(list[i], i)): return list[i]
-	else:
-		for x in list:
-			if t(fn.call(x)): return x
+	var n = fn.get_argument_count()
+	for i in range(list.size()):
+		if t(_cb(fn, n, list, i)): return list[i]
 	return null
 
 func findIndex(a, fn: Callable) -> int:
 	var list = iter(a)
-	var two = fn.get_argument_count() >= 2
+	var n = fn.get_argument_count()
 	for i in range(list.size()):
-		if t(fn.call(list[i], i) if two else fn.call(list[i])): return i
+		if t(_cb(fn, n, list, i)): return i
 	return -1
 
 func some(a, fn: Callable) -> bool:
@@ -334,9 +339,9 @@ func some(a, fn: Callable) -> bool:
 
 func every(a, fn: Callable) -> bool:
 	var list = iter(a)
-	var two = fn.get_argument_count() >= 2
+	var n = fn.get_argument_count()
 	for i in range(list.size()):
-		if not t(fn.call(list[i], i) if two else fn.call(list[i])): return false
+		if not t(_cb(fn, n, list, i)): return false
 	return true
 
 const _NOINIT = "\u0001__noinit__"
@@ -362,6 +367,7 @@ func sort(a: Array, fn = null) -> Array:
 		cmp = func(x, y): return -1 if s(x) < s(y) else (1 if s(x) > s(y) else 0)
 	else:
 		cmp = fn
+	var argc = cmp.get_argument_count()
 	var src = a.duplicate()
 	var buf = a.duplicate()
 	var width = 1
@@ -371,7 +377,7 @@ func sort(a: Array, fn = null) -> Array:
 			var mid = mini(lo + width, n); var hi = mini(lo + 2 * width, n)
 			var i = lo; var j = mid; var k = lo
 			while i < mid and j < hi:
-				var c = cmp.call(src[i], src[j])
+				var c = cmp.call(src[i], src[j]) if argc >= 2 else (cmp.call(src[i]) if argc == 1 else cmp.call())
 				if typeof(c) == TYPE_BOOL: c = 1 if c else -1
 				if c == null or (typeof(c) == TYPE_FLOAT and is_nan(c)): c = 0
 				if c <= 0:
@@ -691,6 +697,7 @@ func _plain(v):
 
 # ───────────────────────── time / scheduling ─────────────────────────
 func now() -> float:
+	if virtual_time >= 0.0: return virtual_time
 	return Time.get_ticks_usec() / 1000.0
 
 func dateNow() -> int:
@@ -705,7 +712,7 @@ var _rafs = {}         # id -> fn
 var virtual_time = -1.0   # >= 0: tests drive the clock manually (ms)
 
 func _clock() -> float:
-	return virtual_time if virtual_time >= 0.0 else now()
+	return now()
 
 func setTimeout(fn, ms = 0) -> int:
 	_timer_id += 1
@@ -731,9 +738,19 @@ func requestAnimationFrame(fn) -> int:
 func cancelAnimationFrame(id = null) -> void:
 	if id != null: _rafs.erase(id)
 
+var sim_speed := 0          # > 0: tests fast-forward this many 60 Hz ticks per rendered frame
+var perf_pump_usec := 0    # time spent in game callbacks last frame
+
 func _process(_dt: float) -> void:
 	Ctx2D.frame_id += 1
-	if virtual_time < 0.0: pump()
+	var t0 := Time.get_ticks_usec()
+	if sim_speed > 0:
+		if virtual_time < 0.0: virtual_time = now()
+		for i in range(sim_speed):
+			virtual_time += 1000.0 / 60.0
+			pump()
+	elif virtual_time < 0.0: pump()
+	perf_pump_usec = Time.get_ticks_usec() - t0
 
 # Runs due animation-frame callbacks and timers once.
 func pump() -> void:

@@ -485,7 +485,7 @@ func applyTalentBonuses():
 
 func _findTalentNode(id = null):
 	for section in JS.iter(JS.values(TALENT_TREE)):
-		var found = JS.find(section.nodes, func(n = null): return JS.eq(n.id, id))
+		var found = JS.find(section.get("nodes"), func(n = null): return JS.eq(n.id, id))
 		if JS.t(found):
 			return found
 	return null
@@ -498,15 +498,15 @@ func purchaseTalent(nodeId = null):
 	var node = _findTalentNode(nodeId)
 	if not JS.t(node):
 		return false
-	var current = JS.or_(JS.idx(meta.talents, nodeId), 0)
-	if current >= node.maxLevel:
+	var current = JS.or_(JS.idx(meta.get("talents"), nodeId), 0)
+	if current >= node.get("maxLevel"):
 		return false
 	var nextLvl = current + 1
 	var cost = JS.callm(node, "cost", [nextLvl])
 	if (JS.or_(meta.get("phos"), 0)) < cost:
 		return false
 	meta.phos -= cost
-	meta.talents[nodeId] = nextLvl
+	meta.get("talents")[nodeId] = nextLvl
 	Artifacts.saveMeta()
 	return true
 
