@@ -1,0 +1,106 @@
+name: Godot web build
+
+# Builds the Godot port (godot/) for the web and publishes it to play/ on main, where
+# GitHub Pages serves it at <site>/play/ next to the JavaScript game.
+#  - pull requests touching godot/: build + smoke test only (nothing is published)
+#  - main: runs after "Update version" finishes, rebuilds only if godot/ changed since the
+#    build already in play/, and commits the result (bot commits do not re-trigger workflows)
+
+on:
+  pull_request:
+    paths: ['godot/**', '.github/workflows/godot-web.yml']
+  workflow_run:
+    workflows: ['Update version']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: godot-web-${{ github.event_name }}-${{ github.event.pull_request.number || 'main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  GODOT_VERSION: 4.4.1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Is the published build already up to date?
+        id: check
+        run: |
+          SRC=$(git rev-parse HEAD:godot)
+          BUILT=$(cat play/.build-source 2>/dev/null || true)
+          if [ "${{ github.event_name }}" != "pull_request" ] && [ "$SRC" = "$BUILT" ]; then
+            echo "play/ already built from godot/ $SRC - nothing to do"
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Cache Godot
+        if: steps.check.outputs.build == 'true'
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot-ci
+          key: godot-${{ env.GODOT_VERSION }}-linux-web-nothreads
+
+      - name: Download Godot and the web export template
+        if: steps.check.outputs.build == 'true' && steps.cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot-ci && cd ~/godot-ci
+          REL=https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable
+          curl -fsSL --retry 4 -o godot.zip "$REL/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          curl -fsSL --retry 4 -o templates.tpz "$REL/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q godot.zip && mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 godot && chmod +x godot
+          unzip -q templates.tpz templates/web_nothreads_release.zip templates/version.txt
+          rm godot.zip templates.tpz
+
+      - name: Install Godot
+        if: steps.check.outputs.build == 'true'
+        run: |
+          T=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$T" && cp ~/godot-ci/templates/* "$T/"
+          echo "GODOT=$HOME/godot-ci/godot" >> "$GITHUB_ENV"
+
+      - name: Build web export
+        if: steps.check.outputs.build == 'true'
+        run: godot/tools/build_web.sh "$RUNNER_TEMP/play"
+
+      - name: Smoke test in headless Chromium
+        if: steps.check.outputs.build == 'true'
+        working-directory: godot/tools
+        run: |
+          npm install --no-save --no-audit --no-fund playwright
+          npx playwright install --with-deps chromium
+          node web_smoke.js "$RUNNER_TEMP/play" "$RUNNER_TEMP/smoke.png"
+
+      - name: Upload smoke test screenshot
+        if: always() && steps.check.outputs.build == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-smoke-screenshot
+          path: ${{ runner.temp }}/smoke.png
+          if-no-files-found: ignore
+
+      - name: Publish to play/
+        if: steps.check.outputs.build == 'true' && github.event_name != 'pull_request'
+        run: |
+          git checkout -- .
+          rm -rf play && cp -r "$RUNNER_TEMP/play" play
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A play
+          if git diff --staged --quiet; then echo "no changes"; exit 0; fi
+          git commit -m "godot web build: $(cut -c1-7 play/.build-source)"
+          for i in 1 2 3 4; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            sleep $((i * 5))
+          done
+          echo "could not push the build" >&2; exit 1

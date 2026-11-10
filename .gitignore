@@ -17,3 +17,8 @@ desktop.ini
 
 # Node (if tooling is ever added)
 node_modules/
+
+# Godot port
+godot/.godot/
+godot/tools/node_modules/
+godot/build/
