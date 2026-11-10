@@ -1,0 +1,1 @@
+[{"speed":20},{"ms":500},{"js":"activeSaveSlot = 0; patchActiveSlot({playerName:'Bot'}); playerName = 'Bot'; sandboxMode = false; showBetweenRuns()"},{"bot":2,"battles":10,"out":"stdout"},{"print":"DRIVER: done"}]

@@ -38,6 +38,29 @@ Two workable routes:
 Screens are styled by `web/styles.css` and the HTML strings in the game modules, exactly as in the
 browser version.
 
+## Web build and GitHub Pages
+
+`tools/build_web.sh [output-dir]` exports the game for the web (Godot 4.4.1 with the web
+export template installed). The output is a plain static folder:
+
+- No special server headers are needed: thread support is off in the export preset, which is
+  what GitHub Pages requires.
+- Music is not packed into `index.pck`. The script copies the mp3 files to `audio/` next to
+  `index.html` and the game fetches each track when it is first played, so the first load is
+  about 13 MB of game data plus the engine instead of an extra 35 MB of music.
+- The on-screen keyboard is enabled so the name field works on phones.
+
+`.github/workflows/godot-web.yml` runs that script in CI:
+
+- On pull requests that touch `godot/` it builds and runs `tools/web_smoke.js`, which serves
+  the export the way Pages does, boots it in headless Chromium, clicks PLAY and fails on any
+  script error, failed request or missing music.
+- On `main` it runs after the version bump, rebuilds only when `godot/` changed, and commits
+  the result to `play/` at the repository root. Pages then serves it at `<site>/play/`. The
+  JavaScript game at the site root is not touched.
+
+To run the smoke test locally: `cd tools && NODE_PATH=$(npm root -g) node web_smoke.js ../build/web`.
+
 ## Saves
 
 Saves live in `user://localstorage.json` using the same keys and JSON as the browser's

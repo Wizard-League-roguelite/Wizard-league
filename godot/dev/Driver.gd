@@ -50,6 +50,12 @@ func _process(_dt: float) -> void:
 	if _bot_out != "":
 		var bot := get_node("/root/Bot")
 		if not bot._botDone and Engine.get_process_frames() % 20 != 0: return
+		if _bot_out == "stdout":   # web export: no shared filesystem, report through the console
+			if not bot._botDone: return
+			for l in bot._botLog: print("BOT|", l)
+			print("DRIVER: bot finished, ", bot._botLog.size(), " lines")
+			_bot_out = ""
+			return
 		var f := FileAccess.open(_bot_out, FileAccess.WRITE)
 		f.store_string("\n".join(PackedStringArray(bot._botLog)) + "\n")
 		f.close()

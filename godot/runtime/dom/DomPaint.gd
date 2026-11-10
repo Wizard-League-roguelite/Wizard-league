@@ -146,6 +146,10 @@ func _place_control(n: DomNode) -> void:
 	if n.control == null: return
 	var r: Rect2 = doc.client_rect(n)
 	n.control.visible = true
+	# native controls are children of the host node, so by tree order they would draw
+	# underneath every DOM canvas item: lift them just above their element's layer
+	n.control.z_as_relative = false
+	n.control.z_index = clampi(n.eff_z + 1, -4000, 4000)
 	n.control.position = r.position
 	n.control.size = r.size
 

@@ -20,20 +20,62 @@ func _init(src_ = null) -> void:
 	document.add_child(_player)
 	if src_ != null: src = src_
 
+var _http: HTTPRequest = null
+var _want_play := false
+static var _remote_cache := {}    # src -> AudioStreamMP3 fetched over HTTP (web build)
+
 var src:
 	get: return _src
 	set(v):
 		_src = JS.s(v)
+		_want_play = false
+		if _http != null:
+			_http.cancel_request()
+			_http.queue_free()
+			_http = null
+		_player.stop()
+		_paused = true
+		_pending_pos = 0.0
 		var path := "res://" + _src
-		var stream = load(path) if ResourceLoader.exists(path) else null
+		var stream = load(path) if ResourceLoader.exists(path) else _remote_cache.get(_src)
+		if stream == null and OS.has_feature("web"):
+			# the web export keeps music out of the .pck (fast first load) and streams it
+			# from the audio/ folder that sits next to index.html
+			_player.stream = null
+			_fetch_remote(_src)
+			return
 		if stream == null:
 			push_warning("JSAudio: missing audio file %s" % path)
 		elif stream is AudioStreamMP3:
 			stream.loop = _loop
-		_player.stop()
 		_player.stream = stream
-		_paused = true
-		_pending_pos = 0.0
+
+func _fetch_remote(s: String) -> void:
+	var base := str(JavaScriptBridge.eval("new URL('.', window.location.href).href", true))
+	var parts := PackedStringArray()
+	for seg in s.split("/"): parts.append(seg.uri_encode())
+	_http = HTTPRequest.new()
+	document.add_child(_http)
+	var h := _http
+	h.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray):
+		if h != _http: return        # src changed while downloading
+		_http = null
+		h.queue_free()
+		if result != HTTPRequest.RESULT_SUCCESS or code != 200 or body.size() < 128:
+			push_warning("JSAudio: could not fetch %s (result %d, http %d)" % [s, result, code])
+			return
+		var st := AudioStreamMP3.new()
+		st.data = body
+		st.loop = _loop
+		_remote_cache[s] = st
+		_player.stream = st
+		if _want_play:
+			_want_play = false
+			_player.play(_pending_pos))
+	if h.request(base + "/".join(parts)) != OK:
+		push_warning("JSAudio: could not request %s" % s)
+		_http = null
+		h.queue_free()
 
 var loop:
 	get: return _loop
@@ -58,7 +100,7 @@ var currentTime:
 		if _player.playing: _player.seek(_pending_pos)
 
 var paused: bool:
-	get: return _paused or not _player.playing
+	get: return _paused or not (_player.playing or _want_play)
 
 var duration: float:
 	get: return _player.stream.get_length() if _player.stream != null else 0.0
@@ -67,12 +109,16 @@ func play() -> JSAudio:
 	if _player.stream != null:
 		_player.play(_pending_pos)
 		_paused = false
+	elif _http != null:
+		_want_play = true          # starts as soon as the download finishes
+		_paused = false
 	return self
 
 func pause() -> void:
 	if _player.playing:
 		_pending_pos = _player.get_playback_position()
 		_player.stop()
+	_want_play = false
 	_paused = true
 
 # `el.play().catch(...)` / `.then(...)`: playback never rejects here
