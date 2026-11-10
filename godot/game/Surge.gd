@@ -95,14 +95,14 @@ func _triggerSurge(targetSide = null):
 		var alive = Helpers.aliveEnemies()
 		for e in JS.iter(alive):
 			State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), e))
-			Hit.applyDirectDamage.call("player", "enemy", surgeValue, "⚡ Surge (Live Wire)")
+			Hit.applyDirectDamage("player", "enemy", surgeValue, "⚡ Surge (Live Wire)")
 			if JS.t(State.combat.get("over")):
 				continue
 		# Restore active enemy
 		if not JS.t(State.combat.get("over")):
 			State.setActiveEnemy(State.combat.get("targetIdx"))
 	else:
-		Hit.applyDirectDamage.call("player", targetSide, surgeValue, "⚡ Surge")
+		Hit.applyDirectDamage("player", targetSide, surgeValue, "⚡ Surge")
 	if JS.t(State.combat.get("over")):
 		return
 	# Galestrike (Air+Lightning duo): triggering Surge costs 5 Momentum

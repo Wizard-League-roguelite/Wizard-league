@@ -397,11 +397,11 @@ func _libSimulateSpell(spell = null):
 	for k in JS.iter(_noopKeys):
 		var _fn11 = func():
 			pass
-		window[k] = _fn11
+		JS.hook(k, _fn11)
 	var _fn12 = func(_a = null, _d = null, dmg = null, label = null):
 		if dmg > 0:
 			events.append({"type": "damage", "hits": 1, "dmgPerHit": dmg, "total": dmg, "effects": [], "label": JS.or_(label, "")})
-	Hit.applyDirectDamage = _fn12
+	JS.hook("applyDirectDamage", _fn12)
 	var _fn13 = func(_a = null, _d = null, pts = null):
 		if pts <= 0:
 			return
@@ -419,8 +419,8 @@ func _libSimulateSpell(spell = null):
 		else:
 			hpDmg = pts
 		events.append({"type": "melt", "pts": pts, "armorDestroyed": armorDestroyed, "hpDmg": hpDmg})
-	Hit.applyMelt = _fn13
-	Helpers.totalEnemyBurnStacks = func(): return 0
+	JS.hook("applyMelt", _fn13)
+	JS.hook("totalEnemyBurnStacks", func(): return 0)
 	State.combat.enemies = [mockEnemy]
 	State.combat.enemy = mockEnemy
 	State.combat.activeEnemyIdx = 0
@@ -431,8 +431,7 @@ func _libSimulateSpell(spell = null):
 	JS.callm(spell, "execute", [mockS])
 	# keep whatever was captured
 	for k in JS.iter(JS.arr(_noopKeys) + JS.arr(_captureKeys)):
-		if JS.idx(_saved, k) != null:
-			window[k] = JS.idx(_saved, k)
+		JS.unhook(k)
 	State.combat.enemies = _sc.get("enemies")
 	State.combat.enemy = _sc.get("enemy")
 	State.combat.activeEnemyIdx = _sc.get("activeEnemyIdx")

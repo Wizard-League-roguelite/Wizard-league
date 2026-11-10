@@ -203,6 +203,20 @@ func _fit(f: Callable, args: Array) -> Array:
 	if args.size() > n: return args.slice(0, n)
 	return args
 
+# Temporary replacements for game functions (used by the library's spell-preview simulator).
+var hooks: Dictionary = {}
+
+func hook(name_, fn) -> void:
+	if fn is Callable: hooks[s(name_)] = fn
+	else: hooks.erase(s(name_))
+
+func unhook(name_) -> void:
+	hooks.erase(s(name_))
+
+func run_hook(name_: String, args: Array):
+	var f: Callable = hooks[name_]
+	return f.callv(_fit(f, args))
+
 # ───────────────────────── objects ─────────────────────────
 func keys(o) -> Array:
 	var out = []
@@ -743,6 +757,7 @@ var perf_pump_usec := 0    # time spent in game callbacks last frame
 
 func _process(_dt: float) -> void:
 	Ctx2D.frame_id += 1
+	if not hooks.is_empty(): hooks.clear()   # hooks never outlive the call that installed them
 	var t0 := Time.get_ticks_usec()
 	if sim_speed > 0:
 		if virtual_time < 0.0: virtual_time = now()
@@ -783,6 +798,32 @@ func next_timer_due() -> float:
 # ───────────────────────── misc browser bits ─────────────────────────
 func confirm(_msg = null) -> bool:
 	return true
+
+# Yes/No dialog built from DOM elements; calls `on_yes` when confirmed.
+func confirmDialog(msg, on_yes) -> void:
+	var overlay: DomNode = document.createElement("div")
+	overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9500;display:flex;align-items:center;justify-content:center;"
+	var box: DomNode = document.createElement("div")
+	box.style.cssText = "background:#0d0b09;border:1px solid #3a2a10;border-radius:8px;padding:1.2rem 1.4rem;max-width:340px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.8);"
+	var text: DomNode = document.createElement("div")
+	text.style.cssText = "font-family:'Cinzel',serif;font-size:.8rem;color:#c8a060;margin-bottom:1rem;line-height:1.5;"
+	text.textContent = s(msg)
+	var row: DomNode = document.createElement("div")
+	row.style.cssText = "display:flex;gap:.6rem;justify-content:center;"
+	var yes: DomNode = document.createElement("button")
+	yes.style.cssText = "background:#1a0a08;border:1px solid #6a2a1a;color:#e06a4a;font-family:'Cinzel',serif;font-size:.7rem;padding:.4rem 1rem;border-radius:4px;cursor:pointer;"
+	yes.textContent = "Yes"
+	var no: DomNode = document.createElement("button")
+	no.style.cssText = "background:#0f0d0b;border:1px solid #3a3020;color:#8a6a30;font-family:'Cinzel',serif;font-size:.7rem;padding:.4rem 1rem;border-radius:4px;cursor:pointer;"
+	no.textContent = "Cancel"
+	yes.onclick = func():
+		overlay.remove()
+		invoke(on_yes, [])
+	no.onclick = func(): overlay.remove()
+	row.appendChild(yes); row.appendChild(no)
+	box.appendChild(text); box.appendChild(row)
+	overlay.appendChild(box)
+	document.body.appendChild(overlay)
 
 func alert(msg = null) -> void:
 	print("[alert] ", s(msg))

@@ -492,6 +492,8 @@ func freshEnemyStatus():
 	return JS.merge([STATUS_DEFAULTS, {"seeds": [], "surgeActive": false, "surgeValue": 0, "surgeMeter": 0}])
 
 func setActiveEnemy(idx = null):
+	if JS.hooks.has("setActiveEnemy"):
+		return JS.run_hook("setActiveEnemy", [idx])
 	if not JS.t(JS.idx(combat.get("enemies"), idx)):
 		return
 	combat.activeEnemyIdx = idx

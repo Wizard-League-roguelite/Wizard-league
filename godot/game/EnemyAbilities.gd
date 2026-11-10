@@ -977,7 +977,7 @@ func ENEMY_ABILITY_CATALOGUE__lightning_blitz__fn(i = null):
 	if shock > 0:
 		var dmg = shock * max(1, floori((JS.or_(e.get("statPow"), 0)) / 2.0))
 		UI.log_("💫 " + JS.s(e.get("name")) + " BLITZ! Detonates " + JS.s(shock) + " Shock stacks (" + JS.s(dmg) + " dmg)", "enemy")
-		Hit.applyDirectDamage.call("enemy", "player", dmg, "💫 Blitz")
+		Hit.applyDirectDamage("enemy", "player", dmg, "💫 Blitz")
 		State.status.get("player").shockStacks = 0
 	else:
 		Hit.performHit("enemy", "player", {"baseDamage": 18, "effects": [], "abilityElement": "Lightning", "isEnemyAttack": true})

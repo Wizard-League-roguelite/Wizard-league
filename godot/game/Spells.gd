@@ -1466,10 +1466,10 @@ func _plasmaConsumeHeal(amount = null, s = null):
 	if (Main.hasPassive("plasma_reactive_field") and not JS.t(State.combat.get("plasmaOvercharged"))):
 		var selfDmg = amount * 5
 		var reactDmg = amount * 5
-		Hit.applyDirectDamage.call("enemy", "player", selfDmg, "💥 Reactive Sacrifice")
+		Hit.applyDirectDamage("enemy", "player", selfDmg, "💥 Reactive Sacrifice")
 		for e in JS.iter(Helpers.aliveEnemies()):
 			State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), e))
-			Hit.applyDirectDamage.call("player", "enemy", reactDmg, "💥 Reactive Field")
+			Hit.applyDirectDamage("player", "enemy", reactDmg, "💥 Reactive Field")
 	# Heal (always — Reactive Field self-damage offsets it when not overcharged)
 	var healPer = JS.round(3 * overMult)
 	var totalHeal = healPer * amount
@@ -1590,7 +1590,7 @@ func SPELL_CATALOGUE__extinguish__execute(s = null):
 	# Trigger enemy burn tick now
 	if (JS.t(e) and e.get("status").get("burnStacks") > 0):
 		var tickDmg = JS.round(e.get("status").get("burnStacks") * Helpers.burnDmgPerStack("player", Helpers.effectPowerFor("player")))
-		Hit.applyDirectDamage.call("player", "enemy", tickDmg, "🔥 Burn (triggered)")
+		Hit.applyDirectDamage("player", "enemy", tickDmg, "🔥 Burn (triggered)")
 		if JS.t(State.combat.get("over")):
 			return
 	var eRemoved = (ceili((JS.or_(e.get("status").get("burnStacks"), 0)) / 2.0) if JS.t(e) else 0)
@@ -1601,12 +1601,12 @@ func SPELL_CATALOGUE__extinguish__execute(s = null):
 	var dmgMult = JS.round(2 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 0.9))
 	var bonusDmg = ((eRemoved + pRemoved) * dmgMult) + JS.callm(s, "attackPow", [])
 	if bonusDmg > 0:
-		Hit.applyDirectDamage.call("player", "enemy", bonusDmg, "💧 Extinguish bonus")
+		Hit.applyDirectDamage("player", "enemy", bonusDmg, "💧 Extinguish bonus")
 	JS.callm(s, "log", ["💧 Extinguish! −" + JS.s(eRemoved) + " enemy burn, −" + JS.s(pRemoved) + " self burn, +" + JS.s(bonusDmg) + " dmg", "player"])
 
 func SPELL_CATALOGUE__fire_heal__execute(s = null):
 	var this = JS._this
-	var total = Helpers.totalEnemyBurnStacks.call() + (JS.or_(State.status.get("player").get("burnStacks"), 0))
+	var total = Helpers.totalEnemyBurnStacks() + (JS.or_(State.status.get("player").get("burnStacks"), 0))
 	var healPer = 1 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 0.2, 0.95)
 	var healed = max(1, JS.round(total * healPer))
 	JS.callm(s, "healSelf", [healed])
@@ -1614,7 +1614,7 @@ func SPELL_CATALOGUE__fire_heal__execute(s = null):
 
 func SPELL_CATALOGUE__fire_rage__execute(s = null):
 	var this = JS._this
-	var total = Helpers.totalEnemyBurnStacks.call() + (JS.or_(State.status.get("player").get("burnStacks"), 0))
+	var total = Helpers.totalEnemyBurnStacks() + (JS.or_(State.status.get("player").get("burnStacks"), 0))
 	var boost = floori(total / 2.0)
 	var rageTurns = 1 + JS.round(Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 1, 1.0))
 	State.status.get("player").rageBoostPow = boost
@@ -1637,14 +1637,14 @@ func SPELL_CATALOGUE__melt_strike__execute(s = null):
 	# strips armor at 3:1 cost (ceil(armor/3) pts to destroy all armor), then
 	# remaining pts deal direct HP damage at 1:1 — bypasses shock and shields.
 	var pts = floori((12 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 3, 0.9)) + (JS.callm(s, "attackPow", []) * 0.5))
-	Hit.applyMelt.call("player", "enemy", pts, "⚒️ Melt Strike")
+	Hit.applyMelt("player", "enemy", pts, "⚒️ Melt Strike")
 	JS.callm(s, "log", ["⚒️ Melt Strike!", "player"])
 
 func SPELL_CATALOGUE__forge_blast__execute(s = null):
 	var this = JS._this
 	var pts = floori((8 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 0.9)) + (JS.callm(s, "attackPow", []) * 0.5))
 	var burn = JS.round(8 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 0.9))
-	Hit.applyMelt.call("player", "enemy", pts, "💥 Forge Blast")
+	Hit.applyMelt("player", "enemy", pts, "💥 Forge Blast")
 	if JS.t(State.combat.get("over")):
 		return
 	JS.callm(s, "hit", [{"baseDamage": 0, "effects": [{"type": "burn", "stacks": burn}], "abilityElement": "Fire"}])
@@ -1664,7 +1664,7 @@ func SPELL_CATALOGUE__crucible__execute(s = null):
 		JS.callm(s, "log", ["🌡️ Crucible! Armor " + JS.s(baseArmor) + " → " + JS.s(boosted), "player"])
 	var pts = floori((boosted * 0.5) + (JS.callm(s, "attackPow", []) * 0.25))
 	if pts > 0:
-		Hit.applyMelt.call("player", "enemy", pts, "🌡️ Crucible")
+		Hit.applyMelt("player", "enemy", pts, "🌡️ Crucible")
 	else:
 		JS.callm(s, "log", ["🌡️ Crucible — no armor to exploit.", "player"])
 
@@ -1675,7 +1675,7 @@ func SPELL_CATALOGUE__scorch_through__execute(s = null):
 	var _arr2 = JS.iter(Helpers.aliveEnemies())
 	for i in range(len(_arr2)):
 		State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
-		Hit.applyMelt.call("player", "enemy", pts, "🌊 Scorch Through")
+		Hit.applyMelt("player", "enemy", pts, "🌊 Scorch Through")
 		if JS.t(State.combat.get("over")):
 			continue
 	if not JS.t(State.combat.get("over")):
@@ -1689,7 +1689,7 @@ func SPELL_CATALOGUE__slag__execute(s = null):
 		return
 	var armorBefore = JS.or_(e.get("status").get("block"), 0)
 	var pts = floori((6 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 0.9)) + (JS.callm(s, "attackPow", []) * 0.5))
-	Hit.applyMelt.call("player", "enemy", pts, "🔶 Slag")
+	Hit.applyMelt("player", "enemy", pts, "🔶 Slag")
 	if JS.t(State.combat.get("over")):
 		return
 	var armorConsumed = armorBefore - (JS.or_(e.get("status").get("block"), 0))
@@ -1705,7 +1705,7 @@ func SPELL_CATALOGUE__heat_surge__execute(s = null):
 		return
 	var pts = floori((16 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 3, 0.9)) + (JS.callm(s, "attackPow", []) * 0.5))
 	var hpBefore = e.get("hp")
-	Hit.applyMelt.call("player", "enemy", pts, "❤️‍🔥 Heat Surge")
+	Hit.applyMelt("player", "enemy", pts, "❤️‍🔥 Heat Surge")
 	if JS.t(State.combat.get("over")):
 		return
 	var hpDmg = max(0, hpBefore - (JS.or_(e.get("hp"), 0)))
@@ -1734,7 +1734,7 @@ func SPELL_CATALOGUE__smelt__execute(s = null):
 			JS.callm(s, "log", ["⚗️ Smelt: chips " + JS.s(pts * 3) + " Burn (" + JS.s(e.get("status").get("burnStacks")) + " remain)", "player"])
 			pts = 0
 	if pts > 0:
-		Hit.applyMelt.call("player", "enemy", pts, "⚗️ Smelt")
+		Hit.applyMelt("player", "enemy", pts, "⚗️ Smelt")
 	elif burn == 0:
 		JS.callm(s, "log", ["⚗️ Smelt! (no Burn to convert)", "player"])
 
@@ -1746,7 +1746,7 @@ func SPELL_CATALOGUE__overheat__execute(s = null):
 	var pts = floori((selfBurn + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 0.9)) + (JS.callm(s, "attackPow", []) * 0.5))
 	JS.callm(s, "log", ["🌡️ Overheat! " + JS.s(selfBurn) + " Burn consumed → " + JS.s(pts) + " Melt pts", "player"])
 	if pts > 0:
-		Hit.applyMelt.call("player", "enemy", pts, "🌡️ Overheat")
+		Hit.applyMelt("player", "enemy", pts, "🌡️ Overheat")
 
 func SPELL_CATALOGUE__crucible_burst__execute(s = null):
 	var this = JS._this
@@ -1756,7 +1756,7 @@ func SPELL_CATALOGUE__crucible_burst__execute(s = null):
 	var armor = JS.or_(e.get("status").get("block"), 0)
 	var pts = (floori((30 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 5, 0.9)) + (JS.callm(s, "attackPow", []) * 0.5)) if armor >= 15 else floori((10 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 0.9)) + (JS.callm(s, "attackPow", []) * 0.5)))
 	JS.callm(s, "log", ["💥 Crucible Burst! " + ("Heavy" if armor >= 15 else "Light") + " armor — " + JS.s(pts) + " Melt pts", "player"])
-	Hit.applyMelt.call("player", "enemy", pts, "💥 Crucible Burst")
+	Hit.applyMelt("player", "enemy", pts, "💥 Crucible Burst")
 
 func SPELL_CATALOGUE__molten_surge__execute(s = null):
 	State.combat.meltDoubleTurn = true
@@ -1789,7 +1789,7 @@ func SPELL_CATALOGUE__melt_down__execute(s = null):
 		pts = floori(12 + (JS.callm(s, "attackPow", []) * 0.5))
 		JS.callm(s, "log", ["🫠 Melt Down! No armor — " + JS.s(pts) + " Melt", "player"])
 	if pts > 0:
-		Hit.applyMelt.call("player", "enemy", pts, "🫠 Melt Down")
+		Hit.applyMelt("player", "enemy", pts, "🫠 Melt Down")
 
 func SPELL_CATALOGUE__temper__execute(s = null):
 	State.combat.nextMeltDouble = true
@@ -1800,13 +1800,13 @@ func SPELL_CATALOGUE__white_heat__execute(s = null):
 	var pts = floori(JS.callm(s, "attackPow", []) * 0.5)
 	JS.callm(s, "log", ["🤍 White Heat! " + JS.s(pts) + " pure Melt", "player"])
 	if pts > 0:
-		Hit.applyMelt.call("player", "enemy", pts, "🤍 White Heat")
+		Hit.applyMelt("player", "enemy", pts, "🤍 White Heat")
 
 func SPELL_CATALOGUE__searing_verdict__execute(s = null):
 	var kills = JS.or_(State._runKillsThisRun, 0)
 	var pts = floori((15 + (kills * 3)) + (JS.callm(s, "attackPow", []) * 0.5))
 	JS.callm(s, "log", ["⚖️ Searing Verdict! " + JS.s(kills) + " kills → " + JS.s(pts) + " Melt pts", "player"])
-	Hit.applyMelt.call("player", "enemy", pts, "⚖️ Searing Verdict")
+	Hit.applyMelt("player", "enemy", pts, "⚖️ Searing Verdict")
 
 func SPELL_CATALOGUE__tidal_surge__execute(s = null):
 	var this = JS._this
@@ -1855,7 +1855,7 @@ func SPELL_CATALOGUE__drown__execute(s = null):
 			e.get("status").foamStacks = reapply
 			var abyssalDmg = (reapply * 15) + JS.callm(s, "attackPow", [])
 			if reapply > 0:
-				Hit.applyDirectDamage.call("player", "enemy", abyssalDmg, "🌊 Abyssal Pain")
+				Hit.applyDirectDamage("player", "enemy", abyssalDmg, "🌊 Abyssal Pain")
 			JS.callm(s, "log", ["🌊 Drown stuns! Abyssal Pain: " + JS.s(reapply) + " Foam reapplied, " + JS.s(abyssalDmg) + " dmg", "player"])
 		else:
 			if JS.t(e):
@@ -1906,15 +1906,15 @@ func SPELL_CATALOGUE__tsunami__execute(s = null):
 		for i in range(ceili(foam)):
 			if JS.t(State.combat.get("over")):
 				continue
-			Hit.applyDirectDamage.call("player", "enemy", dmgPerFoam, "🌊 Tsunami")
+			Hit.applyDirectDamage("player", "enemy", dmgPerFoam, "🌊 Tsunami")
 		if (not JS.t(State.combat.get("over")) and JS.callm(s, "attackPow", []) > 0):
-			Hit.applyDirectDamage.call("player", "enemy", JS.callm(s, "attackPow", []), "🌊 Tsunami (Power)")
+			Hit.applyDirectDamage("player", "enemy", JS.callm(s, "attackPow", []), "🌊 Tsunami (Power)")
 		if not JS.t(State.combat.get("over")):
 			if Main.hasPassive("water_abyssal_pain"):
 				var reapply = floori(foam / 2.0)
 				e.get("status").foamStacks = reapply
 				if reapply > 0:
-					Hit.applyDirectDamage.call("player", "enemy", (reapply * 15) + JS.callm(s, "attackPow", []), "🌊 Abyssal Pain")
+					Hit.applyDirectDamage("player", "enemy", (reapply * 15) + JS.callm(s, "attackPow", []), "🌊 Abyssal Pain")
 			else:
 				e.get("status").foamStacks = 0
 	if not JS.t(State.combat.get("over")):
@@ -2076,7 +2076,7 @@ func SPELL_CATALOGUE__blitz__execute(s = null):
 		var dmg = stacks * perStack
 		if JS.t(e):
 			e.get("status").shockStacks = 0
-		Hit.applyDirectDamage.call("player", "enemy", dmg, "💥 Blitz (" + JS.s(stacks) + " Shock)")
+		Hit.applyDirectDamage("player", "enemy", dmg, "💥 Blitz (" + JS.s(stacks) + " Shock)")
 		JS.callm(s, "log", ["💥⚡ Blitz! " + JS.s(stacks) + "×" + JS.s(perStack) + " = " + JS.s(dmg) + " dmg", "player"])
 	else:
 		JS.callm(s, "log", ["💥 Blitz — no Shock to detonate", "player"])
@@ -2347,7 +2347,7 @@ func SPELL_CATALOGUE__earthshaker__execute(s = null):
 	var this = JS._this
 	var mult = 3.0 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 0.5, 0.9)
 	var dmg = JS.round(JS.callm(s, "attackPow", []) * mult)
-	Hit.applyDirectDamage.call("player", "enemy", dmg, "👊 Earthshaker")
+	Hit.applyDirectDamage("player", "enemy", dmg, "👊 Earthshaker")
 	JS.callm(s, "log", ["👊🪨 Earthshaker! " + JS.s(dmg) + " dmg (" + JS.s(JS.callm(s, "attackPow", [])) + "×" + JS.toFixed(mult, 2) + ")", "player"])
 
 func SPELL_CATALOGUE__dig__execute(s = null):
@@ -2368,7 +2368,7 @@ func SPELL_CATALOGUE__cataclysm__execute(s = null):
 		var _arr8 = JS.iter(Helpers.aliveEnemies())
 		for i in range(len(_arr8)):
 			State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), JS.idx(Helpers.aliveEnemies(), i)))
-			Hit.applyDirectDamage.call("player", "enemy", dmg, "💥 Cataclysm (" + JS.s(stacks) + " Stone)")
+			Hit.applyDirectDamage("player", "enemy", dmg, "💥 Cataclysm (" + JS.s(stacks) + " Stone)")
 	JS.callm(s, "log", ["💥🪨 Cataclysm! " + JS.s(stacks) + " Stone × " + JS.s(perStack) + " = " + JS.s(dmg) + " dmg to all", "player"])
 
 func SPELL_CATALOGUE__vine_strike__execute(s = null):
@@ -2446,7 +2446,7 @@ func SPELL_CATALOGUE__living_forest__execute(s = null):
 			var target = JS.idx(alive, floori(randf() * len(alive)))
 			var idx = JS.indexOf(State.combat.get("enemies"), target)
 			State.setActiveEnemy(idx)
-			Hit.applyDirectDamage.call("player", "enemy", t.get("dmg"), "🌲 " + JS.s(t.get("name")))
+			Hit.applyDirectDamage("player", "enemy", t.get("dmg"), "🌲 " + JS.s(t.get("name")))
 			if (not JS.t(State.combat.get("over")) and randf() < t.get("rootChance")):
 				Helpers.applyRoot("player", "enemy", 1)
 			if JS.t(State.combat.get("over")):
@@ -2483,7 +2483,7 @@ func SPELL_CATALOGUE__natures_wrath__execute(s = null):
 		e.get("status").overgrowthStacks = 0
 		var dmg = (stacks * perStack) + JS.callm(s, "attackPow", [])
 		if dmg > 0:
-			Hit.applyDirectDamage.call("player", "enemy", dmg, "🌿 Nature's Wrath (" + JS.s(stacks) + "×" + JS.s(perStack) + ")")
+			Hit.applyDirectDamage("player", "enemy", dmg, "🌿 Nature's Wrath (" + JS.s(stacks) + "×" + JS.s(perStack) + ")")
 		if JS.t(State.combat.get("over")):
 			continue
 	if not JS.t(State.combat.get("over")):
@@ -2662,7 +2662,7 @@ func SPELL_CATALOGUE__plasma_lance__execute(s = null):
 	var tgt = State.combat.get("targetIdx")
 	State.setActiveEnemy(tgt)
 	JS.callm(s, "hit", [{"baseDamage": dmg, "effects": [], "abilityElement": "Plasma", "_noAtk": true}])
-	Hit.applyDirectDamage.call("enemy", "player", 1, "🔮 Recoil")
+	Hit.applyDirectDamage("enemy", "player", 1, "🔮 Recoil")
 	JS.callm(s, "log", ["🔮 Plasma Lance! " + JS.s(spend) + " Charge × " + JS.s(dmgPerCharge) + " → " + JS.s(dmg) + " dmg", "player"])
 
 func SPELL_CATALOGUE__energy_infusion__execute(s = null):
@@ -2704,7 +2704,7 @@ func SPELL_CATALOGUE__self_sacrifice__execute(s = null):
 	for i in range(ceili(spend * hitsPerCharge)):
 		if JS.t(State.combat.get("over")):
 			return
-		Hit.applyDirectDamage.call("enemy", "player", 5, "💉 Self Sacrifice")
+		Hit.applyDirectDamage("enemy", "player", 5, "💉 Self Sacrifice")
 	JS.callm(s, "log", ["💉 Self Sacrifice! " + JS.s(spend) + " Charge → " + JS.s(spend * hitsPerCharge) + " hits of 5 self-dmg", "player"])
 
 func SPELL_CATALOGUE__borrowed_power__execute(s = null):
@@ -2926,7 +2926,7 @@ func SPELL_CATALOGUE__break_momentum__execute(s = null):
 	var dmgPerStack = JS.round(5 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 2, 0.95))
 	var dmg = (stacks * dmgPerStack) + JS.callm(s, "attackPow", [])
 	State.status.get("player").momentumStacks = 0
-	Hit.applyDirectDamage.call("player", "enemy", dmg, "💫 Break Momentum (" + JS.s(stacks) + "×" + JS.s(dmgPerStack) + ")")
+	Hit.applyDirectDamage("player", "enemy", dmg, "💫 Break Momentum (" + JS.s(stacks) + "×" + JS.s(dmgPerStack) + ")")
 	JS.callm(s, "log", ["💫 Break Momentum! " + JS.s(stacks) + " stacks → " + JS.s(dmg) + " damage!", "player"])
 	UI.renderStatusTags()
 
@@ -3000,7 +3000,7 @@ func SPELL_CATALOGUE__shield_bash__execute(s = null):
 	if not JS.t(State.combat.get("over")):
 		var defBonus = floori(Helpers.defenseFor("player") * 2)
 		var armorGranted = armorBase + defBonus
-		Hit.applyDirectDamage.call("player", "enemy", armorGranted, "🛡 Shield Bash")
+		Hit.applyDirectDamage("player", "enemy", armorGranted, "🛡 Shield Bash")
 		JS.callm(s, "log", ["🛡️ Shield Bash! +" + JS.s(armorGranted) + " Armor → " + JS.s(armorGranted) + " dmg", "player"])
 
 func SPELL_CATALOGUE__vampiric_strike__execute(s = null):
@@ -3023,7 +3023,7 @@ func SPELL_CATALOGUE__plasma_arc__execute(s = null):
 	# ── Lightning + Fire ─────────────────────────────────────────────────────────
 	var meltAmt = JS.round(20 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 3, 0.9))
 	var surgeVal = JS.round(30 + Incantations._incantationBonus(JS.or_(this.get("incantationLevel"), 1), 4, 0.9))
-	Hit.applyMelt.call("player", "enemy", meltAmt, "⚡🔥 Plasma Arc")
+	Hit.applyMelt("player", "enemy", meltAmt, "⚡🔥 Plasma Arc")
 	if not JS.t(State.combat.get("over")):
 		Surge._applySurge("enemy", surgeVal, "⚡🔥 Plasma Arc — Surge")
 	JS.callm(s, "log", ["⚡🔥 Plasma Arc! " + JS.s(meltAmt) + " Melt, Surge " + JS.s(surgeVal) + " loaded.", "player"])

@@ -33,6 +33,8 @@ func _boot():
 # All DOM render functions. No game logic here.
 # renderEnemyCards, renderSpellButtons, updateHPBars, log, showScreen, etc.
 func updateStatsUI():
+	if JS.hooks.has("updateStatsUI"):
+		return JS.run_hook("updateStatsUI", [])
 	# Build lives string: filled hearts for remaining, empty for lost
 	var maxDisplay = max(State.player.get("revives"), 3)
 	var heartsStr = "❤".repeat(State.player.get("revives")) + "🖤".repeat(max(0, maxDisplay - State.player.get("revives")))
@@ -109,6 +111,8 @@ func _repositionDeckSwitcher():
 # UI HELPERS
 # ===============================
 func renderEnemyCards():
+	if JS.hooks.has("renderEnemyCards"):
+		return JS.run_hook("renderEnemyCards", [])
 	var hud = document.getElementById("arena-enemy-hud")
 	if not JS.t(hud):
 		return
@@ -222,6 +226,8 @@ func renderEnemyIntentOverlay():
 	overlay.innerHTML = ""
 
 func renderSummonsRow():
+	if JS.hooks.has("renderSummonsRow"):
+		return JS.run_hook("renderSummonsRow", [])
 	var col = document.getElementById("arena-summons")
 	if not JS.t(col):
 		return
@@ -240,6 +246,8 @@ func renderSummonsRow():
 	Sprites.renderBattlefield()
 
 func updateHPBars():
+	if JS.hooks.has("updateHPBars"):
+		return JS.run_hook("updateHPBars", [])
 	var pMax = Helpers.maxHPFor("player")
 	var pPct = max(0, (State.player.get("hp") / float(pMax)) * 100)
 	# Player HUD
@@ -267,6 +275,8 @@ func updateHPBars():
 	renderSummonsRow()
 
 func renderStatusTags():
+	if JS.hooks.has("renderStatusTags"):
+		return JS.run_hook("renderStatusTags", [])
 	var pr = document.getElementById("player-status-row")
 	if JS.t(pr):
 		pr.innerHTML = ""
@@ -332,6 +342,8 @@ func hpColor(pct = null):
 	return ("#3a8a3a" if pct > 50 else ("#8a7a1a" if pct > 25 else "#8a2a2a"))
 
 func log_(msg = null, type_ = null):
+	if JS.hooks.has("log"):
+		return JS.run_hook("log", [msg, type_])
 	if type_ == null:
 		type_ = ""
 	var el = document.getElementById("battle-log")

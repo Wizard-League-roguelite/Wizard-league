@@ -122,6 +122,8 @@ func _arcPt(from = null, to = null, p = null):
 
 # ─── Public API ───────────────────────────────────────────────────────────────
 func triggerSpellAnim(abilityElement = null, attackerSide = null, targetEnemyIdx = null):
+	if JS.hooks.has("triggerSpellAnim"):
+		return JS.run_hook("triggerSpellAnim", [abilityElement, attackerSide, targetEnemyIdx])
 	var def = JS.or_(JS.idx(ANIM_DEFS, abilityElement), ANIM_DEFS.get("Neutral"))
 	var needsParticles = (def.get("type") == "arc" or def.get("type") == "rise")
 	ACTIVE_ANIMS.append(JS.merge([def, {
@@ -132,6 +134,8 @@ func triggerSpellAnim(abilityElement = null, attackerSide = null, targetEnemyIdx
 	}]))
 
 func triggerHealAnim():
+	if JS.hooks.has("triggerHealAnim"):
+		return JS.run_hook("triggerHealAnim", [])
 	var def = ANIM_DEFS.get("heal")
 	ACTIVE_ANIMS.append(JS.merge([def, {
 		"particles": _makeParticles(def.get("count"), def.get("spread")),

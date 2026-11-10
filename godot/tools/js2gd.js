@@ -44,6 +44,10 @@ const FILES = [...html.matchAll(/<script src="([^"]+)"/g)].map(m => m[1]);
 const mods = [];
 const GLOBALS = new Map(); // name -> {mod, kind, node}
 const REASSIGNED = new Set();
+// Functions the spell-preview simulator temporarily replaces (library.js swaps window[name]).
+// They stay ordinary functions with a small prologue that defers to JS.hooks when one is installed.
+const HOOKABLE = new Set(['renderStatusTags', 'renderEnemyCards', 'renderBattlefield', 'renderSummonsRow', 'updateHPBars', 'updateActionUI', 'updateStatsUI',
+  'triggerSpellAnim', 'triggerHealAnim', 'log', 'checkDeath', 'checkWin', 'setActiveEnemy', 'aliveEnemies', 'applyDirectDamage', 'applyMelt', 'totalEnemyBurnStacks']);
 const warnings = [];
 function warn(mod, node, msg) { warnings.push(`${mod.file}:${node && node.loc ? node.loc.start.line : '?'}: ${msg}`); }
 
@@ -107,6 +111,7 @@ for (const mod of mods) normalizeTop(mod);
 for (const mod of mods) mod.ast.body = mod.ast.body.map(n => {
   if (n.type !== 'FunctionDeclaration') return n;
   const nm = n.id.name;
+  if (HOOKABLE.has(nm)) return n;
   if (!(REASSIGNED.has(nm) && !n._topFnExport) && !REASSIGNED.has('window.' + nm)) return n;
   if (n._topFnExport && !REASSIGNED.has(nm)) return n;
   return { type: 'VariableDeclaration', kind: 'let', start: n.start, end: n.end, loc: n.loc, _private: n._private, _swappable: true,
@@ -859,6 +864,11 @@ class Emitter {
       const o = this.expr(L.object);
       if (R.type === 'Literal' && R.value === 0) return [`${o}.clear()`];
       return [`${o}.resize(${this.expr(R)})`];
+    }
+    // window.fn = replacement / window[name] = replacement → install a hook
+    if (op === '=' && L.type === 'MemberExpression' && L.object.type === 'Identifier' && L.object.name === 'window' && !L.object._b) {
+      if (L.computed) return [`JS.hook(${this.expr(L.property)}, ${this.expr(R)})`];
+      if (HOOKABLE.has(L.property.name)) return [`JS.hook(${strLit(L.property.name)}, ${this.expr(R)})`];
     }
     if (op === '=' && R.type === 'AssignmentExpression' && R.operator === '=') { // a = b = c
       const inner = this.assignStmt(R);
@@ -1673,6 +1683,7 @@ class Emitter {
           const body = this.block(s.body, head);
           this.fnStack.pop();
           if (info.usesThis) body.unshift('var this = JS._this');
+          if (HOOKABLE.has(s.id.name)) body.unshift(`if JS.hooks.has(${strLit(s.id.name)}):\n\treturn JS.run_hook(${strLit(s.id.name)}, [${s.params.map(p => this.bindName((p.type === 'AssignmentPattern' ? p.left : p)._b)).join(', ')}])`);
           text = `func ${name}(${params}):\n${ind((body.some(l => !l.startsWith('#')) ? body : [...body, 'pass']).join('\n'))}`;
         }
         const g = lookupGlobal(s.id.name, mod);

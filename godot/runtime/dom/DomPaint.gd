@@ -135,7 +135,7 @@ func _hide_control(n: DomNode) -> void:
 	if n.control != null and is_instance_valid(n.control): n.control.visible = false
 	for c in n.childNodes:
 		if c.nodeType != DomNode.ELEMENT: continue
-		if c.rid.is_valid() and c.st.get("position") == "fixed" and c.st.get("_shown", false):
+		if c.rid.is_valid() and c.st.get("_parent_rid") == doc.host_rid and c.st.get("_shown", false):
 			RenderingServer.canvas_item_set_visible(c.rid, false)
 			c.st["_shown"] = false
 		if c.control != null or c.childNodes.size() > 0: _hide_control(c)

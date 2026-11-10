@@ -1,10 +1,9 @@
 # Helpers — generated from js/logic/helpers.js by tools/js2gd.js
 extends Node
 
-var totalEnemyBurnStacks = null
 
 func _boot():
-	totalEnemyBurnStacks = totalEnemyBurnStacks_2
+	pass
 
 # ===== helpers.js =====
 # ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -92,7 +91,7 @@ func attackPowerFor(side = null, targetSide = null):
 			pow_ += bonus * totalRoots
 	# Blazing Heat (Fire): +totalEnemyBurn/2 AP
 	if (side == "player" and Main.hasPassive("fire_blazing_heat")):
-		pow_ += floori(totalEnemyBurnStacks.call() / 2.0)
+		pow_ += floori(totalEnemyBurnStacks() / 2.0)
 	# Fire Rage temp power
 	if s.get("rageBoostTurns") > 0:
 		pow_ += s.get("rageBoostPow")
@@ -159,6 +158,11 @@ func burnDmgPerStack(side = null, sourceEFX = null):
 	var base = (1.5 if legendary else 1.0)
 	return (base + ((JS.or_(sourceEFX, 0)) / 100.0)) + talentBonus
 
+func totalEnemyBurnStacks():
+	if JS.hooks.has("totalEnemyBurnStacks"):
+		return JS.run_hook("totalEnemyBurnStacks", [])
+	return JS.reduce(State.combat.get("enemies"), func(s = null, e = null): return s + (JS.or_(e.get("status").get("burnStacks"), 0) if JS.t(e.get("alive")) else 0), 0)
+
 # ── Effective armor (block + Stone bonuses – Foam – Frost) ───────────────────
 func effectiveArmor(side = null):
 	var s = JS.idx(State.status, side)
@@ -190,7 +194,7 @@ func powerFor(side = null, targetSide = null):
 			pow_ += bonus * totalRoots
 	# Blazing Heat (Fire passive): +total enemy burn / 2
 	if (side == "player" and Main.hasPassive("fire_blazing_heat")):
-		pow_ += floori(totalEnemyBurnStacks.call() / 2.0)
+		pow_ += floori(totalEnemyBurnStacks() / 2.0)
 	# Fire Rage temp power (2-turn window)
 	if s.get("rageBoostTurns") > 0:
 		pow_ += s.get("rageBoostPow")
@@ -264,6 +268,8 @@ func actionsPerTurnFor(side = null):
 
 # ── Misc ──────────────────────────────────────────────────────────────────────
 func aliveEnemies():
+	if JS.hooks.has("aliveEnemies"):
+		return JS.run_hook("aliveEnemies", [])
 	return JS.arr(State.combat.get("enemies")).filter(func(e = null): return JS.t(e.get("alive")))
 
 func firstAliveIdx():
@@ -434,7 +440,7 @@ func applySelfDamage(amount = null, label = null):
 	if Main.hasPassive("lightning_superconductor"):
 		var tripled = amount * 3
 		UI.log_("🔋 Superconductor redirects " + JS.s(label) + " — " + JS.s(tripled) + " dmg to enemy!", "status")
-		Hit.applyDirectDamage.call("player", "enemy", tripled, "🔋 " + JS.s(label))
+		Hit.applyDirectDamage("player", "enemy", tripled, "🔋 " + JS.s(label))
 	else:
 		State.player.hp = max(0, State.player.get("hp") - amount)
 		UI.log_(JS.s(label) + ": " + JS.s(amount) + " self damage. (" + JS.s(State.player.get("hp")) + "/" + JS.s(maxHPFor("player")) + ")", "player")
@@ -637,6 +643,3 @@ func applyEnemyElementalProc(element = null, enemyIdx = null):
 			pass
 		_:
 			pass
-
-func totalEnemyBurnStacks_2():
-	return JS.reduce(State.combat.get("enemies"), func(s = null, e = null): return s + (JS.or_(e.get("status").get("burnStacks"), 0) if JS.t(e.get("alive")) else 0), 0)

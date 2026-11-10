@@ -51,7 +51,7 @@ func _applyBookSpellEffect(action = null):
 			var anyEnemy = (JS.idx(Helpers.aliveEnemies(), 0) if JS.t(Helpers.aliveEnemies) else null)
 			if JS.t(anyEnemy):
 				State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), anyEnemy))
-				Hit.applyDirectDamage.call("player", "enemy", echoDmg, "🌀 Echo")
+				Hit.applyDirectDamage("player", "enemy", echoDmg, "🌀 Echo")
 				UI.log_("🌀 Echo Grimoire: +" + JS.s(echoDmg) + " echo damage!", "player")
 
 func startRound():
@@ -79,7 +79,7 @@ func startRound():
 		State.status.get("player").chargeShotDmgBonus = 0
 		for e in JS.iter(Helpers.aliveEnemies()):
 			State.setActiveEnemy(JS.indexOf(State.combat.get("enemies"), e))
-			Hit.applyDirectDamage.call("player", "enemy", csDmg, "🎯⚡ Charge Shot")
+			Hit.applyDirectDamage("player", "enemy", csDmg, "🎯⚡ Charge Shot")
 		UI.log_("🎯⚡ Charge Shot FIRES! " + JS.s(csDmg) + " dmg to all", "player")
 		if JS.t(State.combat.get("over")):
 			return
@@ -638,6 +638,8 @@ func renderQueue():
 		endBtn.textContent = ("⚔ End Turn — Resolve " + JS.s(totalQ) + " Action" + ("s" if totalQ > 1 else "") if JS.t(hasActions) else "⚔ End Turn")
 
 func updateActionUI():
+	if JS.hooks.has("updateActionUI"):
+		return JS.run_hook("updateActionUI", [])
 	var el = document.getElementById("turn-indicator")
 	var slotsTxt = document.getElementById("queue-slots-left")
 	if not JS.t(el):
@@ -862,7 +864,7 @@ func resolveFlat(flatActions = null, idx = null, chainGen = null):
 		# Headwind: bonus hit when acting first (EAB=0)
 		if ((((not JS.t(State.combat.get("over")) and State.playerElement == "Air") and Main.hasPassive("air_headwind")) and (JS.or_(JS.idx(flatActions, idx).get("enemyActionsBefore"), 0)) == 0) and not JS.t(isPlasmaFinal)):
 			var _hwDmg = JS.round(10 + (Helpers.attackPowerFor("player", "enemy") * 0.5))
-			Hit.applyDirectDamage.call("player", "enemy", _hwDmg, "💨 Headwind")
+			Hit.applyDirectDamage("player", "enemy", _hwDmg, "💨 Headwind")
 		# Turbulence: momentum from enemy actions before
 		if (((not JS.t(State.combat.get("over")) and State.playerElement == "Air") and Main.hasPassive("air_turbulence")) and not JS.t(isPlasmaFinal)):
 			var _turbGain = min(2, JS.or_(JS.idx(flatActions, idx).get("enemyActionsBefore"), 0)) * 2

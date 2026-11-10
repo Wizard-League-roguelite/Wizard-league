@@ -16,11 +16,24 @@ module.exports = {
     }; },`, ``],
   ],
   'js/ui/library.js': [
+    // The preview simulator swapped global functions through window[name]; restore by removing the hooks.
+    [`if (_saved[k] !== undefined) window[k] = _saved[k];`, `JS_unhook(k);`],
     [`get state() {
       return { self: { ...STATUS_DEFAULTS }, target: { ...STATUS_DEFAULTS } };
     },`, ``],
   ],
   'js/main.js': [
+    // confirm() cannot block in Godot: ask through an in-game dialog instead.
+    [`if (!confirm(\`Delete Save \${slot+1}? This cannot be undone.\`)) return;
+  deleteSlot(slot);
+  localStorage.removeItem('elemental_meta_v1_slot' + slot);
+  if (window._metaBySlot) delete window._metaBySlot[slot];
+  showSaveSelect();`, `JS_confirmDialog(\`Delete Save \${slot+1}? This cannot be undone.\`, () => {
+    deleteSlot(slot);
+    localStorage.removeItem('elemental_meta_v1_slot' + slot);
+    if (window._metaBySlot) delete window._metaBySlot[slot];
+    showSaveSelect();
+  });`],
     // BUG FIX: `isDeck` was never defined, so the sandbox deck picker threw a ReferenceError.
     [`(isDeck ? '⚡ Generic Deck' : '⚡ Generic')`, `'⚡ Generic Deck'`],
     [`(cat.element || '') + (isDeck ? ' Deck' : ' Book')`, `(cat.element || '') + ' Deck'`],

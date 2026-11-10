@@ -1248,6 +1248,8 @@ func _drawFloatAura(ctx = null, cx = null, cy = null, r = null, element = null, 
 	ctx.restore()
 
 func renderBattlefield():
+	if JS.hooks.has("renderBattlefield"):
+		return JS.run_hook("renderBattlefield", [])
 	var canvas = document.getElementById("battle-canvas")
 	if (not JS.t(canvas) or not JS.t(canvas.get("width"))):
 		return

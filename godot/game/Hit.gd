@@ -1,16 +1,9 @@
 # Hit — generated from js/logic/hit.js by tools/js2gd.js
 extends Node
 
-var applyDirectDamage = null
-var applyMelt = null
 
 func _boot():
-	applyDirectDamage = applyDirectDamage_2
-	# ─── MELT DAMAGE ─────────────────────────────────────────────────────────────
-	# Melt is a Fire damage type that hits armor at 3:1 efficiency (ceil(armor/3) points
-	# to destroy all armor), then remaining points deal direct HP damage at 1:1.
-	# Bypasses shock damage reduction and all shield effects — armor still applies normally.
-	applyMelt = applyMelt_2
+	pass
 
 # ===== hit.js =====
 # ─── DAMAGE PIPELINE ─────────────────────────────────────────────────────────
@@ -232,7 +225,7 @@ func performHit(attackerSide = null, defenderSide = null, pkg = null):
 					var _mdownDmg = JS.round(peak)
 					UI.log_("🌋 Meltdown! +" + JS.s(_mdownDmg) + " from peak armor " + JS.s(peak) + "!", "status")
 					JS.idx(State.status, defenderSide)._armorPeak = 0
-					applyDirectDamage.call("player", "enemy", _mdownDmg, "🌋 Meltdown")
+					applyDirectDamage("player", "enemy", _mdownDmg, "🌋 Meltdown")
 					if JS.t(State.combat.get("over")):
 						return
 				# Tidal Shield reactive: Foam attacker + heal per block consumed
@@ -267,7 +260,7 @@ func performHit(attackerSide = null, defenderSide = null, pkg = null):
 			UI.renderStatusTags()
 			dmg = 0
 		var _atkEnemy = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
-		applyDirectDamage.call(attackerSide, defenderSide, dmg, (pkg.get("label") if JS.t(pkg.get("label")) else ((JS.or_(JS.g(_atkEnemy, "emoji"), "")) + " " + (JS.or_(JS.g(_atkEnemy, "name"), "Enemy")) if JS.t(pkg.get("isEnemyAttack")) else "Hit")))
+		applyDirectDamage(attackerSide, defenderSide, dmg, (pkg.get("label") if JS.t(pkg.get("label")) else ((JS.or_(JS.g(_atkEnemy, "emoji"), "")) + " " + (JS.or_(JS.g(_atkEnemy, "name"), "Enemy")) if JS.t(pkg.get("isEnemyAttack")) else "Hit")))
 		# ── Air: Momentum gain per damage instance ──
 		if (((attackerSide == "player" and State.playerElement == "Air") and dmg > 0) and not JS.t(pkg.get("_isTornadoSelf"))):
 			if randf() < (pkg.get("momentumChance") if pkg.get("momentumChance") != null else 0.5):
@@ -287,7 +280,7 @@ func performHit(attackerSide = null, defenderSide = null, pkg = null):
 		if (JS.t(defIsFrozen) and dmg > 0):
 			var hasEmbrit = ((attackerSide == "player" and Main.hasPassive("ice_embrittlement")) or (attackerSide == "enemy" and Main.enemyHasPassive("ice_embrittlement")))
 			if hasEmbrit:
-				applyDirectDamage.call(attackerSide, defenderSide, 3, "🧊 Embrittlement")
+				applyDirectDamage(attackerSide, defenderSide, 3, "🧊 Embrittlement")
 				if JS.t(State.combat.get("over")):
 					return
 		# ── Ebb: reflect damage ──
@@ -369,7 +362,7 @@ func performHit(attackerSide = null, defenderSide = null, pkg = null):
 		if hasThorns:
 			var totalRoots = (JS.or_(JS.idx(State.status, defenderSide).get("rootStacks"), 0)) + (JS.or_(JS.idx(State.status, defenderSide).get("overgrowthStacks"), 0))
 			if totalRoots > 0:
-				applyDirectDamage.call(attackerSide, defenderSide, totalRoots * 5, "🌵 Thorned Strikes (×" + JS.s(totalRoots) + ")")
+				applyDirectDamage(attackerSide, defenderSide, totalRoots * 5, "🌵 Thorned Strikes (×" + JS.s(totalRoots) + ")")
 				if JS.t(State.combat.get("over")):
 					return
 		# ── Ice Blast (execute): kills enemies below HP threshold ──
@@ -412,49 +405,11 @@ func applyEffectDamage(attackerSide = null, defenderSide = null, dmg = null, lab
 		dmg = reduced
 		if dmg <= 0:
 			return
-	applyDirectDamage.call(attackerSide, defenderSide, dmg, label, {"noSurge": true})
+	applyDirectDamage(attackerSide, defenderSide, dmg, label, {"noSurge": true})
 
-# Grant Charge when a debuff is applied to the player (Plasma only, 1 per application instance)
-# Only triggers when the Plasma abilities book is the currently active book
-func _plasmaChargeOnDebuff(defenderSide = null):
-	if State.playerElement != "Plasma":
-		return
-	if defenderSide != "player":
-		return
-	# Charge only accumulates when the plasma book is active
-	var _pIdx = State.plasmaBookIdx()
-	if (_pIdx < 0 or State.player.get("activeBookIdx") != _pIdx):
-		return
-	var hasStabilized = Main.hasPassive("plasma_stabilized_core")
-	if hasStabilized:
-		# Stabilized: 1 charge per debuff (was 0.5)
-		State.status.get("player").plasmaCharge = (JS.or_(State.status.get("player").get("plasmaCharge"), 0)) + 1
-		UI.log_("🔋 Charge +1 from debuff (Stabilized) → " + JS.s(State.status.get("player").get("plasmaCharge")), "status")
-		Spells.updateChargeUI()
-	else:
-		# Base: 2 charge per debuff (was 1)
-		State.status.get("player").plasmaCharge = (JS.or_(State.status.get("player").get("plasmaCharge"), 0)) + 2
-		UI.log_("⚡ Charge +2 from debuff → " + JS.s(State.status.get("player").get("plasmaCharge")), "status")
-		Spells.updateChargeUI()
-
-func _plasmaBackfeed(attackerSide = null, triggeringDmg = null):
-	if not Main.hasPassive("plasma_backfeed_reactor"):
-		return
-	var pow_ = Helpers.attackPowerFor("player", "enemy")
-	var reflectDmg = max(1, JS.round((triggeringDmg * 0.2) + (pow_ / 5.0)))
-	# Reflect back at the active enemy
-	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
-	if (JS.t(e) and JS.t(e.get("alive"))):
-		e.hp = max(0, e.get("hp") - reflectDmg)
-		UI.log_("♻️ Backfeed Reactor: " + JS.s(reflectDmg) + " reflected to " + JS.s(e.get("name")) + "!", "status")
-		if e.get("hp") <= 0:
-			e.alive = false
-			UI.log_("💀 " + JS.s(e.get("name")) + " defeated!", "win")
-			UI.renderEnemyCards()
-			if len(Helpers.aliveEnemies()) == 0:
-				Combat.endBattle(true)
-
-func applyDirectDamage_2(attackerSide = null, defenderSide = null, dmg = null, label = null, opts = null):
+func applyDirectDamage(attackerSide = null, defenderSide = null, dmg = null, label = null, opts = null):
+	if JS.hooks.has("applyDirectDamage"):
+		return JS.run_hook("applyDirectDamage", [attackerSide, defenderSide, dmg, label, opts])
 	if dmg <= 0:
 		if JS.t(label):
 			UI.log_(JS.s(label) + ": 0 dmg.", "status")
@@ -536,7 +491,36 @@ func applyDirectDamage_2(attackerSide = null, defenderSide = null, dmg = null, l
 				Combat.endBattle(false)
 	UI.updateHPBars()
 
-func applyMelt_2(attackerSide = null, targetSide = null, meltPoints = null, label = null):
+# Grant Charge when a debuff is applied to the player (Plasma only, 1 per application instance)
+# Only triggers when the Plasma abilities book is the currently active book
+func _plasmaChargeOnDebuff(defenderSide = null):
+	if State.playerElement != "Plasma":
+		return
+	if defenderSide != "player":
+		return
+	# Charge only accumulates when the plasma book is active
+	var _pIdx = State.plasmaBookIdx()
+	if (_pIdx < 0 or State.player.get("activeBookIdx") != _pIdx):
+		return
+	var hasStabilized = Main.hasPassive("plasma_stabilized_core")
+	if hasStabilized:
+		# Stabilized: 1 charge per debuff (was 0.5)
+		State.status.get("player").plasmaCharge = (JS.or_(State.status.get("player").get("plasmaCharge"), 0)) + 1
+		UI.log_("🔋 Charge +1 from debuff (Stabilized) → " + JS.s(State.status.get("player").get("plasmaCharge")), "status")
+		Spells.updateChargeUI()
+	else:
+		# Base: 2 charge per debuff (was 1)
+		State.status.get("player").plasmaCharge = (JS.or_(State.status.get("player").get("plasmaCharge"), 0)) + 2
+		UI.log_("⚡ Charge +2 from debuff → " + JS.s(State.status.get("player").get("plasmaCharge")), "status")
+		Spells.updateChargeUI()
+
+# ─── MELT DAMAGE ─────────────────────────────────────────────────────────────
+# Melt is a Fire damage type that hits armor at 3:1 efficiency (ceil(armor/3) points
+# to destroy all armor), then remaining points deal direct HP damage at 1:1.
+# Bypasses shock damage reduction and all shield effects — armor still applies normally.
+func applyMelt(attackerSide = null, targetSide = null, meltPoints = null, label = null):
+	if JS.hooks.has("applyMelt"):
+		return JS.run_hook("applyMelt", [attackerSide, targetSide, meltPoints, label])
 	if meltPoints <= 0:
 		return
 	label = JS.or_(label, "🔥 Melt")
@@ -626,7 +610,7 @@ func applyMelt_2(attackerSide = null, targetSide = null, meltPoints = null, labe
 			if _bMult > 1:
 				remaining = JS.round(remaining * _bMult)
 				UI.log_("💨🔩 Bellows: ×" + JS.toFixed(_bMult, 2) + " Melt HP (" + _bChoice + ", EAB=" + JS.s(eab) + ")", "status")
-		applyDirectDamage.call(attackerSide, targetSide, JS.round(remaining * 1.5), label)
+		applyDirectDamage(attackerSide, targetSide, JS.round(remaining * 1.5), label)
 		if JS.t(State.combat.get("over")):
 			return
 		# Eternal Flame: melt HP damage applies Burn (50% of HP damage dealt)
@@ -637,3 +621,20 @@ func applyMelt_2(attackerSide = null, targetSide = null, meltPoints = null, labe
 				UI.log_("🔥 Eternal Flame: +" + JS.s(flameBurn) + " Burn from Melt!", "status")
 	UI.updateHPBars()
 	UI.renderStatusTags()
+
+func _plasmaBackfeed(attackerSide = null, triggeringDmg = null):
+	if not Main.hasPassive("plasma_backfeed_reactor"):
+		return
+	var pow_ = Helpers.attackPowerFor("player", "enemy")
+	var reflectDmg = max(1, JS.round((triggeringDmg * 0.2) + (pow_ / 5.0)))
+	# Reflect back at the active enemy
+	var e = JS.idx(State.combat.get("enemies"), State.combat.get("activeEnemyIdx"))
+	if (JS.t(e) and JS.t(e.get("alive"))):
+		e.hp = max(0, e.get("hp") - reflectDmg)
+		UI.log_("♻️ Backfeed Reactor: " + JS.s(reflectDmg) + " reflected to " + JS.s(e.get("name")) + "!", "status")
+		if e.get("hp") <= 0:
+			e.alive = false
+			UI.log_("💀 " + JS.s(e.get("name")) + " defeated!", "win")
+			UI.renderEnemyCards()
+			if len(Helpers.aliveEnemies()) == 0:
+				Combat.endBattle(true)

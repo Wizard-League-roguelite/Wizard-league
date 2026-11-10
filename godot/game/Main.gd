@@ -16,11 +16,11 @@ func _boot():
 		{"el": "Air", "emoji": "🌀", "color": "#B0E0E6", "mechanic": "Speed · Multi-hit"},
 	]
 	# ── Music bootstrap ───────────────────────────────────────────────────────────
-	var _fn9 = func():
+	var _fn10 = func():
 		var _started = [null]
 		var _firstGesture = [null]
 		_started[0] = false
-		var _fn8 = func():
+		var _fn9 = func():
 			if _started[0]:
 				return
 			_started[0] = true
@@ -35,10 +35,10 @@ func _boot():
 			Mp3Audio.musicPlaySmart("menu")
 			for ev in JS.iter(["click", "keydown", "touchstart"]):
 				document.removeEventListener(ev, _firstGesture[0], true)
-		_firstGesture[0] = _fn8
+		_firstGesture[0] = _fn9
 		for ev in JS.iter(["click", "keydown", "touchstart"]):
 			document.addEventListener(ev, _firstGesture[0], true)
-	_fn9.call()
+	_fn10.call()
 
 # ===== main.js =====
 # ─── MAIN / SCREEN NAVIGATION ────────────────────────────────────────────────
@@ -100,13 +100,13 @@ func showSaveSelect():
 	UI.showScreen("save-select-screen")
 
 func confirmDeleteSlot(slot = null):
-	if not JS.t(JS.confirm("Delete Save " + JS.s(slot + 1) + "? This cannot be undone.")):
-		return
-	deleteSlot(slot)
-	localStorage.removeItem("elemental_meta_v1_slot" + JS.s(slot))
-	if JS.t(window.get("_metaBySlot")):
-		JS.del(window.get("_metaBySlot"), slot)
-	showSaveSelect()
+	var _fn2 = func():
+		deleteSlot(slot)
+		localStorage.removeItem("elemental_meta_v1_slot" + JS.s(slot))
+		if JS.t(window.get("_metaBySlot")):
+			JS.del(window.get("_metaBySlot"), slot)
+		showSaveSelect()
+	JS.confirmDialog("Delete Save " + JS.s(slot + 1) + "? This cannot be undone.", _fn2)
 
 func selectSaveSlot(slot = null):
 	Constants.activeSaveSlot = slot
@@ -291,11 +291,11 @@ func showPassiveScreen(element = null):
 	var choices = (pool if JS.t(Constants.sandboxMode) else BattleReward.pickRandom(pool, min(3, len(pool))))
 	window.pendingStartPassive = null
 	startBtn.disabled = true
-	var _fn2 = func():
+	var _fn3 = func():
 		if not JS.t(window.get("pendingStartPassive")):
 			return
 		confirmStartPassive(window.get("pendingStartPassive"))
-	startBtn.onclick = _fn2
+	startBtn.onclick = _fn3
 	title.textContent = "Choose a " + JS.s(element) + " Passive"
 	sub.textContent = "Pick one to start your run. You can earn others later."
 	list.innerHTML = ""
@@ -311,7 +311,7 @@ func showPassiveScreen(element = null):
 		btn.dataset.passiveId = ch.id
 		var infoIcon = ("<span class=\"pc-info-icon\" title=\"" + JS.s(ch.detail) + "\" onclick=\"event.stopPropagation()\">ℹ</span>" if JS.t(ch.get("detail")) else "")
 		btn.innerHTML = "<div class=\"choice-title\">" + JS.s(ch.get("emoji")) + " " + JS.s(ch.title) + infoIcon + "</div><div class=\"choice-desc\">" + JS.s(ch.get("desc")) + "</div>"
-		var _fn3 = func():
+		var _fn4 = func():
 			window.pendingStartPassive = ch.id
 			for b in JS.iter(list.querySelectorAll("button.choice-btn")):
 				b.style.borderColor = "#2b2b36"
@@ -319,7 +319,7 @@ func showPassiveScreen(element = null):
 			btn.style.borderColor = "#ffffff66"
 			btn.style.transform = "translateY(-1px)"
 			startBtn.disabled = false
-		btn.addEventListener("click", _fn3)
+		btn.addEventListener("click", _fn4)
 		list.appendChild(btn)
 	UI.showScreen("passive-screen")
 
@@ -347,16 +347,16 @@ func showRunBookSelectionScreen(onDone = null):
 		onDone.call(null)
 		return
 	# Non-legendary owned books — randomly sample up to 3
-	var _fn4 = func(id = null):
+	var _fn5 = func(id = null):
 		var cat = JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, id)
 		return (cat.get("rarity") != "legendary" if JS.t(cat) else cat)
-	var regularIds = JS.arr(ownedBookIds).filter(_fn4)
+	var regularIds = JS.arr(ownedBookIds).filter(_fn5)
 	for i in range(len(regularIds) - 1, 0, -1):
 		var j = floori(randf() * (i + 1))
-		var _t5 = JS.idx(regularIds, j)
-		var _t6 = regularIds[i]
-		regularIds[i] = _t5
-		regularIds[j] = _t6
+		var _t6 = JS.idx(regularIds, j)
+		var _t7 = regularIds[i]
+		regularIds[i] = _t6
+		regularIds[j] = _t7
 	var offeredIds = JS.slice(regularIds, 0, 3)
 	if (len(offeredIds) == 0 or false):
 		onDone.call(null)
@@ -509,7 +509,7 @@ func beginRun():
 
 # Helper: show run-start book selection, then launch first battle
 func _offerRunBookThenBattle():
-	var _fn7 = func(chosenId = null):
+	var _fn8 = func(chosenId = null):
 		if JS.t(chosenId):
 			var cat = JS.idx(Spellbooks.SPELLBOOK_CATALOGUE, chosenId)
 			if JS.t(cat):
@@ -535,7 +535,7 @@ func _offerRunBookThenBattle():
 			CastleCutscene.playThroneRoomCutscene(func(): return BattleLoad.loadBattle(JS.idx(Encounters.ENCOUNTER_POOL, 0)))
 		else:
 			BattleLoad.loadBattle(JS.idx(Encounters.ENCOUNTER_POOL, 0))
-	showRunBookSelectionScreen(_fn7)
+	showRunBookSelectionScreen(_fn8)
 
 func confirmStartPassive(passiveId = null):
 	State.player.startPassive = passiveId
