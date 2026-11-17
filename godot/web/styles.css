@@ -2435,3 +2435,15 @@
   }
 }
 
+
+/* Narrow portrait phones (Android build, ~400 CSS px wide): keep the battle top bar on screen */
+@media (max-width: 440px) {
+  #combat-screen.deck-mode-active .combat-topbar { gap: .3rem; padding: .18rem .3rem; justify-content: flex-start; }
+  #combat-screen.deck-mode-active .combat-topbar .combat-header { display: none; }
+  #combat-screen.deck-mode-active .combat-topbar > div:last-child { gap: .25rem !important; }
+  #combat-screen.deck-mode-active .combat-topbar > div:last-child > button { padding: .25rem .4rem !important; letter-spacing: .03em !important; }
+}
+/* Portrait: the 16:9 night-sky canvas would be stretched tall; keep its shape, fill the height, crop the sides */
+@media (orientation: portrait) {
+  #bg-canvas { width: 177.78vh !important; left: calc(50vw - 88.89vh) !important; right: auto !important; }
+}

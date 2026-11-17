@@ -1,0 +1,154 @@
+name: Godot Android build
+
+# Builds the Godot port (godot/) as a signed Android APK and publishes it as a GitHub Release.
+# The installed game checks the latest release on launch and offers the update
+# (godot/android/Updater.gd); Obtainium can also watch this repo's releases.
+#  - pull requests touching godot/: build with a throwaway key, upload the APK as a workflow
+#    artifact (nothing is published)
+#  - main: runs after "Update version" finishes and releases only if godot/ changed since the
+#    last Android release
+#  - manual run: always releases
+# Signing uses the repository secrets RELEASE_KEYSTORE_BASE64, RELEASE_KEYSTORE_PASSWORD and
+# RELEASE_KEY_ALIAS. Godot signs with one password, so the key password must equal the store's.
+
+on:
+  pull_request:
+    paths: ['godot/**', '.github/workflows/godot-android.yml']
+  workflow_run:
+    workflows: ['Update version']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: godot-android-${{ github.event_name }}-${{ github.event.pull_request.number || 'main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  GODOT_VERSION: 4.4.1
+
+jobs:
+  build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      ANDROID_BUILD: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # tags, to compare godot/ against the last release
+
+      - name: Has godot/ changed since the last release?
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          build=true
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            LAST=$(gh release list --limit 50 --json tagName -q '[.[] | select(.tagName | startswith("android-"))][0].tagName // ""')
+            if [ -n "$LAST" ] && git diff --quiet "$LAST" HEAD -- godot; then
+              echo "godot/ unchanged since $LAST - nothing to release"
+              build=false
+            fi
+          fi
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@v4
+        if: steps.check.outputs.build == 'true'
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Cache Godot
+        if: steps.check.outputs.build == 'true'
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot-ci
+          key: godot-${{ env.GODOT_VERSION }}-linux-android
+
+      - name: Download Godot and the Android export templates
+        if: steps.check.outputs.build == 'true' && steps.cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot-ci && cd ~/godot-ci
+          REL=https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable
+          curl -fsSL --retry 4 -o godot.zip "$REL/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          curl -fsSL --retry 4 -o templates.tpz "$REL/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q godot.zip && mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 godot && chmod +x godot
+          unzip -q templates.tpz templates/android_release.apk templates/android_debug.apk templates/version.txt
+          rm godot.zip templates.tpz
+
+      - name: Install Godot
+        if: steps.check.outputs.build == 'true'
+        run: |
+          T=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$T" && cp ~/godot-ci/templates/* "$T/"
+          MINOR=$(echo "$GODOT_VERSION" | cut -d. -f1,2)
+          mkdir -p ~/.config/godot
+          printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/java_sdk_path = "%s"\n' \
+            "$ANDROID_HOME" "$JAVA_HOME" > ~/.config/godot/editor_settings-$MINOR.tres
+          echo "GODOT=$HOME/godot-ci/godot" >> "$GITHUB_ENV"
+
+      - name: Build signed APK
+        if: steps.check.outputs.build == 'true'
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # throwaway key: PR builds are for testing and never reach the release track
+            keytool -genkeypair -noprompt -keystore "$RUNNER_TEMP/ci.jks" -alias ci -keyalg RSA -keysize 2048 \
+              -validity 30 -storepass ci-build -keypass ci-build -dname "CN=Wizard League CI"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$RUNNER_TEMP/ci.jks"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_USER=ci
+            export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=ci-build
+          else
+            if [ -z "$RELEASE_KEYSTORE_BASE64" ]; then
+              echo "RELEASE_KEYSTORE_BASE64 secret is missing" >&2
+              exit 1
+            fi
+            echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$RUNNER_TEMP/release.jks"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_USER="$RELEASE_KEY_ALIAS"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="$RELEASE_KEYSTORE_PASSWORD"
+          fi
+          godot/tools/build_android.sh "$RUNNER_TEMP/wizard-league.apk"
+
+      - name: Check the APK
+        if: steps.check.outputs.build == 'true'
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/aapt2" dump badging "$RUNNER_TEMP/wizard-league.apk" | grep -E "^(package|sdkVersion|targetSdkVersion|uses-permission|launchable-activity|native-code)"
+          "$BT/aapt2" dump badging "$RUNNER_TEMP/wizard-league.apk" | grep -q "versionCode='$ANDROID_BUILD'" \
+            || { echo "versionCode is not $ANDROID_BUILD" >&2; exit 1; }
+          "$BT/apksigner" verify --print-certs "$RUNNER_TEMP/wizard-league.apk" | head -3
+
+      - name: Upload APK (pull request)
+        if: steps.check.outputs.build == 'true' && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: wizard-league-apk
+          path: ${{ runner.temp }}/wizard-league.apk
+
+      - name: Publish GitHub Release
+        if: steps.check.outputs.build == 'true' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Every release's APK has the same name, so
+          # https://github.com/Wizard-League-roguelite/Wizard-league/releases/latest/download/wizard-league.apk
+          # always downloads the newest build.
+          VER=$(tr -d '[:space:]' < VERSION)
+          tag="android-${ANDROID_BUILD}"
+          cp "$RUNNER_TEMP/wizard-league.apk" wizard-league.apk
+          notes="$(git log -1 --pretty=%B -- godot | grep -v '^Co-Authored-By:')
+
+          **Install:** on an Android phone, tap wizard-league.apk below, then open it and allow the install."
+          gh release create "$tag" wizard-league.apk \
+            --title "Wizard's League v${VER} (Android build ${ANDROID_BUILD})" \
+            --notes "$notes" \
+            --target "$GITHUB_SHA"

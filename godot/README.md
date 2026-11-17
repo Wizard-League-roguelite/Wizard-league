@@ -61,6 +61,32 @@ export template installed). The output is a plain static folder:
 
 To run the smoke test locally: `cd tools && NODE_PATH=$(npm root -g) node web_smoke.js ../build/web`.
 
+## Android build and updates
+
+`tools/build_android.sh [output.apk]` exports an APK (arm64, package `com.wizardleague.game`,
+music bundled) that turns with the phone, portrait or landscape. It needs the Android export
+templates, an Android SDK and JDK 17 set in Godot's editor settings.
+
+The page is sized like a phone browser shows it: about 400 CSS px across in portrait, 480 tall in
+landscape (`Boot.android_scale`), recomputed on rotation. The narrow-portrait fixes live at the end
+of `web/styles.css`.
+
+`.github/workflows/godot-android.yml` runs it in CI:
+
+- Pull requests touching `godot/` build with a throwaway signing key and attach the APK to the run.
+- On `main`, after the version bump, it publishes a GitHub Release tagged `android-<build>` with
+  `wizard-league.apk`, but only if `godot/` changed since the last Android release. A manual run
+  always releases. The newest APK is always at
+  `https://github.com/Wizard-League-roguelite/Wizard-league/releases/latest/download/wizard-league.apk`.
+- Signing uses repository secrets `RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD` and
+  `RELEASE_KEY_ALIAS` (Godot uses one password for store and key). Keep the keystore: an APK
+  signed with a different key cannot update the installed game.
+
+On launch the installed game asks GitHub for the latest release (`android/Updater.gd`). If its
+build number is higher, an in-game prompt offers the update; "Update" opens the APK in the
+browser and Android installs it over the old one. Saves (`user://`) are kept. Local builds
+(build number 0) never prompt. Obtainium pointed at the repo works as well.
+
 ## Saves
 
 Saves live in `user://localstorage.json` using the same keys and JSON as the browser's
