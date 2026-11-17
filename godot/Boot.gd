@@ -10,6 +10,11 @@ func _ready() -> void:
 	# high-DPI displays: scale the whole UI like a browser does (CSS pixels)
 	var scale := DisplayServer.screen_get_scale()
 	if scale <= 1.0 and OS.get_name() == "Windows": scale = clampf(roundf(DisplayServer.screen_get_dpi() / 96.0 * 4.0) / 4.0, 1.0, 3.0)
+	if OS.has_feature("android"):
+		# phones report scale 1: use the screen density like a mobile browser (dpi/160), but keep
+		# the short side at least 480 CSS px so the landscape layout is not cramped
+		var short_side := float(mini(DisplayServer.screen_get_size().x, DisplayServer.screen_get_size().y))
+		scale = clampf(minf(DisplayServer.screen_get_dpi() / 160.0, short_side / 480.0), 1.0, 4.0)
 	if DisplayServer.get_name() != "headless":
 		# a bigger window shows more of the page (as in a browser) instead of zooming it
 		var win := get_window()
@@ -22,6 +27,10 @@ func _ready() -> void:
 		var mod := get_node_or_null("/root/" + m)
 		if mod != null: mod._boot()
 	_version_label()
+	if OS.has_feature("android"):
+		var up = load("res://android/Updater.gd").new()
+		up.name = "Updater"
+		add_child(up)
 	for a in args:
 		if a.begins_with("--driver="):
 			var d = load("res://dev/Driver.gd").new()
