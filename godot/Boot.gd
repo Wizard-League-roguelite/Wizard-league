@@ -10,17 +10,14 @@ func _ready() -> void:
 	# high-DPI displays: scale the whole UI like a browser does (CSS pixels)
 	var scale := DisplayServer.screen_get_scale()
 	if scale <= 1.0 and OS.get_name() == "Windows": scale = clampf(roundf(DisplayServer.screen_get_dpi() / 96.0 * 4.0) / 4.0, 1.0, 3.0)
-	if OS.has_feature("android"):
-		# phones report scale 1: use the screen density like a mobile browser (dpi/160), but keep
-		# the short side at least 480 CSS px so the landscape layout is not cramped
-		var short_side := float(mini(DisplayServer.screen_get_size().x, DisplayServer.screen_get_size().y))
-		scale = clampf(minf(DisplayServer.screen_get_dpi() / 160.0, short_side / 480.0), 1.0, 4.0)
 	if DisplayServer.get_name() != "headless":
 		# a bigger window shows more of the page (as in a browser) instead of zooming it
 		var win := get_window()
-		win.content_scale_factor = maxf(scale, 1.0)
-		win.content_scale_size = win.size
-		win.size_changed.connect(func(): win.content_scale_size = win.size)
+		var fit := func():
+			win.content_scale_factor = maxf(android_scale(win.size) if OS.has_feature("android") else scale, 1.0)
+			win.content_scale_size = win.size
+		fit.call()
+		win.size_changed.connect(fit)   # also fires when the phone rotates
 	InlineJS.setup(GameModules.GLOBALS)
 	document.load_page("res://web/index.html", ["res://web/styles.css"])
 	for m in GameModules.ORDER:
@@ -37,6 +34,13 @@ func _ready() -> void:
 			d.name = "Driver"
 			d.script_path = a.substr(9)
 			add_child(d)
+
+# Phones report scale 1, so size the page from the screen density like a mobile browser (dpi/160),
+# capped so the page keeps enough CSS pixels: about 400 across in portrait (a phone browser's
+# width) and 480 tall in landscape, which the battle and menu screens need to fit.
+static func android_scale(size: Vector2i) -> float:
+	var css := 400.0 if size.y > size.x else 480.0
+	return clampf(minf(DisplayServer.screen_get_dpi() / 160.0, mini(size.x, size.y) / css), 1.0, 4.0)
 
 # small build stamp in the corner (index.html's inline script)
 func _version_label() -> void:

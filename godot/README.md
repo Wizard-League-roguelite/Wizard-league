@@ -63,9 +63,13 @@ To run the smoke test locally: `cd tools && NODE_PATH=$(npm root -g) node web_sm
 
 ## Android build and updates
 
-`tools/build_android.sh [output.apk]` exports a landscape APK (arm64, package
-`com.wizardleague.game`, music bundled). It needs the Android export templates, an Android SDK and
-JDK 17 set in Godot's editor settings.
+`tools/build_android.sh [output.apk]` exports an APK (arm64, package `com.wizardleague.game`,
+music bundled) that turns with the phone, portrait or landscape. It needs the Android export
+templates, an Android SDK and JDK 17 set in Godot's editor settings.
+
+The page is sized like a phone browser shows it: about 400 CSS px across in portrait, 480 tall in
+landscape (`Boot.android_scale`), recomputed on rotation. The narrow-portrait fixes live at the end
+of `web/styles.css`.
 
 `.github/workflows/godot-android.yml` runs it in CI:
 
